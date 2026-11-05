@@ -353,3 +353,328 @@ curl.exe -s -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
 - `expo-secure-store` key for the session: `xf_tokens`.
 - Sentry DSN is embedded (`o4512162143535104.ingest.de.sentry.io/4512162166800464`).
 - The APK ships split configs (`arm64_v8a`, `en`, `xxhdpi`); only `base.apk` contains code.
+
+---
+
+## 10. Posting, quoting and editing (verified live)
+
+All three need `thread:write`. Body is `application/x-www-form-urlencoded`.
+`message` is **BBCode**, not HTML — the server returns both `message` (raw BBCode)
+and `message_parsed` (rendered HTML).
+
+### 10.1 Create a reply
+
+```
+POST /api/posts/
+  thread_id=<id>
+  message=<bbcode>
+```
+
+```powershell
+curl.exe -s -X POST "https://voz.vn/api/posts/" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data-urlencode "thread_id=682181" `
+  --data-urlencode "message=alo test est"
+```
+
+Response (`success: true` + the created post):
+
+```json
+{ "success": true,
+  "post": { "post_id": 44261023, "thread_id": 682181, "position": 31612,
+            "user_id": 1680514, "username": "Fioren",
+            "message": "alo test est", "message_parsed": "alo test est",
+            "message_state": "visible", "post_date": 1793893531,
+            "can_edit": true, "can_soft_delete": true, "can_hard_delete": false,
+            "is_first_post": false, "is_last_post": true,
+            "view_url": "https://voz.vn/p/44261023/" } }
+```
+
+Notes:
+- `position` is the 1-based post index inside the thread; the new post gets
+  `reply_count + 1`.
+- `view_url` is the canonical short link — `https://voz.vn/p/{post_id}/` redirects to
+  `/t/{slug}.{thread_id}/page-{n}#post-{post_id}`.
+- `can_edit` / `can_soft_delete` are per-post permissions for the current user.
+- Posting to a thread you cannot reply to returns `can_reply: false` on the thread
+  object; the API then answers `403` with a `thread:write`-style error.
+
+### 10.2 Quote reply
+
+There is no dedicated quote endpoint. The app builds a BBCode block client-side
+(`quoteBlock` + `composeMessage` in `hermes_out.js` ~763574) and posts it as a normal
+reply. Exact format:
+
+```
+[QUOTE="<author>, post: <post_id>, member: <user_id>"]
+<quoted message with nested quotes stripped>
+[/QUOTE]
+
+<your text>
+```
+
+Rules extracted from the bundle:
+
+| Rule | Detail |
+|---|---|
+| Author | `username` with `"` characters removed |
+| `post:` | `post_id`, or `0` when missing |
+| `member:` | `user_id`; the whole `, member: N` part is omitted when `user_id` is falsy |
+| Body | `stripQuotes()` removes every nested `[QUOTE…]…[/QUOTE]` block, then collapses 3+ newlines to 2 and trims |
+| Separator | exactly one blank line (`\n\n`) between the quote block and your text |
+| Empty text | the trailing text is dropped if blank, leaving only the quote |
+
+`stripQuotes()` is a depth counter over `/\[(\/?)quote(?:=[^\]]*)?\]/gi`: text is kept
+only while depth is 0, so nested quotes never leak into the new quote.
+
+Working example (post 44261058, quoting post 44253025):
+
+```
+[QUOTE="Nước mắm Phú Quốc, post: 44253025, member: 1964161"]
+Non-tech muốn hỏi sếp là các app trên github hình như đều là "open-source". ...
+[/QUOTE]
+
+Tải source code về kêu AI nó review thôi nhanh gọn lẹ
+```
+
+Server renders it to:
+
+```html
+<blockquote class="xfBb-quote" data-name="Nước mắm Phú Quốc">…</blockquote><br />
+Tải source code về kêu AI nó review thôi nhanh gọn lẹ
+```
+
+Helper script: `voz-app\quote_reply.py`
+
+```powershell
+python "D:\Data 2\Github-Clone\siritami\voz-app\quote_reply.py" 44253025 "your reply text"
+```
+
+It fetches the target post, builds the quote block with the same `stripQuotes` logic,
+posts to `/api/posts/` with the target's `thread_id`, and prints the result.
+
+### 10.3 Edit a post
+
+```
+POST /api/posts/{post_id}/
+  message=<new bbcode>
+```
+
+```powershell
+curl.exe -s -X POST "https://voz.vn/api/posts/44261023/" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data-urlencode "message=alo test test"
+```
+
+Response: same `{ success, post }` envelope, with `last_edit_date` now set
+(Unix seconds) and `message` / `message_parsed` replaced.
+
+Verified: `post 44261023` went from `alo test est` → `alo test test`,
+`last_edit_date = 1793893961`, and the web UI shows
+`Last edited: A moment ago`.
+
+Notes:
+- Editing replaces the whole message — send the full BBCode, not a diff.
+- Only the author (or a moderator) can edit; otherwise `403`.
+- `can_edit` on the post object tells you in advance.
+- There is no edit-history endpoint exposed by the app.
+
+### 10.4 Optional flags on create/edit
+
+| Field | Effect |
+|---|---|
+| `silent` | `true` → do not bump the thread / no alert to watchers |
+| `author_alert` | `true` → notify the thread starter |
+
+Both are only sent when truthy (the app omits them otherwise).
+
+### 10.5 Delete a post
+
+```
+DELETE /api/posts/{post_id}/
+```
+
+Optional body fields (`application/x-www-form-urlencoded`):
+
+| Field | Effect |
+|---|---|
+| `hard_delete=true` | permanent removal — moderators/admins only |
+| `author_alert=true` | notify the post author |
+
+```powershell
+curl.exe -s -X DELETE "https://voz.vn/api/posts/44261023/" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26"
+```
+
+Success response — **no post object**, just a flag:
+
+```json
+{ "success": true }
+```
+
+HTTP `200`, and the response headers echo the acting user:
+
+```
+xf-request-user: 1680514
+xf-request-user-extras: {"conversations_unread":0,"alerts_unviewed":0}
+```
+
+#### What actually happens
+
+`DELETE` is a **soft delete** ("removed from public view"), not a row delete:
+
+| Effect | Detail |
+|---|---|
+| Post disappears from the thread listing | `GET /threads/{id}/posts` no longer returns it |
+| `GET /api/posts/{post_id}/` → `404` | `{"code":"requested_post_not_found"}` |
+| `reply_count` decrements | 31613 → 31612 |
+| Remaining posts are **renumbered** | `position` shifts down by 1 for every later post |
+| Post ID is **immutable** | `44261058` kept its ID; only `position` changed 31613 → 31612 |
+| Moderator log entry | `Post removed from public view (reason: )` |
+
+So the post ID never changes after a delete — only `position` and `reply_count` do.
+A deleted post is invisible to the API but still exists server-side and can be restored.
+
+#### Permissions
+
+| Who | Result |
+|---|---|
+| Author, own post | `200 {"success": true}` |
+| Moderator, anyone's post | `200 {"success": true}` — **no confirmation, no ownership check** |
+| Non-moderator, someone else's post | `403` |
+| Already-deleted post | `404 requested_post_not_found` (not idempotent) |
+| Non-existent post id | `404 requested_page_not_found` |
+
+`can_soft_delete` / `can_hard_delete` on the post object tell you in advance what the
+current user may do. Note `can_hard_delete` is `false` for regular moderators.
+
+> **Warning:** because a moderator account can delete any post with a single
+> unauthenticated-looking `DELETE`, never run this call as a "permission test" against
+> a post you do not own. There is no dry-run and no confirmation step.
+
+#### Restoring a soft-deleted post
+
+The REST API has **no undelete endpoint** — `DELETE` on an already-deleted post returns
+`404`, it does not toggle back. Restoration is only available through the web UI
+(moderator action), which posts to:
+
+```
+POST /p/{post_id}/undelete
+  _xfToken=<csrf token from the GET form>
+```
+
+```js
+// browser console, logged in as moderator
+const g = await fetch('/p/44253025/undelete', { credentials: 'include' });
+const token = (await g.text()).match(/name="_xfToken" value="([^"]+)"/)[1];
+await fetch('/p/44253025/undelete', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ _xfToken: token }).toString(),
+});
+```
+
+After restore: `GET /api/posts/{id}/` returns `200` again with
+`message_state: "visible"` and the original `position`; `reply_count` goes back up.
+
+---
+
+## 11. Reactions (verified live)
+
+Reactions are a **toggle**, not separate add/remove endpoints. One call with the same
+`reaction_id` twice: first `insert`, then `delete`.
+
+### 11.1 Endpoint
+
+```
+POST /api/posts/{post_id}/react
+  reaction_id=<id>
+```
+
+```powershell
+curl.exe -s -X POST "https://voz.vn/api/posts/44244882/react" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data "reaction_id=1"
+```
+
+Response — no post object, just the action taken:
+
+```json
+{ "success": true, "action": "insert" }   // reaction added
+{ "success": true, "action": "delete" }   // reaction removed
+```
+
+### 11.2 Reaction IDs
+
+`GET /api/voz/reactions` (guest-accessible) returns the catalogue:
+
+| `reaction_id` | `title` | `score` | `active` |
+|---|---|---|---|
+| 1 | Ưng | +1 | true |
+| 2 | Gạch | −1 | true |
+| 3 | Haha | 0 | false |
+| 4 | Wow | 0 | false |
+| 5 | Sad | 0 | false |
+| 6 | Angry | 0 | false |
+
+`active: false` only hides the reaction in the UI — the API still accepts it
+(verified: `reaction_id=3` returned `insert` and applied normally).
+
+### 11.3 Toggle semantics
+
+| Current state | Call | Result |
+|---|---|---|
+| no reaction | `reaction_id=1` | `action: "insert"`, score `0 → +1` |
+| has Ưng (1) | `reaction_id=1` | `action: "delete"`, score `+1 → 0` |
+| has Ưng (1) | `reaction_id=2` | `action: "insert"`, score `+1 → −1` (switches, does not stack) |
+| has Gạch (2) | `reaction_id=2` | `action: "delete"`, score `−1 → 0` |
+
+A user can hold **at most one** reaction per post. Sending a different `reaction_id`
+replaces the existing one in a single call — no need to remove first.
+
+### 11.4 Reading reaction state
+
+`GET /api/posts/{post_id}/` exposes:
+
+| Field | Meaning |
+|---|---|
+| `reaction_score` | net score (`Ưng` +1, `Gạch` −1, others 0) |
+| `reaction_counts` | map of `reaction_id` → count, e.g. `{"1": 3, "2": 1}` |
+| `visitor_reaction_id` | the current user's reaction id, or absent when none |
+| `is_reacted_to` | boolean shortcut for `visitor_reaction_id != null` |
+| `can_react` | whether the current user may react at all |
+
+Example after reacting Ưng:
+
+```json
+{ "post": { "post_id": 44244882, "reaction_score": 1,
+            "reaction_counts": { "1": 1 },
+            "visitor_reaction_id": 1, "is_reacted_to": true,
+            "can_react": true } }
+```
+
+After removing it: `reaction_score: 0`, `reaction_counts: {}`,
+`visitor_reaction_id` absent, `is_reacted_to: false`.
+
+### 11.5 Errors
+
+| Case | Response |
+|---|---|
+| missing `reaction_id` | `400 required_input_missing`, `params.missing: ["reaction_id"]` |
+| unknown `reaction_id` (e.g. 99) | `404 requested_page_not_found` |
+| no `thread:write` scope | `403 missing_scope`, `params.scope: "thread:write"` |
+| post not found | `404 requested_post_not_found` |
+
+### 11.6 Client-side model (from the app)
+
+`applyReaction()` in `hermes_out.js` (~645431) mirrors the server logic for optimistic
+updates: it decrements the old `visitor_reaction_id` count, deletes the key when it
+reaches 0, increments the new one, adjusts `reaction_score` by the old reaction's
+`score` then the new one's, and sets `is_reacted_to = (oldId !== newId)`.
+
+The UI (`useReactToPost`, ~762051) calls the same endpoint for both add and remove —
+there is no separate "unreact" call anywhere in the bundle.
