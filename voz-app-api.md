@@ -374,7 +374,7 @@ POST /api/posts/
 curl.exe -s -X POST "https://voz.vn/api/posts/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
-  --data-urlencode "thread_id=682181" `
+  --data-urlencode "thread_id=<thread_id>" `
   --data-urlencode "message=alo test est"
 ```
 
@@ -382,13 +382,13 @@ Response (`success: true` + the created post):
 
 ```json
 { "success": true,
-  "post": { "post_id": 44261023, "thread_id": 682181, "position": 31612,
-            "user_id": 1680514, "username": "Fioren",
+  "post": { "post_id": <post_id>, "thread_id": <thread_id>, "position": <n>,
+            "user_id": <your_id>, "username": "<your_name>",
             "message": "alo test est", "message_parsed": "alo test est",
             "message_state": "visible", "post_date": 1793893531,
             "can_edit": true, "can_soft_delete": true, "can_hard_delete": false,
             "is_first_post": false, "is_last_post": true,
-            "view_url": "https://voz.vn/p/44261023/" } }
+            "view_url": "https://voz.vn/p/<post_id>/" } }
 ```
 
 Notes:
@@ -428,10 +428,10 @@ Rules extracted from the bundle:
 `stripQuotes()` is a depth counter over `/\[(\/?)quote(?:=[^\]]*)?\]/gi`: text is kept
 only while depth is 0, so nested quotes never leak into the new quote.
 
-Working example (post 44261058, quoting post 44253025):
+Working example (quoting an existing post):
 
 ```
-[QUOTE="Nước mắm Phú Quốc, post: 44253025, member: 1964161"]
+[QUOTE="<author>, post: <post_id>, member: <user_id>"]
 Non-tech muốn hỏi sếp là các app trên github hình như đều là "open-source". ...
 [/QUOTE]
 
@@ -441,14 +441,14 @@ Tải source code về kêu AI nó review thôi nhanh gọn lẹ
 Server renders it to:
 
 ```html
-<blockquote class="xfBb-quote" data-name="Nước mắm Phú Quốc">…</blockquote><br />
+<blockquote class="xfBb-quote" data-name="<author>">…</blockquote><br />
 Tải source code về kêu AI nó review thôi nhanh gọn lẹ
 ```
 
 Helper script: `voz-app\quote_reply.py`
 
 ```powershell
-python "D:\Data 2\Github-Clone\siritami\voz-app\quote_reply.py" 44253025 "your reply text"
+python "D:\Data 2\Github-Clone\siritami\voz-app\quote_reply.py" <post_id> "your reply text"
 ```
 
 It fetches the target post, builds the quote block with the same `stripQuotes` logic,
@@ -462,7 +462,7 @@ POST /api/posts/{post_id}/
 ```
 
 ```powershell
-curl.exe -s -X POST "https://voz.vn/api/posts/44261023/" `
+curl.exe -s -X POST "https://voz.vn/api/posts/<post_id>/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
   --data-urlencode "message=alo test test"
@@ -471,7 +471,7 @@ curl.exe -s -X POST "https://voz.vn/api/posts/44261023/" `
 Response: same `{ success, post }` envelope, with `last_edit_date` now set
 (Unix seconds) and `message` / `message_parsed` replaced.
 
-Verified: `post 44261023` went from `alo test est` → `alo test test`,
+Verified: the post went from `alo test est` → `alo test test`,
 `last_edit_date = 1793893961`, and the web UI shows
 `Last edited: A moment ago`.
 
@@ -504,7 +504,7 @@ Optional body fields (`application/x-www-form-urlencoded`):
 | `author_alert=true` | notify the post author |
 
 ```powershell
-curl.exe -s -X DELETE "https://voz.vn/api/posts/44261023/" `
+curl.exe -s -X DELETE "https://voz.vn/api/posts/<post_id>/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26"
 ```
 
@@ -517,7 +517,7 @@ Success response — **no post object**, just a flag:
 HTTP `200`, and the response headers echo the acting user:
 
 ```
-xf-request-user: 1680514
+xf-request-user: <your_id>
 xf-request-user-extras: {"conversations_unread":0,"alerts_unviewed":0}
 ```
 
@@ -531,7 +531,7 @@ xf-request-user-extras: {"conversations_unread":0,"alerts_unviewed":0}
 | `GET /api/posts/{post_id}/` → `404` | `{"code":"requested_post_not_found"}` |
 | `reply_count` decrements | 31613 → 31612 |
 | Remaining posts are **renumbered** | `position` shifts down by 1 for every later post |
-| Post ID is **immutable** | `44261058` kept its ID; only `position` changed 31613 → 31612 |
+| Post ID is **immutable** | the later post kept its ID; only `position` shifted down by 1 |
 | Moderator log entry | `Post removed from public view (reason: )` |
 
 So the post ID never changes after a delete — only `position` and `reply_count` do.
@@ -567,9 +567,9 @@ POST /p/{post_id}/undelete
 
 ```js
 // browser console, logged in as moderator
-const g = await fetch('/p/44253025/undelete', { credentials: 'include' });
+const g = await fetch('/p/<post_id>/undelete', { credentials: 'include' });
 const token = (await g.text()).match(/name="_xfToken" value="([^"]+)"/)[1];
-await fetch('/p/44253025/undelete', {
+await fetch('/p/<post_id>/undelete', {
   method: 'POST',
   credentials: 'include',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -595,7 +595,7 @@ POST /api/posts/{post_id}/react
 ```
 
 ```powershell
-curl.exe -s -X POST "https://voz.vn/api/posts/44244882/react" `
+curl.exe -s -X POST "https://voz.vn/api/posts/<post_id>/react" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
   --data "reaction_id=1"
@@ -651,7 +651,7 @@ replaces the existing one in a single call — no need to remove first.
 Example after reacting Ưng:
 
 ```json
-{ "post": { "post_id": 44244882, "reaction_score": 1,
+{ "post": { "post_id": <post_id>, "reaction_score": 1,
             "reaction_counts": { "1": 1 },
             "visitor_reaction_id": 1, "is_reacted_to": true,
             "can_react": true } }
@@ -678,3 +678,382 @@ reaches 0, increments the new one, adjusts `reaction_score` by the old reaction'
 
 The UI (`useReactToPost`, ~762051) calls the same endpoint for both add and remove —
 there is no separate "unreact" call anywhere in the bundle.
+
+---
+
+## 12. Direct messages / conversations (verified live)
+
+### 12.1 Start a conversation
+
+```
+POST /api/conversations/
+  recipient_ids[]=<user_id>     (repeatable)
+  title=<subject>
+  message=<first message>
+```
+
+```powershell
+curl.exe -s -X POST "https://voz.vn/api/conversations/" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data-urlencode "recipient_ids[]=<recipient_id>" `
+  --data-urlencode "title=test test test" `
+  --data-urlencode "message=test test test"
+```
+
+Response:
+
+```json
+{ "success": true,
+  "conversation": {
+    "conversation_id": <conversation_id>,
+    "title": "test test test",
+    "user_id": <your_id>, "username": "<your_name>",
+    "recipients": { "<recipient_id>": "<recipient_name>" },
+    "recipient_count": 2,
+    "first_message_id": <message_id>,
+    "last_message_id": <message_id>,
+    "last_message_date": 1793898104,
+    "last_message_user_id": <your_id>,
+    "reply_count": 0,
+    "is_starred": false, "is_unread": false,
+    "conversation_open": true,
+    "can_edit": true, "can_reply": true, "can_invite": true,
+    "can_upload_attachment": false,
+    "start_date": 1793898104,
+    "view_url": "https://voz.vn/direct-messages/<slug>.<conversation_id>/",
+    "Starter": { "user_id": <your_id>, "username": "<your_name>", "avatar_urls": {...} }
+  } }
+```
+
+Notes:
+- `recipients` is a map of `user_id → username`, **excluding** the starter.
+- `recipient_count` includes the starter (2 for a 1-to-1 DM).
+- `reply_count` is 0 on creation — the first message is not counted as a reply.
+- `view_url` slug is derived from the title; the numeric id is authoritative.
+- Requires `conversation:write`. Target user must allow conversations
+  (`can_converse: true` on `GET /api/users/{id}/`).
+
+### 12.2 Read a conversation
+
+```
+GET /api/conversations/{id}/?with_messages=true&page=1
+```
+
+```json
+{ "conversation": { ...same shape as above... },
+  "messages": [ { "message_id": <message_id>, "user_id": <your_id>,
+                  "username": "<your_name>", "message_date": <unix_ts>,
+                  "message": "test test test", "message_parsed": "test test test" } ] }
+```
+
+Without `with_messages=true` the response contains only `conversation`.
+
+### 12.3 List conversations
+
+| Query | Effect |
+|---|---|
+| `page` | pagination |
+| `unread=true` | only conversations with unread messages; `pagination.total` = unread count |
+| `starred=true` | only starred conversations |
+
+```powershell
+curl.exe -s -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  "https://voz.vn/api/conversations/?unread=true"
+```
+
+### 12.4 Messages
+
+| Method | Path | Body / query |
+|---|---|---|
+| GET | `/conversations/{id}/messages` | `page` — same as `?with_messages=true` |
+| GET | `/conversation-messages/{message_id}/` | – |
+| POST | `/conversation-messages/` | `conversation_id`, `message` |
+| POST | `/conversation-messages/{message_id}/` | `message` (edit) |
+
+```powershell
+curl.exe -s -X POST "https://voz.vn/api/conversation-messages/" `
+  -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  --data-urlencode "conversation_id=<conversation_id>" `
+  --data-urlencode "message=hello again"
+```
+
+### 12.5 Star / unstar
+
+```
+POST /api/conversations/{id}/star
+  star=1     → star
+  star=0     → unstar
+  (no body)  → toggle
+```
+
+Response is always `{"success": true}` — no state echoed back, so re-read the
+conversation to confirm `is_starred`.
+
+Verified: `star=1` → `is_starred: true`, `star=0` → `false`, empty body → toggles.
+
+### 12.6 Mark read
+
+```
+POST /api/conversations/{id}/mark-read
+  date=<unix seconds>
+```
+
+`date` is the timestamp up to which messages are considered read.
+
+### 12.7 Leave / delete a conversation
+
+```
+DELETE /api/conversations/{id}/
+```
+
+Returns `{"success": true}`. The conversation then disappears for the current user —
+`GET /api/conversations/{id}/` → `404 requested_direct_message_not_found`.
+
+> This is a **leave**, not a global delete: other participants keep their copy.
+> There is no separate `/leave` endpoint (`404`).
+
+### 12.8 Invite more recipients
+
+```
+POST /api/conversations/{id}/invite
+  recipient_ids[]=<user_id>
+```
+
+Missing input → `400 required_input_missing`, `params.missing: ["recipient_ids"]`.
+
+### 12.9 Errors
+
+| Case | Response |
+|---|---|
+| no `conversation:read` scope | `403 missing_scope`, `params.scope: "conversation:read"` |
+| no `conversation:write` scope | `403 missing_scope`, `params.scope: "conversation:write"` |
+| unknown conversation id | `404 requested_direct_message_not_found` |
+| recipient disallows DMs | `403` with a permission error |
+
+---
+
+## 13. Endpoints the app does not use (discovered by probing)
+
+The APK only calls the subset in §5. The XenForo REST layer underneath exposes more.
+Everything below was verified live; entries marked **unverified** returned a
+validation error rather than a success, so the shape is inferred from the error only.
+
+### 13.1 Thread lists and filters
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/threads/` | global thread list, `page`; 11 218 threads visible to a guest |
+| GET | `/threads/?order=post_date` | **all** threads, 819 218 total — the only `order` value that changes the result set |
+| GET | `/threads/?forum_id=13` | accepted but **ignored** (same total as unfiltered) |
+| GET | `/threads/?creator_id=…`, `?starter_id=…` | accepted but ignored |
+| GET | `/threads/?unread=1` | auth only; 11 054 total for this account |
+| GET | `/threads/?sticky=1`, `?prefix_id=`, `?with_tags=1`, `?since=`, `?direction=` | accepted, no observable effect |
+| GET | `/forums/{id}/` | forum detail: `node_id`, `title`, `description`, `breadcrumbs`, `type_data`, `view_url` |
+| GET | `/forums/{id}/threads` | `page`, `order`, `direction`, `sticky` |
+| GET | `/nodes/` | full node tree: `{ tree_map, nodes }`, 61 nodes |
+| GET | `/nodes/{id}/` | single node |
+
+> `order=post_date` is the only ordering that actually works; `view_count`,
+> `reply_count`, `first_post_likes`, `last_post_date` all return the default set.
+
+### 13.2 Users
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/users/{id}/` | public profile: `message_count`, `reaction_score`, `trophy_points`, `register_date`, `signature`, `custom_fields`, `is_staff`, `can_follow`, `can_ignore`, `can_post_profile`, … |
+| GET | `/users/{id}/?with_posts=1` | accepted, no extra fields observed |
+| GET | `/users/find-name?username=` | `{ exact, … }`; empty username returns `200` |
+| GET | `/users/` | **403** — listing users is disabled |
+| GET | `/users/find-email?email=` | **403** — disabled |
+
+### 13.3 Profile posts
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/profile-posts/{id}/` | `profile_post` object: `profile_post_id`, `profile_user_id`, `message`, `comment_count`, `reaction_score`, `ProfileUser`, `User` |
+| GET | `/profile-posts/{id}/comments` | `page` |
+| POST | `/profile-posts/` | needs `profile_post:write` scope (not granted to this app) |
+
+### 13.4 Stats
+
+```
+GET /api/stats
+```
+
+```json
+{ "totals": { "threads": "1047777", "messages": "36671980", "users": 1249342 },
+  "latest_user": { "user_id": <user_id>, "username": "<username>", "register_date": <unix_ts> },
+  "online": { "total": "16253", "members": "1277", "guests": "14976" } }
+```
+
+Guest-accessible. Note `totals` values are **strings**, `users` is a number.
+
+### 13.5 Attachments
+
+**Status: upload via REST API does not work. Use the web UI.**
+
+#### What works
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/attachments/{id}/` | returns the `attachment` object (see shape below) |
+| GET | `/posts/{id}/` | includes an `Attachments` array when the post has files |
+
+Attachment object:
+
+```json
+{ "attachment": {
+    "attachment_id": <attachment_id>,
+    "content_id": <post_id>,
+    "content_type": "post",
+    "filename": "1685413887274.png",
+    "file_size": 279828,
+    "attach_date": 1685413853,
+    "direct_url": "https://voz.vn/attachments/<slug>.<id>/",
+    "thumbnail_url": "https://data.voz.vn/attachments/...",
+    "width": 955, "height": 719,
+    "is_audio": false, "is_video": false,
+    "view_count": 957 } }
+```
+
+#### What does not work
+
+| Attempt | Result |
+|---|---|
+| `POST /api/attachments/` (no body) | `400 required_input_missing`, `params.missing: ["key"]` |
+| `POST /api/attachments/` with `key` + multipart `attachment` | `404 requested_page_not_found` |
+| `POST /api/attachments/` with `key` = UUID / MD5 / SHA1 / attachment id / upload hash | `404 requested_page_not_found` |
+| `POST /api/attachments/` with `key` = `attachment_hash_combined` JSON | `404 requested_page_not_found` |
+| `POST /api/attachments/upload` | `404 endpoint_not_found`, `params.reason: "invalid_action"` |
+| `GET /api/attachments/?key=<anything>` | `404 requested_page_not_found` |
+| `POST /api/posts/{id}/` with `attachment_key=<value>` | `400 attachment_key_unknown` |
+
+The `attachment:write` scope **is** grantable — it appears on the consent screen as
+"Covers uploading new attachments" and can be added to the authorize request:
+
+```
+&scope=... attachment:read attachment:write
+```
+
+With that scope the `missing_scope` error disappears, but every upload attempt then
+falls through to `404 requested_page_not_found`. The REST route accepts the scope check
+and then fails to resolve the request — the upload action is not wired up on this
+install.
+
+`attachment_key` **is** a real field on `POST /api/posts/{id}/` (it validates and
+returns `attachment_key_unknown`), but no key format tried was accepted. The key is
+presumably issued by the upload endpoint, which is unreachable — so the field cannot be
+used.
+
+#### How the web UI does it
+
+The browser uses a **non-API** route, not `/api/`:
+
+```
+POST /attachments/upload?type=post&context[post_id]=<post_id>&hash=<upload_hash>
+  multipart field: attachment
+  header: X-Requested-With: XMLHttpRequest
+  header: _xfToken: <csrf>
+```
+
+The `hash` comes from a hidden input on the edit page:
+
+```html
+<input type="hidden" name="attachment_hash" value="<hash>">
+<input type="hidden" name="attachment_hash_combined"
+       value='{"type":"post","context":{"post_id":<id>},"hash":"<hash>"}'>
+```
+
+Uploading returns an HTML fragment (`template-attachment_upload`) containing
+`<li data-attachment-id="...">`. The attachment only becomes permanent after the post
+is saved with the edit form, which submits `attachment_hash` /
+`attachment_hash_combined` alongside the message.
+
+Verified end-to-end in the browser: file uploaded → `data-attachment-id` appeared →
+Save → `GET /api/posts/{id}/` showed `attach_count: 1` and the `Attachments` array.
+Deleting the file in the editor and saving brought `attach_count` back to `0`.
+
+#### Practical workaround
+
+If you need to attach a file programmatically:
+
+1. `GET /posts/{id}/edit` with the session cookie, scrape `attachment_hash` and
+   `_xfToken`.
+2. `POST /attachments/upload?type=post&context[post_id]={id}&hash={hash}` with the
+   file as multipart `attachment`.
+3. `POST /posts/{id}/edit` with `_xfToken`, `message`, `attachment_hash`,
+   `attachment_hash_combined`.
+
+This requires a **cookie session**, not the OAuth bearer token — the `/attachments/`
+and `/posts/{id}/edit` routes are the web frontend, not the REST API.
+
+### 13.6 Account management (unverified — validation errors only)
+
+| Method | Path | Required input |
+|---|---|---|
+| POST | `/me/avatar` | `avatar` |
+| POST | `/me/password` | `current_password`, `new_password` |
+| POST | `/me/email` | `current_password`, `email` |
+
+These exist and are reachable with the current token, but were **not executed** —
+they change account credentials. Input names come from the `required_input_missing`
+error payload.
+
+### 13.7 Thread creation (unverified)
+
+```
+POST /api/threads/
+  node_id, title, message
+```
+
+`400 required_input_missing` with `params.missing: ["node_id", "title", "message"]`.
+Not executed — the user asked not to create new threads.
+
+### 13.8 Confirmed absent
+
+These return `404` and do **not** exist on this install:
+
+```
+/api/forums/            /api/categories/       /api/tags/
+/api/online/            /api/link-forums/      /api/batch
+/api/me/alerts          /api/me/watched        /api/me/bookmarks
+/api/me/conversations   /api/me/push           /api/me/notifications
+/api/me/ignored         /api/me/following      /api/me/followers
+/api/me/timeline        /api/me/likes          /api/me/avatar (GET)
+/api/me/security        /api/me/settings       /api/me/preferences
+/api/me/tfa             /api/me/sessions       /api/me/oauth
+/api/me/api-keys        /api/posts/ (list)     /api/polls/
+/api/threads/{id}/poll  /api/threads/{id}/tags /api/threads/{id}/reactions
+/api/posts/{id}/reactions                     /api/users/{id}/followers
+/api/users/{id}/following                     /api/users/{id}/timeline
+/api/users/{id}/likes   /api/users/{id}/bookmarks
+/api/users/{id}/warnings                      /api/users/{id}/ignored
+/api/users/{id}/avatar  /api/users/{id}/activity
+/api/users/{id}/threads /api/users/{id}/posts
+/api/users/{id}/conversations
+/api/users/{id}/follow  /api/users/{id}/ignore
+/api/threads/{id}/bookmark  /api/threads/{id}/watch  /api/posts/{id}/bookmark
+/api/conversations/{id}/leave  /api/conversations/{id}/read
+/api/alerts/{id}/  /api/alerts/{id}/read  /api/alerts/{id}/mark
+/api/alerts/read
+```
+
+Bookmarking and watching live only under the `/voz/` prefix
+(`/voz/posts/{id}/bookmark`, `/voz/threads/{id}/watch`) — the plain XenForo paths
+are not routed on this install.
+
+### 13.9 Error codes seen while probing
+
+| Code | Meaning |
+|---|---|
+| `required_input_missing` | `params.missing` lists the missing fields |
+| `missing_scope` | `params.scope` names the required scope |
+| `endpoint_not_found` | route exists but action invalid (`params.reason`: `invalid_action`, `invalid_route`) |
+| `requested_page_not_found` | unknown id or unrouted path |
+| `requested_thread_not_found` | thread id unknown or not visible |
+| `requested_post_not_found` | post id unknown or soft-deleted |
+| `requested_direct_message_not_found` | conversation id unknown or left |
+| `login_required` | endpoint needs a session, not just a scope |
+| `invalid_grant` / `invalid_client` | OAuth token endpoint errors |
