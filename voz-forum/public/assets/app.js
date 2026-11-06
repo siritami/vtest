@@ -40,11 +40,12 @@ const esc = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+// voz.vn rounds to whole K/M (12301 → 12K, 443764 → 444K, 1274095 → 1M).
 const num = (value) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return '0';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.0', '')}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace('.0', '')}K`;
+  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(n);
 };
 
@@ -76,13 +77,7 @@ function fullDate(seconds) {
   });
 }
 
-function avatar(user, size = 'm') {
-  const urls = (user && user.avatar_urls) || {};
-  return urls[size] || urls.m || urls.l || urls.o || '';
-}
-
 /* --------------------------------------------------------------- url slugs */
-
 // voz.vn canonical URLs carry a slug: /t/<slug>.<id>/page-<n>, /f/<slug>.<id>/page-<n>,
 // /u/<slug>.<id>/, /direct-messages/<slug>.<id>/. The slug is cosmetic — the numeric
 // id is what the API uses — but it is reproduced so links look identical to voz.vn.
@@ -132,19 +127,143 @@ function withPage(path, page) {
   return n > 1 ? `${base}page-${n}/` : base;
 }
 
-// `size` is the 1x source; the next larger variant is offered as 2x so the
-// avatar stays sharp on HiDPI screens.
-const AVATAR_2X = { s: 'm', m: 'l', l: 'o', o: 'o' };
+// voz.vn buckets avatar files by floor(user_id / 1000): /avatars/s/1680/1680514.jpg
+function avatarUrlById(userId, size = 's') {
+  const id = Number(userId);
+  if (!id) return '';
+  return `https://data.voz.vn/avatars/${size}/${Math.floor(id / 1000)}/${id}.jpg`;
+}
 
-function avatarImg(user, size = 'm', cls = '') {
-  const src = avatar(user, size);
-  if (!src) {
-    const initial = esc(((user && user.username) || '?').slice(0, 1).toUpperCase());
-    return `<span class="node-icon ${cls}" aria-hidden="true">${initial}</span>`;
-  }
-  const hi = avatar(user, AVATAR_2X[size] || size);
-  const srcset = hi && hi !== src ? ` srcset="${esc(src)} 1x, ${esc(hi)} 2x"` : '';
-  return `<img class="${cls}" src="${esc(src)}"${srcset} alt="" loading="lazy" referrerpolicy="no-referrer">`;
+// XenForo's generated avatars cycle through a fixed palette.
+const DYNAMIC_AVATAR = [
+  ['#66cc66', '#206020'],
+  ['#669966', '#1f2e1f'],
+  ['#33cc99', '#0f3d2e'],
+  ['#339966', '#06130d'],
+  ['#66cc33', '#1f3d0f'],
+  ['#66cccc', '#206060'],
+  ['#99cc66', '#406020'],
+];
+
+// Avatar with a coloured initial underneath, so a missing image degrades to the
+// same generated avatar voz.vn shows instead of a broken-image icon.
+function avatarMarkup(user, size = 's') {
+  const id = Number(user && user.user_id) || 0;
+  const urls = (user && user.avatar_urls) || {};
+  // A stub user (only id + username) has no avatar_urls at all, so guess the
+  // canonical path. A user whose avatar_urls are all null genuinely has no
+  // avatar — guessing there would only produce 404s.
+  const known = Object.keys(urls).length > 0;
+  const src = known
+    ? urls[size] || urls.m || urls.l || urls.o || ''
+    : avatarUrlById(id, size);
+  const [bg, fg] = DYNAMIC_AVATAR[id % DYNAMIC_AVATAR.length];
+  const initial = esc(((user && user.username) || '?').slice(0, 1).toUpperCase());
+  const img = src
+    ? `<img class="avatar-img" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    : '';
+  return `<span class="avatar-fallback" style="background:${bg};color:${fg}"><span aria-hidden="true">${initial}</span>${img}</span>`;
+}
+
+// Prefix ids are stable per forum; the label colour is what voz.vn renders.
+const PREFIX_CLASS = {
+  4: 'green', 5: 'red', 6: 'royalBlue', 7: 'orange',
+  8: 'green', 9: 'red', 10: 'royalBlue', 11: 'orange',
+  12: 'primary', 13: 'accent', 14: 'red', 15: 'green',
+  16: 'orange', 17: 'royalBlue', 18: 'gray', 19: 'olive',
+  20: 'red', 21: 'green', 22: 'royalBlue',
+};
+
+function prefixLabel(thread) {
+  if (!thread || !thread.prefix) return '';
+  const cls = PREFIX_CLASS[thread.prefix_id] || 'gray';
+  return `<span class="label label--${cls}">${esc(thread.prefix)}</span> `;
+}
+
+const POSTS_PER_PAGE = 20;
+
+function threadLastPage(thread) {
+  return Math.max(1, Math.ceil(((Number(thread.reply_count) || 0) + 1) / POSTS_PER_PAGE));
+}
+
+// One row of a XenForo thread list: icon | main | meta | latest | iconEnd.
+function threadRow(thread, { sticky = false, showForum = false } = {}) {
+  const starter = thread.User || { user_id: thread.user_id, username: thread.username };
+  const lastUser = { user_id: thread.last_post_user_id, username: thread.last_post_username };
+  const lastPage = threadLastPage(thread);
+  const statuses = [
+    thread.discussion_open === false
+      ? '<li><i class="structItem-status structItem-status--locked" title="Đã khóa"></i><span class="u-srOnly">Đã khóa</span></li>'
+      : '',
+    sticky
+      ? '<li><i class="structItem-status structItem-status--sticky" title="Ghim"></i><span class="u-srOnly">Ghim</span></li>'
+      : '',
+  ].join('');
+  const jumpCount = Math.min(3, lastPage);
+  const jump =
+    lastPage > 1
+      ? `<span class="structItem-pageJump">${Array.from(
+          { length: jumpCount },
+          (_, i) => `<a href="${withPage(threadPath(thread), lastPage - jumpCount + 1 + i)}">${lastPage - jumpCount + 1 + i}</a>`
+        ).join('')}</span>`
+      : '';
+  return `
+    <li class="structItem structItem--thread">
+      <div class="structItem-cell structItem-cell--icon">
+        <div class="structItem-iconContainer">
+          <a href="${userPath(starter)}" class="avatar avatar--s">${avatarMarkup(starter, 's')}</a>
+        </div>
+      </div>
+      <div class="structItem-cell structItem-cell--main">
+        ${statuses ? `<ul class="structItem-statuses">${statuses}</ul>` : ''}
+        <div class="structItem-title">${prefixLabel(thread)}<a href="${threadPath(thread)}">${esc(thread.title)}</a></div>
+        <div class="structItem-minor">
+          <ul class="structItem-parts">
+            <li><a href="${userPath(starter)}">${esc(thread.username)}</a></li>
+            <li class="structItem-startDate"><a href="${threadPath(thread)}">${timeAgo(thread.post_date)}</a></li>
+            ${showForum && thread.Forum ? `<li><a href="${forumPath(thread.Forum)}">${esc(thread.Forum.title)}</a></li>` : ''}
+          </ul>${jump}
+        </div>
+      </div>
+      <div class="structItem-cell structItem-cell--meta">
+        <dl class="pairs pairs--justified"><dt>Trả lời</dt><dd>${num(thread.reply_count)}</dd></dl>
+        <dl class="pairs pairs--justified structItem-minor"><dt>Lượt xem</dt><dd>${num(thread.view_count)}</dd></dl>
+      </div>
+      <div class="structItem-cell structItem-cell--latest">
+        <a href="${withPage(threadPath(thread), lastPage)}"><time class="structItem-latestDate">${timeAgo(thread.last_post_date)}</time></a>
+        <div class="structItem-minor"><a href="${userPath(lastUser)}">${esc(thread.last_post_username || '')}</a></div>
+      </div>
+      <div class="structItem-cell structItem-cell--icon structItem-cell--iconEnd">
+        <div class="structItem-iconContainer">
+          <a href="${userPath(lastUser)}" class="avatar avatar--xxs">${avatarMarkup(lastUser, 's')}</a>
+        </div>
+      </div>
+    </li>`;
+}
+
+// Row for post-centric lists (bookmarks, search results).
+function postRow(post, thread) {
+  const author = post.User || { user_id: post.user_id, username: post.username };
+  const title = (thread && thread.title) || `Bài #${post.post_id}`;
+  const href = `${threadPath({ thread_id: post.thread_id, title })}?post=${post.post_id}`;
+  return `
+    <li class="structItem structItem--thread">
+      <div class="structItem-cell structItem-cell--icon">
+        <div class="structItem-iconContainer">
+          <a href="${userPath(author)}" class="avatar avatar--s">${avatarMarkup(author, 's')}</a>
+        </div>
+      </div>
+      <div class="structItem-cell structItem-cell--main">
+        <div class="structItem-title"><a href="${href}">${esc(title)}</a></div>
+        <div class="structItem-minor">
+          <ul class="structItem-parts">
+            <li><a href="${userPath(author)}">${esc(post.username)}</a></li>
+            <li>${timeAgo(post.post_date)}</li>
+          </ul>
+        </div>
+        <p class="structItem-snippet">${esc(bbcodeToPlain(post.message).replace(/\s+/g, ' ').slice(0, 240))}</p>
+      </div>
+    </li>`;
 }
 
 function toast(message, isError = false) {
@@ -384,7 +503,7 @@ function renderAccount() {
   if (state.loggedIn && state.me) {
     const me = state.me;
     accountEl.innerHTML = `
-      <a href="${userPath(me)}" class="u-nowrap">${avatarImg(me, 's', 'avatar')}</a>
+      <a href="${userPath(me)}" class="u-nowrap avatar">${avatarMarkup(me, 's')}</a>
       <a href="${userPath(me)}" class="username">${esc(me.username)}</a>
       <button class="button button--small" id="logout-btn" type="button">Đăng xuất</button>
     `;
@@ -476,33 +595,6 @@ async function viewForum(nodeId, page) {
 
     const sticky = threadsRes.sticky || [];
     const threads = threadsRes.threads || [];
-    const renderThread = (t, isSticky) => `
-      <li class="structItem${isSticky ? ' structItem--sticky' : ''}">
-        ${avatarImg(t.User, 's', 'structItem-avatar')}
-        <div class="structItem-main">
-          <h3 class="structItem-title">
-            ${isSticky ? '<span class="label label--sticky">Ghim</span> ' : ''}
-            ${t.prefix ? `<span class="label label--prefix">${esc(t.prefix)}</span> ` : ''}
-            <a href="${threadPath(t)}">${esc(t.title)}</a>
-            ${t.discussion_open === false ? ' <span class="label label--locked">Khoá</span>' : ''}
-          </h3>
-          <ul class="structItem-parts">
-            <li><a href="${userPath(t.User || { user_id: t.user_id, username: t.username })}">${esc(t.username)}</a></li>
-            <li>${timeAgo(t.post_date)}</li>
-            <li>${num(t.reply_count)} trả lời</li>
-            <li>${num(t.view_count)} lượt xem</li>
-          </ul>
-          ${t.first_post_snippet ? `<p class="structItem-snippet">${esc(t.first_post_snippet.replace(/\s+/g, ' ').slice(0, 220))}</p>` : ''}
-        </div>
-        <div class="structItem-stats">
-          <div><b>${num(t.reply_count)}</b>trả lời</div>
-          <div><b>${num(t.view_count)}</b>xem</div>
-        </div>
-        <div class="structItem-lastPost">
-          <a href="${withPage(threadPath(t), t.pagination ? t.pagination.last_page : 1)}">${timeAgo(t.last_post_date)}</a><br>
-          <a href="${userPath({ user_id: t.last_post_user_id, username: t.last_post_username })}">${esc(t.last_post_username || '')}</a>
-        </div>
-      </li>`;
 
     app.innerHTML = `
       <div class="block">
@@ -510,8 +602,10 @@ async function viewForum(nodeId, page) {
           ${esc(forum.title)}
           <span class="block-header-extra">${num(threadsRes.pagination && threadsRes.pagination.total)} chủ đề</span>
         </div>
-        ${sticky.length ? `<ul class="structItemContainer">${sticky.map((t) => renderThread(t, true)).join('')}</ul>` : ''}
-        <ul class="structItemContainer">${threads.map((t) => renderThread(t, false)).join('')}</ul>
+        <div class="structItemContainer">
+          ${sticky.length ? `<div class="structItemContainer-group structItemContainer-group--sticky">${sticky.map((t) => threadRow(t, { sticky: true })).join('')}</div>` : ''}
+          <div class="structItemContainer-group">${threads.map((t) => threadRow(t)).join('')}</div>
+        </div>
         ${pagination(threadsRes.pagination, (p) => withPage(forumPath(forum), p))}
       </div>`;
   } catch (err) {
@@ -529,26 +623,9 @@ async function viewNewThreads(page) {
     app.innerHTML = `
       <div class="block">
         <div class="block-header">Bài mới<span class="block-header-extra">${num(res.pagination && res.pagination.total)} chủ đề</span></div>
-        <ul class="structItemContainer">
-          ${threads
-            .map(
-              (t) => `
-            <li class="structItem">
-              ${avatarImg(t.User, 's', 'structItem-avatar')}
-              <div class="structItem-main">
-                <h3 class="structItem-title"><a href="${threadPath(t)}">${esc(t.title)}</a></h3>
-                <ul class="structItem-parts">
-                  <li><a href="${userPath(t.User || { user_id: t.user_id, username: t.username })}">${esc(t.username)}</a></li>
-                  <li>${timeAgo(t.post_date)}</li>
-                  <li><a href="${forumPath(t.Forum || { node_id: t.node_id, title: "" })}">${esc((t.Forum && t.Forum.title) || '')}</a></li>
-                  <li>${num(t.reply_count)} trả lời</li>
-                </ul>
-              </div>
-              <div class="structItem-lastPost">${timeAgo(t.last_post_date)}</div>
-            </li>`
-            )
-            .join('')}
-        </ul>
+        <div class="structItemContainer">
+          <div class="structItemContainer-group">${threads.map((t) => threadRow(t, { showForum: true })).join('')}</div>
+        </div>
         ${pagination(res.pagination, (p) => withPage("/new", p))}
       </div>`;
   } catch (err) {
@@ -671,7 +748,7 @@ function postHtml(post, thread, page) {
         <div class="message-cell message-cell--user">
           <section class="message-user">
             <div class="message-avatar">
-              <a href="${userPath(user)}">${avatarImg(user, 'l', 'avatar')}</a>
+              <a href="${userPath(user)}" class="avatar avatar--l">${avatarMarkup(user, 'l')}</a>
             </div>
             <div class="message-userDetails">
               <h4 class="message-name"><a class="username" href="${userPath(user)}">${esc(post.username)}</a></h4>
@@ -802,8 +879,7 @@ async function viewThread(threadId, page, focusPost) {
       <div class="block block--messages">
         <div class="block-header">
           <span class="block-header-title">
-            ${thread.prefix ? `<span class="label label--prefix">${esc(thread.prefix)}</span>` : ''}
-            ${esc(thread.title)}
+            ${prefixLabel(thread)}${esc(thread.title)}
           </span>
           <span class="block-header-extra">${num(thread.reply_count)} trả lời · ${num(thread.view_count)} xem</span>
           <button type="button" class="block-header-icon${watching ? ' is-on' : ''}" id="watch-btn"
@@ -1128,25 +1204,16 @@ async function runSearch(query, page, searchId) {
     app.innerHTML = `
       <div class="block">
         <div class="block-header">Kết quả cho “${esc(query || '')}”<span class="block-header-extra">${num(res.pagination && res.pagination.total)} kết quả</span></div>
-        <ul class="structItemContainer">
-          ${results
-            .map((item) => {
-              const p = item.result || {};
-              const thread = p.Thread || {};
-              return `<li class="structItem">
-                ${avatarImg(p.User, 's', 'structItem-avatar')}
-                <div class="structItem-main">
-                  <h3 class="structItem-title"><a href="${threadPath({ thread_id: p.thread_id, title: (thread && thread.title) || "" })}?post=${p.post_id}">${esc(thread.title || `Bài #${p.post_id}`)}</a></h3>
-                  <ul class="structItem-parts">
-                    <li><a href="${userPath(p.User || { user_id: p.user_id, username: p.username })}">${esc(p.username)}</a></li>
-                    <li>${timeAgo(p.post_date)}</li>
-                  </ul>
-                  <p class="structItem-snippet">${esc(bbcodeToPlain(p.message).replace(/\s+/g, ' ').slice(0, 240))}</p>
-                </div>
-              </li>`;
-            })
-            .join('')}
-        </ul>
+        <div class="structItemContainer">
+          <div class="structItemContainer-group">
+            ${results
+              .map((item) => {
+                const p = item.result || {};
+                return postRow(p, p.Thread || {});
+              })
+              .join('')}
+          </div>
+        </div>
         ${pagination(res.pagination, (p) => `/search?q=${encodeURIComponent(query || '')}&id=${id}&page=${p}`)}
       </div>`;
   } catch (err) {
@@ -1177,7 +1244,7 @@ async function viewDmList(page) {
                     .map(([, name]) => name);
                   const who = others.length ? others.join(', ') : c.username;
                   return `<li class="dm-row${c.is_unread ? ' is-unread' : ''}">
-                    ${avatarImg(c.Starter, 's')}
+                    <a href="${dmPath(c)}" class="avatar">${avatarMarkup(c.Starter, 's')}</a>
                     <div class="dm-main">
                       <a class="dm-title" href="${dmPath(c)}">${esc(c.title)}</a>
                       <div class="dm-meta">${esc(who)} · ${timeAgo(c.last_message_date)} · ${num(c.reply_count)} trả lời</div>
@@ -1350,7 +1417,7 @@ async function viewAlerts(page) {
                 .map(
                   (a) => `
               <div class="alert-row${a.read_date ? '' : ' is-unread'}">
-                ${avatarImg(a.User, 's')}
+                <a href="${userPath(a.User || { user_id: a.user_id, username: a.username })}" class="avatar">${avatarMarkup(a.User, 's')}</a>
                 <div class="alert-main">
                   <div>${esc(a.alert_text)}</div>
                   ${a.content_title ? `<div class="u-smaller u-dimmed">${esc(a.content_title)}</div>` : ''}
@@ -1381,23 +1448,9 @@ async function viewBookmarks(page) {
         <div class="block-header">Bài viết đã đánh dấu</div>
         ${
           items.length
-            ? `<ul class="structItemContainer">${items
-                .map((b) => {
-                  const p = b.Post || {};
-                  const thread = p.Thread || {};
-                  return `<li class="structItem">
-                    ${avatarImg(p.User, 's', 'structItem-avatar')}
-                    <div class="structItem-main">
-                      <h3 class="structItem-title"><a href="${threadPath({ thread_id: p.thread_id, title: (thread && thread.title) || "" })}?post=${p.post_id}">${esc(thread.title || `Bài #${p.post_id}`)}</a></h3>
-                      <ul class="structItem-parts">
-                        <li><a href="${userPath(p.User || { user_id: p.user_id, username: p.username })}">${esc(p.username)}</a></li>
-                        <li>đánh dấu ${timeAgo(b.bookmark_date)}</li>
-                      </ul>
-                      <p class="structItem-snippet">${esc(bbcodeToPlain(p.message).replace(/\s+/g, ' ').slice(0, 240))}</p>
-                    </div>
-                  </li>`;
-                })
-                .join('')}</ul>`
+            ? `<div class="structItemContainer"><div class="structItemContainer-group">${items
+                .map((b) => postRow(b.Post || {}, (b.Post && b.Post.Thread) || {}))
+                .join('')}</div></div>`
             : '<div class="empty">Chưa đánh dấu bài nào.</div>'
         }
         ${pagination(res.pagination, (p) => withPage("/bookmarks", p))}
@@ -1420,22 +1473,9 @@ async function viewWatched(page) {
         <div class="block-header">Chủ đề đang theo dõi</div>
         ${
           threads.length
-            ? `<ul class="structItemContainer">${threads
-                .map(
-                  (t) => `
-              <li class="structItem">
-                ${avatarImg(t.User, 's', 'structItem-avatar')}
-                <div class="structItem-main">
-                  <h3 class="structItem-title"><a href="${threadPath(t)}">${esc(t.title)}</a></h3>
-                  <ul class="structItem-parts">
-                    <li><a href="${userPath(t.User || { user_id: t.user_id, username: t.username })}">${esc(t.username)}</a></li>
-                    <li>${num(t.reply_count)} trả lời</li>
-                    <li>${timeAgo(t.last_post_date)}</li>
-                  </ul>
-                </div>
-              </li>`
-                )
-                .join('')}</ul>`
+            ? `<div class="structItemContainer"><div class="structItemContainer-group">${threads
+                .map((t) => threadRow(t, { showForum: true }))
+                .join('')}</div></div>`
             : '<div class="empty">Chưa theo dõi chủ đề nào.</div>'
         }
         ${pagination(res.pagination, (p) => withPage("/watched", p))}
@@ -1457,7 +1497,7 @@ async function viewUser(userId) {
       <div class="block">
         <div class="block-header">${esc(user.username)}</div>
         <div class="profile-head">
-          ${avatarImg(user, 'l')}
+          <span class="avatar avatar--l">${avatarMarkup(user, 'l')}</span>
           <div>
             <h1 class="profile-name">${esc(user.username)}</h1>
             ${user.user_title ? `<div class="profile-title">${esc(user.user_title)}</div>` : ''}

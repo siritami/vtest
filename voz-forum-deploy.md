@@ -530,11 +530,11 @@ Sao chép từ voz.vn:
 | `.block-header` | thanh xanh `#5c7099`, chứa tiêu đề + số trả lời/lượt xem |
 | Nút theo dõi | **icon con mắt** trong thanh xanh, góc phải; bật = nền cam `#ff6600` |
 | `.block-outer` | hàng riêng ngay dưới thanh xanh, chứa `.pageNav` |
-| `.pageNav` | `‹ Trước` + `ul.pageNav-main` (các số trang) + `Sau ›` + `Trang x/y` |
+| `.pageNav` | `‹ Trước` + `ul.pageNav-main` (các số trang) + `Sau ›` + tên tác giả bên phải |
 
 Phân trang dùng `ul/li` giống XenForo: mỗi số là một `li.pageNav-page`, trang hiện tại là
-`span.current` (nền trong suốt, chữ cam đậm), các trang khác nền `#dfe7f6`. Dấu `…` là
-`li.pageNav-skip`.
+`span.current` (nền `#5c7099`, chữ trắng), các trang khác nền `#dfe7f6`. Dấu `…` là
+`li.pageNav-skip` — bấm vào sẽ đổi thành ô nhập số trang (Enter để đi, Esc/blur để huỷ).
 
 Nút theo dõi gọi `POST /voz/threads/{id}/watch` với `state=watch` / `state=unwatch`; trạng
 thái ban đầu đọc từ `thread.is_watching` (chỉ có khi đã đăng nhập).
@@ -560,6 +560,60 @@ trong response API.
 
 Ảnh trong bài (`voz.vn/attachments/…`) hotlink được — đã kiểm tra trả `200 image/webp`
 kể cả khi `Referer` là domain khác.
+
+### 6.5 Danh sách chủ đề (`structItem`)
+
+Bảng chủ đề dùng đúng cấu trúc bảng của XenForo — `display: table` + `table-layout: fixed`,
+5 ô:
+
+| Ô | Rộng | Nội dung |
+|---|---|---|
+| `--icon` | 52px | avatar người lập chủ đề (36px) |
+| `--main` | auto | `ul.structItem-statuses` (float phải) + tiêu đề + `structItem-minor` |
+| `--meta` | 135px | 2 dòng `dl.pairs--justified`: `Trả lời` / `Lượt xem` |
+| `--latest` | 190px | thời gian bài cuối + tên người gửi cuối, canh phải |
+| `--iconEnd` | 40px | avatar người gửi cuối (24px) |
+
+`dl.pairs--justified` đặt `dt` float trái và `dd` float phải, nên **mọi con số trong cột
+thẳng hàng nhau** bất kể độ dài nhãn.
+
+**Trạng thái** dùng mask SVG của Font Awesome 5 (nhúng dạng data-URI, không phụ thuộc
+mạng): `structItem-status--sticky` = thumbtack, `structItem-status--locked` = ổ khoá.
+Chủ đề ghim có tiêu đề màu cam (`--link-hover`), giống voz.vn.
+
+**Tiền tố** (`prefix_id`) map sang class màu của XenForo — bảng lấy trực tiếp từ
+`<option data-prefix-class>` trong form đăng bài của từng forum:
+
+| id | nhãn | class |
+|---|---|---|
+| 4 | góp ý | `green` |
+| 5 | báo lỗi | `red` |
+| 6 | thắc mắc | `royalBlue` |
+| 7 | chú ý | `orange` |
+| 8 / 9 / 10 / 11 | HN / SG / ĐN / khác | `green` / `red` / `royalBlue` / `orange` |
+| 12 | thảo luận | `primary` |
+| 13 | tin tức | `accent` |
+| 14 | đánh giá | `red` |
+| 15 | khoe | `green` |
+| 16 | thắc mắc | `orange` |
+| 17 | kiến thức | `royalBlue` |
+| 18 | TQ | `gray` |
+| 19 | download | `olive` |
+| 20 / 21 | tuyển dụng / tìm việc | `red` / `green` |
+| 22 | Dịch | `royalBlue` |
+
+**Avatar** dùng `avatarMarkup()`: một `<span>` nền màu + chữ cái đầu, ảnh thật phủ lên
+trên. Nếu ảnh 404 (`onerror="this.remove()"`) thì lộ ra avatar chữ cái — đúng như
+`avatar--default--dynamic` của XenForo. Bảng màu chữ cái lấy từ voz.vn
+(`#66cc66/#206020`, `#669966/#1f2e1f`, …), chọn theo `user_id % 7`.
+
+Với user chỉ có `user_id` + `username` (không có `avatar_urls`), ảnh được đoán theo quy
+tắc thư mục của voz.vn: `https://data.voz.vn/avatars/{size}/{floor(id/1000)}/{id}.jpg`.
+Nếu `avatar_urls` tồn tại nhưng toàn `null` thì user thật sự không có avatar → chỉ hiện
+chữ cái, không đoán (tránh 404).
+
+**Số liệu** làm tròn giống voz.vn: `12301 → 12K`, `443764 → 444K`, `1274095 → 1M`
+(`Math.round`, không có phần thập phân).
 
 ---
 
