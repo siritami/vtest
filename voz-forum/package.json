@@ -1,0 +1,11 @@
+{
+  "name": "voz-forum",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "VOZ-style forum front-end built on the voz.vn REST API (OAuth2 + PKCE)",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}

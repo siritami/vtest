@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "regions": ["sin1"],
+  "rewrites": [
+    { "source": "/((?!api/|assets/|userscript/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0" }
+      ]
+    }
+  ]
+}
