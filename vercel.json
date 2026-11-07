@@ -1,6 +1,7 @@
 {
   "version": 2,
   "regions": ["sin1"],
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/((?!api/|assets/|userscript/).*)", "destination": "/index.html" }
   ],

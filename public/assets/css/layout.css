@@ -1,0 +1,177 @@
+/* Page chrome: header, nav, body wrapper, blocks, footer. */
+
+/* ---------- header ---------- */
+.p-header {
+  background: var(--header-bg);
+  color: var(--header-fg);
+}
+.p-header-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px;
+}
+.p-header-logo {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  flex: 0 0 auto;
+}
+.p-header-logo:hover { color: var(--nav-active); }
+.p-header-search {
+  display: flex;
+  flex: 1 1 auto;
+  max-width: 420px;
+}
+.p-header-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: #eff0f0;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+.p-header-search button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--block-header-bg);
+  color: var(--block-header-fg);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.p-header-search button:hover { background: #6b80ab; }
+.p-header-account {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.p-header-account .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #4a525b;
+}
+.p-header-account .username { color: #fff; font-weight: 600; }
+.p-header-account .badge {
+  background: var(--nav-active);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---------- nav ---------- */
+.p-nav {
+  background: var(--nav-bg);
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+.p-nav-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 12px;
+}
+.p-nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Shortcuts can be added without limit; the cap is a safety valve, not a layout limit. */
+  max-height: 40vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.p-nav-list > li { min-width: 0; max-width: 100%; }
+.p-nav-list a {
+  display: block;
+  padding: 9px 14px;
+  color: var(--nav-fg);
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.p-nav-list a:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.p-nav-list a.is-active {
+  color: #fff;
+  border-bottom-color: var(--nav-active);
+}
+
+/* ---------- page body ---------- */
+.p-body {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 14px 12px 40px;
+}
+.p-breadcrumbs {
+  font-size: 14px;
+  color: var(--nav-fg);
+  margin-bottom: 10px;
+  min-height: 1px;
+}
+.p-breadcrumbs a { color: var(--nav-fg); }
+.p-breadcrumbs a:hover { color: #fff; }
+.p-breadcrumbs .sep { margin: 0 6px; color: var(--dimmed); }
+
+/* ---------- blocks ---------- */
+.block {
+  background: var(--content-bg);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.block-header {
+  margin: 0;
+  background: var(--block-header-bg);
+  color: var(--block-header-fg);
+  padding: 7px 12px;
+  font-size: 19px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.block-header a { color: var(--block-header-fg); }
+.block-header .block-header-extra {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 400;
+  opacity: .9;
+}
+.block-body { padding: 0; }
+.block-body--pad { padding: 12px; }
+.block-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--dimmed);
+}
+
+/* ---------- footer ---------- */
+.p-footer {
+  background: var(--footer-bg);
+  color: var(--footer-fg);
+  font-size: 14px;
+}
+.p-footer-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 18px 12px;
+}
+.p-footer a { color: #9fc0ea; }
+.p-footer p { margin: 0 0 6px; }

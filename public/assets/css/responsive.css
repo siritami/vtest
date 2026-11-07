@@ -1,0 +1,48 @@
+/* Responsive overrides — keep last so they win. */
+
+@media (max-width: 900px) {
+  .structItem-cell--meta { width: 115px; font-size: 12px; }
+  .structItem-cell--latest { width: 140px; font-size: 12px; }
+}
+@media (max-width: 860px) {
+  .message-cell--user { flex: 0 0 110px; padding: 8px; }
+  .message-avatar .avatar { width: 72px; height: 72px; }
+  .message-userStats { display: none; }
+  .node-stats { display: none; }
+}
+@media (max-width: 650px) {
+  .structItem-cell--iconEnd { display: none; }
+  .structItem-cell--latest { display: none; }
+}
+@media (max-width: 620px) {
+  .block--messages .pageNav a.pageNav-author { display: none; }
+  .block--messages > .block-header > .block-header-extra,
+  .block--messages > .block-header > #watch-btn { display: none; }
+  #thread-title { user-select: none; -webkit-touch-callout: none; }
+  #thread-title:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
+  .p-header-inner { flex-wrap: wrap; }
+  .p-header-search { order: 3; flex-basis: 100%; max-width: none; }
+  .message-inner { flex-direction: column; }
+  .message-cell--user {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    border-radius: 3px 3px 0 0;
+  }
+  .message-avatar { margin-bottom: 0; }
+  .message-user { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; text-align: left; }
+  .message-avatar { flex: 0 0 48px; }
+  .message-avatar .avatar { width: 48px; height: 48px; }
+  .message-userDetails { flex: 1; margin-bottom: 0; min-width: 0; overflow-wrap: anywhere; }
+  .message-userStats { display: block; flex: 0 0 auto; margin-left: auto; min-width: 92px; font-size: 11px; }
+  .message-userStats li { gap: 8px; white-space: nowrap; }
+  .message-userMeta { justify-content: flex-start; }
+  .message-userMeta .userTitle { flex-basis: auto; }
+  .message-cell--user { position: relative; border-bottom: 1px solid var(--border); }
+  .message-cell--user::after { content: ''; position: absolute; bottom: -6px; left: 28px; width: 10px; height: 10px; background: var(--quote-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transform: rotate(45deg); z-index: 1; }
+  .message-cell--main { border-radius: 0 0 3px 3px; }
+  .profile-head { flex-direction: column; align-items: center; text-align: center; }
+  .profile-stats { justify-content: center; }
+}

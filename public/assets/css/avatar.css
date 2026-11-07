@@ -1,0 +1,58 @@
+/* Avatars and thread prefix labels. */
+
+/* Avatars: image on top of a coloured initial so a 404 still looks right. */
+.avatar {
+  display: inline-block;
+  border-radius: 50%;
+  overflow: hidden;
+  text-decoration: none;
+  line-height: 1;
+}
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  container-type: inline-size;
+  font-weight: 400;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-fallback > span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60cqi;
+  line-height: 1;
+}
+.avatar-fallback .avatar-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* XenForo prefix labels — colours match voz.vn's label--* classes. */
+.label {
+  display: inline-block;
+  padding: 1px .35em;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 80%;
+  line-height: 1.35;
+  text-decoration: none;
+  vertical-align: middle;
+}
+.label--primary { color: #23497b; background: #dfe7f6; border-color: #c9d6ec; }
+.label--accent { color: hsl(24, 100%, 50%); background: hsl(24, 100%, 90%); border-color: hsl(24, 100%, 80%); }
+.label--red { color: #fff; background: hsl(0, 100%, 44%); border-color: hsl(0, 100%, 34%); }
+.label--green { color: #fff; background: hsl(120, 100%, 25%); border-color: hsl(120, 100%, 15%); }
+.label--olive { color: #fff; background: hsl(60, 100%, 25%); border-color: hsl(60, 100%, 15%); }
+.label--royalBlue { color: #fff; background: hsl(225, 73%, 57%); border-color: hsl(225, 73%, 47%); }
+.label--orange { color: #000; background: hsl(48, 100%, 50%); border-color: hsl(48, 100%, 40%); }
+.label--gray { color: #fff; background: hsl(0, 0%, 50%); border-color: hsl(0, 0%, 40%); }

@@ -1,0 +1,51 @@
+// Entry point: wires global listeners and boots the router.
+// All data comes from /api/xf/* (edge proxy) so the guest key and the OAuth
+// bearer token never reach the browser.
+
+import { navigate } from './core/nav.js';
+import { route } from './core/router.js';
+import { loadSession } from './ui/session.js';
+import { wireHeaderMenus } from './ui/headerMenus.js';
+import { wireNavShortcuts } from './ui/chrome.js';
+
+// Intercept same-origin link clicks so navigation never reloads the page.
+document.addEventListener('click', (event) => {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href');
+  if (!href || link.target === '_blank' || link.hasAttribute('download')) return;
+  const url = new URL(link.href, location.origin);
+  if (url.origin !== location.origin) return;
+  if (/^\/(api|assets|userscript)\//.test(url.pathname)) return;
+  // Same page, only a #post-… fragment: let the browser scroll, no re-render.
+  if (url.pathname === location.pathname && url.search === location.search && url.hash) {
+    const target = document.getElementById(url.hash.slice(1));
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ block: 'center' });
+      history.replaceState({}, '', url.pathname + url.search + url.hash);
+    }
+    return;
+  }
+  event.preventDefault();
+  navigate(url.pathname + url.search + url.hash);
+});
+
+wireHeaderMenus();
+wireNavShortcuts();
+
+window.addEventListener('popstate', () => {
+  window.scrollTo({ top: 0 });
+  route();
+});
+
+(async function boot() {
+  // Legacy hash URLs (#/t/123) are rewritten to the path form.
+  if (location.hash.startsWith('#/')) {
+    history.replaceState({}, '', location.hash.slice(1));
+  }
+  await loadSession();
+  await route();
+})();

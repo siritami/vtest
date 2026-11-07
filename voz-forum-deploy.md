@@ -4,23 +4,130 @@ Website diễn đàn theo phong cách voz.vn, chạy trên Vercel Edge (region *
 dùng REST API của voz.vn làm backend. Không có database riêng: mọi dữ liệu đọc/ghi trực tiếp
 qua API, phiên đăng nhập lưu trong cookie mã hoá base64url.
 
+> **Ghi chú về dữ liệu cá nhân.** Tài liệu này **không** chứa username, user id, member id,
+> conversation id, thread id, post id, attachment id hay nội dung bài viết thật của bất kỳ
+> thành viên nào. Mọi ví dụ dùng placeholder dạng `<slug>`, `<thread_id>`, `<post_id>`,
+> `<user_id>`, `<conversation_id>`, `<attach_id>`. Khi thêm ví dụ mới, giữ nguyên quy tắc
+> này: không dán URL voz.vn thật, không dán id thật, không dán nội dung bài viết thật.
+> Hằng số kỹ thuật của ứng dụng (`client_id`, guest API key, region, scope) **được giữ lại**
+> vì cần cho việc deploy và không phải thông tin cá nhân.
+
 ```
-vtest/voz-forum/
+vtest/
 ├── api/
 │   ├── [...path].js      # Edge Function: proxy /api/xf/* + OAuth endpoints
 │   └── index.js          # re-export cho route /api
 ├── public/
 │   ├── index.html        # shell (History API router)
 │   ├── assets/
-│   │   ├── style.css     # theme lấy từ voz.vn
+│   │   ├── app.js        # entry: global listeners + boot
 │   │   ├── api.js        # client gọi /api/xf/*
-│   │   └── app.js        # router + toàn bộ view
+│   │   ├── core/         # hạ tầng dùng chung
+│   │   │   ├── dom.js        # handle DOM + state toàn cục
+│   │   │   ├── icons.js      # SVG inline
+│   │   │   ├── utils.js      # esc / num / timeAgo / fullDate
+│   │   │   ├── paths.js      # slug + URL giống voz.vn
+│   │   │   ├── nav.js        # navigate / currentPage
+│   │   │   └── router.js     # parsePath + route
+│   │   ├── lib/          # logic thuần, không đụng DOM
+│   │   │   ├── avatar.js     # avatarMarkup + fallback chữ cái
+│   │   │   ├── bbcode.js     # sanitize + khôi phục size ảnh + quote
+│   │   │   ├── editorCodec.js # BBCode ⇄ HTML cho trình soạn
+│   │   │   ├── media.js      # khôi phục iframe/media + resize Reddit
+│   │   │   ├── prefix.js     # prefix_id → class màu
+│   │   │   ├── quotes.js     # khôi phục link nguồn của quote
+│   │   │   ├── attachments.js # [ATTACH]id → URL thật cho trình soạn
+│   │   │   ├── smilies.js    # danh mục /voz/smilies → <img>
+│   │   │   ├── stickers.js   # album sticker + recent + clientId (localStorage)
+│   │   │   ├── imgurImport.js # tách album id + tải album imgur
+│   │   │   ├── pikUpload.js  # nén + tải ảnh lên pik.vn qua proxy
+│   │   │   ├── spoilers.js   # parser BBCode → details/summary
+│   │   │   └── userBadges.js # User.banners → badge màu
+│   │   ├── ui/           # component render HTML
+│   │   │   ├── chrome.js     # header account / breadcrumbs / nav
+│   │   │   ├── headerMenus.js # dropdown tìm kiếm / hộp thư / thông báo
+│   │   │   ├── forumNodes.js # nhóm diễn đàn + bài mới nhất
+│   │   │   ├── feedback.js   # toast / loading / errorBox
+│   │   │   ├── pagination.js # pageNav + ô nhảy trang
+│   │   │   ├── threadRow.js  # 1 dòng danh sách chủ đề
+│   │   │   ├── post.js       # 1 bài viết (.message)
+│   │   │   ├── reactions.js  # nút cảm xúc + dải tên
+│   │   │   ├── editor.js     # textarea BBCode + toolbar
+│   │   │   ├── editorTools.js # bảng chèn (URL/ảnh/media/bảng/smilie/sticker)
+│   │   │   ├── stickerPicker.js # popup chọn sticker (tab album + gần đây)
+│   │   │   ├── memberTooltip.js # thẻ thành viên hover/chạm
+│   │   │   ├── titleHold.js  # giữ tiêu đề 1,5 s để theo dõi
+│   │   │   ├── unreadCounts.js # badge hộp thư / thông báo
+│   │   │   ├── inlineEdit.js # sửa bài tại chỗ (không modal)
+│   │   │   ├── modal.js      # modal shell + báo cáo
+│   │   │   └── session.js    # loadSession / requireLogin
+│   │   ├── views/        # 1 file / nhóm route
+│   │   │   ├── forum.js      # trang chủ + danh sách chủ đề + bài mới
+│   │   │   ├── thread.js     # chủ đề + trả lời + mọi action
+│   │   │   ├── compose.js    # tạo chủ đề + chọn tiền tố
+│   │   │   ├── search.js
+│   │   │   ├── dm.js         # hộp thư / hội thoại / soạn mới
+│   │   │   ├── lists.js      # thông báo / đánh dấu / theo dõi
+│   │   │   ├── user.js
+│   │   │   ├── settings.js  # /cai-dat-tuivoz — phím tắt nav + sticker + JSON backup
+│   │   │   └── login.js
+│   │   └── css/          # theme, tách theo khu vực
+│   │       ├── base.css      # biến màu + reset + utility
+│   │       ├── layout.css    # header / nav / block / footer
+│   │       ├── forum.css     # node list / structItem / pageNav
+│   │       ├── avatar.css    # avatar + label tiền tố
+│   │       ├── post.css      # .message + bbWrapper
+│   │       ├── media.css     # unfurl + iframe media
+│   │       ├── reaction.css
+│   │       ├── forms.css     # button / input / tabs
+│   │       ├── editor.css    # trình soạn trực quan
+│   │       ├── account.css   # DM / alert / profile / login
+│   │       ├── misc.css      # toast / modal / loading
+│   │       ├── responsive.css
+│   │       ├── headerMenus.css
+│   │       ├── home.css
+│   │       ├── settings.css   # trang cài đặt + danh sách phím tắt
+│   │       └── stickers.css   # popup sticker + quản lý album
 │   └── userscript/
 │       └── voz-oauth-helper.user.js
 ├── dev-server.mjs        # server local (không deploy)
 ├── package.json
-└── vercel.json
+├── vercel.json
+├── LICENSE               # GPL-3.0
+├── voz-app-api.md        # tài liệu API voz.vn (tham chiếu)
+└── voz-forum-deploy.md   # tài liệu này
 ```
+
+Thứ tự thẻ `<link>` trong `index.html` quan trọng: `base.css` (biến màu) phải đứng đầu,
+`responsive.css` chứa override chung; `headerMenus.css` và `home.css` đứng sau để giữ layout responsive riêng cho menu và trang chủ.
+`editor.css` phải đứng **sau** `forms.css` vì nó ghi đè `.editor-toolbar`; `media.css`
+đứng ngay sau `post.css` để style unfurl/iframe nằm cạnh style bài viết. `settings.css` và
+`stickers.css` đứng cuối vì chỉ phục vụ `/cai-dat-tuivoz` và popup sticker.
+
+### Giao diện trang chủ và header
+
+- `ui/forumNodes.js` dựng nhóm diễn đàn, icon hội thoại/tìm kiếm, số chủ đề/bài viết và chủ đề mới nhất cùng người bình luận cuối. SearchForum (Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức) trỏ về route nội bộ `/s/<slug>.<id>/` giống voz.vn, không mở sang voz.vn nữa.
+- `ui/headerMenus.js` quản lý menu tìm kiếm, hộp thư và thông báo; tải tối đa 6 mục khi mở, có liên kết xem tất cả. Escape/click bên ngoài đóng menu. Menu tài khoản chứa hồ sơ, đánh dấu, theo dõi và nút Đăng xuất kèm icon nguồn; không còn nút đăng xuất riêng trên thanh header.
+- `ui/unreadCounts.js` hiển thị badge đỏ trên icon hộp thư/thông báo, lấy tổng từ `GET /conversations/?unread=true` và `GET /alerts/?unviewed=true` (không đếm riêng trang đầu). Số 0 ẩn badge, trên 99 hiện `99+`; accessible label giữ số đầy đủ. Cập nhật khi render tài khoản, chuyển trang xong, tải menu xong, quay lại tab và mỗi 60 giây khi tab hiển thị. Mở menu thông báo gọi `POST /alerts/mark-all` với `viewed=true`; mở hộp thư đánh dấu các hội thoại chưa đọc đang hiển thị qua `POST /conversations/{id}/mark-read` tới `last_message_date` (không đánh dấu hội thoại ngoài preview). Mục mới có nền cam nhạt suốt lần mở đó, mở lại dùng trạng thái API mới. Sau thao tác đọc, bắt buộc tải lại count sau request count đang chạy để tránh số cũ; API lỗi không giả lập xóa badge.
+- Tìm kiếm hỗ trợ từ khoá **hoặc** bài viết của một thành viên. API không áp dụng `title_only`/`users` trên tìm từ khoá; tìm nâng cao đầy đủ mở voz.vn, không giả lập bộ lọc bị bỏ qua.
+- `views/compose.js` xử lý `/f/<slug>.<id>/post-thread`, kiểm tra quyền và lấy tiền tố từ API. Nút đăng gửi dữ liệu thật lên voz.vn; không dùng nút này để kiểm tra trên dữ liệu thật. Diễn đàn yêu cầu trường đặc biệt mở composer trên voz.vn.
+- Nút Tạo chủ đề mới nằm cùng hàng breadcrumb của diễn đàn, kể cả trên mobile; breadcrumb dài tự xuống dòng trong phần bên trái.
+- Trên mobile ≤620px, thống kê Bài viết / Điểm / Tham gia hiển thị bên phải tên và badge tác giả; số lượng rút gọn K/M, ngày tham gia hiển thị năm.
+- Phân trang cuối danh sách chủ đề dùng `.block-outer` trong suốt giống trang chủ đề.
+- Chủ đề có bài mới chưa đọc in đậm tiêu đề (`font-weight: 600`), đọc rồi trở về 400 — giống voz.vn. API `/forums/{id}/threads` trả sẵn `is_unread` (kèm `first_unread_snippet`, `visitor_read_date`) theo tài khoản đang đăng nhập, nên không cần gọi thêm endpoint: `ui/threadRow.js` thêm class `is-unread` và `css/forum.css` lo phần in đậm, nhãn tiền tố vẫn giữ 400. Cơ chế `is-unread` này dùng chung với trang chủ (`node-row`) và hộp thư (`dm-row`).
+- Trạng thái đọc chỉ được xoá khi mở bài ở **trang cuối** (`viewThread` gọi `POST /threads/{id}/mark-read` với `date` hiện tại, bỏ qua lỗi); mở trang giữa không đánh dấu đã đọc. Chỉ chạy khi đã đăng nhập và thread đang `is_unread`.
+- Avatar mặc định giữ bảng màu hiện tại; chữ cái bằng 60% chiều rộng avatar (`60cqi`).
+- Thời gian đăng bài trong chủ đề dùng dạng tương đối đến hết ngày thứ 7; từ 8 ngày hiển thị ngày giờ đầy đủ. Hover thời gian luôn xem được ngày giờ chính xác. Trên mobile ≤620px, chạm thời gian sẽ đổi thành ngày giờ đầy đủ tại chỗ, không chuyển đến permalink bài viết; liên kết số bài vẫn hoạt động. Các định dạng thời gian ở khu vực khác giữ nguyên.
+- API thay nội dung spoiler bằng `Spoiler content hidden.`; `lib/spoilers.js` lấy lại nội dung từ BBCode gốc bằng parser stack, dựng `details/summary` hỗ trợ spoiler lồng nhau. Giữ các định dạng cơ bản, list, URL, ảnh/attachment, code, quote và media; EMBED chưa hỗ trợ giữ liên kết nguồn. Chỉ thay placeholder khi số spoiler ngoài cùng khớp, không tải HTML ngoài hay chạy BBCode như HTML. Nội dung phục hồi tiếp tục đi qua sanitizer, khôi phục quote/media/smiley và kích thước ảnh.
+- `lib/quotes.js` khôi phục liên kết bài gốc trong tên tác giả quote từ BBCode (bao gồm quote lồng nhau); quote không có post ID giữ tên thường. Route `/p/<id>/` lấy bài gốc và pagination API để chuyển đến đúng thread/trang rồi cuộn tới bài, không giả định 20 bài/trang.
+- `css/media.css` định dạng preview URL (`bbCodeBlock--unfurl`) từ HTML API: thumbnail, tiêu đề, mô tả, favicon; ảnh preview không nhận class ảnh bài viết. Không tự fetch URL tùy ý để lấy metadata. Khối embed (`.media-embed`) canh giữa bằng `margin: 12px auto` để video không dạt trái so với voz.vn.
+- `lib/media.js` khôi phục wrapper media của API: YouTube, X/Twitter, TikTok, Reddit (`subreddit/comments/id`) và Imgur (`[MEDIA=imgur]<album_id>[/MEDIA]` → `https://imgur.com/<id>/embed`) được dựng iframe từ ID đã kiểm tra, có liên kết mở nguồn. Iframe sẵn có chỉ được giữ khi khớp HTTPS host/path cho YouTube, Vimeo, Dailymotion, Facebook plugins, Spotify, SoundCloud, TikTok, Twitter hoặc Imgur (`/^\/[\w-]+\/embed\/?$/`). Mọi thuộc tính iframe được dựng lại, loại `srcdoc`/event handler và áp sandbox; script bên ngoài không được chèn. Provider chưa hỗ trợ giữ nội dung/link fallback của API. Không sao chép mã plugin XenForo. Reddit và Imgur tự điều chỉnh chiều cao từ message của provider — Reddit dùng `resize.embed` (origin `embed.reddit.com`/`www.redditmedia.com`), Imgur dùng `resize_imgur` (origin `https://imgur.com`); cả hai đều kiểm tra `event.source` đúng iframe và giới hạn 100–3000px. Ảnh Imgur đơn lẻ không bị đổi: `i.imgur.com` vẫn là `<img>` bình thường. X dùng khung cao cố định có cuộn; nội dung bị xóa, giới hạn vùng/đăng nhập hoặc chặn embed phụ thuộc provider.
+- Trang chủ đề tải danh mục `/voz/smilies` qua `lib/smilies.js`, đổi mã smiley trong văn bản thành ảnh đúng kích thước/2x. Không thay mã trong liên kết hoặc khối code. Trình soạn cũng hiển thị smiley ngay khi chọn hoặc gõ mã, không cần bấm Xem trước; ảnh nằm trong `contenteditable` nên `data-smilie` giữ mã gốc để serialize về BBCode, caret được đặt lại theo độ dài mã khi ảnh thay thế text.
+- `ui/memberTooltip.js` hiện thẻ thông tin khi hover/focus tên hoặc avatar tác giả trên desktop; trên mobile ≤620px hoặc thiết bị không hỗ trợ hover, chạm tên/avatar để mở, chạm lại hoặc bên ngoài để đóng, dùng liên kết Hồ sơ trong thẻ để vào trang thành viên: avatar, chức danh, ngày tham gia, hoạt động, thống kê và liên kết hồ sơ/tin nhắn. Chi tiết được tải khi mở và cache theo thành viên; Escape, cuộn hoặc rời thẻ sẽ đóng.
+- Tiêu đề trang chủ đề dùng nền trong suốt; các tiêu đề nhóm diễn đàn vẫn giữ màu xanh. Mobile ≤620px ẩn số trả lời/lượt xem, icon theo dõi và liên kết tác giả cạnh phân trang để tiết kiệm không gian; thông tin tác giả từng bài viết vẫn hiển thị. `ui/titleHold.js` bật/tắt theo dõi khi giữ tiêu đề 1,5 giây (hoặc Enter/Space khi focus); thả sớm, di chuyển quá 10px hoặc pointercancel sẽ hủy. Desktop giữ nút theo dõi và thống kê; yêu cầu theo dõi đang chạy được khóa để tránh gửi trùng.
+- Thả/bỏ/đổi cảm xúc chỉ cập nhật nút và số đếm tại bài viết, không tải lại thread; giữ vị trí đọc và bản nháp trả lời. Các nút của cùng bài bị khoá khi đang gửi; lỗi giữ trạng thái cũ.
+- Mỗi bài viết có icon đánh dấu cạnh số bài, dùng `POST /voz/posts/{id}/bookmark` với `state=bookmark|unbookmark`. Icon tô đầy khi đã lưu, khoá trong lúc gửi, giữ trạng thái cũ nếu lỗi. Khách được chuyển đến đăng nhập; danh sách đã lưu nằm trong menu tài khoản → Đánh dấu.
+- `lib/userBadges.js` hiển thị mọi badge trong `User.banners` ở bài viết và thẻ thành viên, kiểm tra giá trị màu trước khi đưa vào CSS. Mobile (≤620px) dùng avatar 48px bên trái, tên phía trên, chức danh và badge cùng hàng có xuống dòng khi thiếu chỗ; desktop giữ avatar 96px và bố cục dọc.
 
 ---
 
@@ -28,7 +135,7 @@ vtest/voz-forum/
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>(public/index.html + app.js)"]
+    B["Browser<br/>(public/index.html + assets/app.js)"]
     E["Vercel Edge Function<br/>api/[...path].js<br/>region sin1"]
     V["voz.vn/api<br/>(XenForo REST)"]
     A["voz.vn/oauth2/authorize"]
@@ -57,7 +164,7 @@ Vì sao phải có lớp edge:
 ### 2.1 Chuẩn bị
 
 ```powershell
-cd "D:\Data 2\Github-Clone\siritami\vtest\voz-forum"
+cd "D:\Data 2\Github-Clone\siritami\vtest"
 npm i -g vercel      # hoặc dùng npx vercel
 vercel login
 ```
@@ -105,12 +212,19 @@ Header `x-vercel-id` trong response cho biết region thực tế, ví dụ
 ### 2.4 Chạy local
 
 ```powershell
+cd "D:\Data 2\Github-Clone\siritami\vtest"
 node dev-server.mjs 3111
 # → http://localhost:3111
 ```
 
 `dev-server.mjs` chỉ để phát triển: nó serve `public/` và chuyển `/api/*` vào đúng
 handler edge. Vercel không dùng file này.
+
+### 2.5 `outputDirectory`
+
+`vercel.json` khai báo `"outputDirectory": "public"`. Cần thiết vì gốc project còn chứa
+`voz-app-api.md`, `voz-forum-deploy.md`, `LICENSE` — nếu không khai báo, Vercel sẽ coi
+`public/` là thư mục con thường và các file `.md` có thể bị serve công khai.
 
 ---
 
@@ -211,7 +325,7 @@ token **bắt buộc** chạy ở edge function.
 | GET | `/api/config` | – | `clientId`, `redirectUri`, `scopes`, `authorizeUrl` |
 | GET | `/api/oauth/status` | – | `{ loggedIn, me }`; tự refresh nếu còn < 60 s |
 | POST | `/api/oauth/exchange` | `{ code, verifier }` | set cookie, trả `{ ok, me }` |
-| POST | `/api/oauth/token` | `{ accessToken, refreshToken?, expiresAt? }` | nhận token dán tay, set cookie |
+| POST | `/api/oauth/token` | `{ accessToken, refreshToken?, expiresIn?, scope?, tokenType? }` hoặc `{ tokens: {…} }` | nhận token dán tay, xác thực bằng `/me/`, set cookie |
 | POST | `/api/oauth/logout` | – | revoke refresh token + xoá cookie |
 
 Cookie:
@@ -221,6 +335,10 @@ voz_session=<base64url(JSON tokens)>; Path=/; HttpOnly; Secure; SameSite=Lax; Ma
 ```
 
 Nội dung: `{ accessToken, refreshToken, expiresAt, scope, tokenType, obtainedAt }`.
+
+`expiresAt` là **epoch ms** (`Date.now() + expires_in * 1000`), không phải giây. Cookie
+không ký: `b64uEncode(JSON.stringify(tokens))` rồi `b64uDecode` khi đọc, lỗi parse thì coi
+như chưa đăng nhập. `sessionCookie(null, 0)` tạo cookie rỗng `Max-Age=0` để đăng xuất.
 
 ### 3.6 Đăng nhập bằng token dán tay
 
@@ -261,7 +379,7 @@ Ví dụ:
 |---|---|
 | `/api/xf/nodes/` | `/api/nodes/` |
 | `/api/xf/forums/13/threads?page=2` | `/api/forums/13/threads?page=2` |
-| `/api/xf/threads/682181/?with_posts=true&page=1` | `/api/threads/682181/?with_posts=true&page=1` |
+| `/api/xf/threads/{id}/?with_posts=true&page=1` | `/api/threads/{id}/?with_posts=true&page=1` |
 | `/api/xf/posts/` (POST) | `/api/posts/` (POST) |
 
 Header do edge function gắn:
@@ -279,6 +397,144 @@ encoding (kể cả tiếng Việt và `key[]=v`).
 Response: giữ `status`, `content-type`, `xf-request-user`, `xf-request-user-extras`;
 thêm `Cache-Control: private, no-store`.
 
+Nếu upstream trả `401` và request có session, edge gọi `refreshTokens()` rồi gửi lại
+**một lần**; token mới được ghi vào cookie bằng `Set-Cookie` trên chính response đó.
+`redirect: 'manual'` nên `3xx` của voz.vn được trả nguyên trạng cho client.
+
+### 4.1 Toàn bộ endpoint của edge function
+
+`api/[...path].js` là một handler duy nhất, phân nhánh theo `url.pathname`:
+
+| Method | Path | Xử lý |
+|---|---|---|
+| `OPTIONS` | bất kỳ | `204` + `corsHeaders()` |
+| `GET` | `/api/config` | `{ siteUrl, clientId, redirectUri, scopes, authorizeUrl }` |
+| `GET` | `/api/oauth/status` | đọc cookie, refresh nếu còn < 60 s, `fetchMe()`, trả `{ loggedIn, me }` |
+| `POST` | `/api/oauth/exchange` | `{ code, verifier }` → `tokenRequest(grant_type=authorization_code)` → set cookie → `{ ok, me }` |
+| `POST` | `/api/oauth/token` | nhận `{ accessToken, refreshToken?, expiresIn?, scope?, tokenType? }` hoặc `{ tokens: … }`, xác thực bằng `/me/` rồi set cookie |
+| `POST` | `/api/oauth/logout` | revoke refresh token (best-effort) + `Set-Cookie` rỗng `Max-Age=0` |
+| `POST` | `/api/pik/upload` | chuyển tiếp multipart sang `https://pik.vn/api/upload`, trả nguyên `{ url, deleteUrl, exists }`; cần `Content-Type: multipart/form-data` |
+| `*` | `/api/xf` hoặc `/api/xf/…` | `handleProxy()` |
+| `*` | còn lại | `404 { error: 'not_found', path }` |
+
+`corsHeaders()` chỉ cho phép `https://voz.vn`, `*.vercel.app` và `http://localhost*`;
+origin khác nhận `Access-Control-Allow-Origin: https://voz.vn`. Header gồm
+`Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS`,
+`Allow-Headers: Content-Type, Accept`, `Allow-Credentials: true`, `Max-Age: 86400`,
+`Vary: Origin`.
+
+`json()` luôn gắn `Content-Type: application/json; charset=utf-8` và
+`Cache-Control: private, no-store, max-age=0`.
+
+Hằng số trong file: `SITE`, `API_BASE`, `GUEST_KEY`, `CLIENT_ID`, `REDIRECT_URI`,
+`UA = 'VOZ/MA26'`, `SCOPES` (11 scope, gồm `attachment:read` nhưng **không** có
+`attachment:write`), `SESSION_COOKIE = 'voz_session'`, `SESSION_MAX_AGE = 30 ngày`.
+
+### 4.2 Lớp client (`public/assets`)
+
+Bốn tầng, import một chiều: `views` → `ui` → `lib` → `core`. `api.js` đứng riêng, được
+`core/router.js`, `ui/*` và `views/*` cùng dùng. Ngoại lệ duy nhất là `core/router.js`
+import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` giữ `setRouteHandler()`
+để view gọi `navigate()` mà không phải import router (tránh vòng import).
+
+**`core/` — hạ tầng, không phụ thuộc tầng trên**
+
+| File | Export | Việc làm |
+|---|---|---|
+| `dom.js` | `app`, `breadcrumbsEl`, `accountEl`, `navEl`, `toastEl`, `modalRoot`, `state` | giữ handle DOM lấy một lần lúc load + state toàn cục `{ me, loggedIn, reactions, nodes, config }` |
+| `utils.js` | `esc`, `num`, `unix`, `timeAgo`, `postDate`, `fullDate` | escape HTML; rút gọn số kiểu voz (`12K`, `444K`, `1M`); đổi giây → ms; thời gian tương đối |
+| `paths.js` | `slugify`, `idFromSegment`, `threadPath`, `forumPath`, `searchForumPath`, `userPath`, `dmPath`, `withPage` | dựng URL có slug giống voz.vn |
+| `nav.js` | `setRouteHandler`, `navigate`, `currentPage` | `pushState`/`replaceState` + gọi router; đọc `?page=` (hỗ trợ `last`) |
+| `router.js` | `parsePath`, `route` | tách `/page-{n}` khỏi segment cuối, phân nhánh theo segment đầu, gọi view, bắt lỗi bằng `errorBox()`, cuối cùng `refreshUnreadCounts()` |
+| `icons.js` | `ICON_*` | SVG inline, không icon font, không request thêm |
+
+`postDate()` là biến thể riêng cho bài viết: tương đối đến hết ngày thứ 7, từ 8 ngày dùng
+`fullDate()`. Các chỗ khác dùng `timeAgo()`.
+
+**`lib/` — logic thuần, chỉ đụng DOM qua tham số `root`**
+
+| File | Export | Việc làm |
+|---|---|---|
+| `avatar.js` | `avatarUrlById`, `avatarMarkup` | đoán `data.voz.vn/avatars/{size}/{floor(id/1000)}/{id}.jpg`; chồng `<img>` lên chữ cái màu, `onerror="this.remove()"` để lộ fallback |
+| `bbcode.js` | `sanitizeHtml`, `bbcodeToPlain`, `stripQuotes`, `quoteBlock` | pipeline sanitize 6 bước (xem §6); `stripQuotes()` đếm độ sâu quote; `quoteBlock()` dựng `[QUOTE="…, post: …, member: …"]` |
+| `editorCodec.js` | `safeEditorUrl`, `parseEditorCode`, `editorCodePlain`, `editorCodeHtml`, `editorDomCode` | BBCode ⇄ HTML cho trình soạn; tag lạ giữ nguyên dạng `data-bb-raw` (atomic, `contenteditable=false`); `[IMG size=…]` và `[ATTACH]` đã đăng ký được vẽ thành `<img>` thật, thuộc tính giữ qua `data-bb-attrs` |
+| `attachments.js` | `registerAttachments`, `getAttachment`, `attachmentIdForUrl`, `clearAttachments`, `attachmentImage` | API trả `[ATTACH]id[/ATTACH]` trong `message` còn URL thật nằm ở `post.Attachments[].direct_url`; view đăng ký danh sách này để codec vẽ được ảnh. Không đăng ký thì giữ nguyên `data-bb-raw` (không mất dữ liệu) |
+| `media.js` | `safeMediaUrl`, `restoreMedia` | allowlist host/path cho iframe; dựng lại `[MEDIA=…]`; nghe `resize.embed` của Reddit |
+| `prefix.js` | `prefixLabel` | `prefix_id` → `label--{green,red,royalBlue,orange,primary,accent,gray,olive}` |
+| `quotes.js` | `restoreQuoteLinks` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/` |
+| `smilies.js` | `smilieChoices`, `loadSmilies`, `smiliesReady`, `splitSmilieText`, `renderSmilies` | tải `/voz/smilies` một lần, dựng regex từ mã đã escape, chỉ thay trong text node không nằm trong `a/code/pre/script/style`, chỉ nhận ảnh `https://data.voz.vn/`; trả `true` khi có thay đổi để editor biết khi nào cần đặt lại caret |
+| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent, clientId})` gộp cả dữ liệu sticker vào cùng file JSON |
+| `stickers.js` | `getAlbums`, `addAlbum`, `updateAlbum`, `renameAlbum`, `removeAlbums`, `moveAlbum`, `setAlbumImages`, `getRecentStickers`, `addRecentSticker`, `removeRecentSticker`, `clearRecentStickers`, `getClientId`, `setClientId`, `resetClientId`, `imageFileToBase64`, `downscaleDataUrl`, `urlToBase64`, `downloadImagesInParallel`, `DEFAULT_CLIENT_ID` | album sticker trong `localStorage['voz-stickers:v1']`, gần đây ở `voz-stickers:recent:v1` (tối đa 30), Client-ID ở `voz-stickers:clientId:v1`; ảnh thu nhỏ ≤ 400px, mã hoá WebP 0.8 (GIF giữ nguyên); chỉ nhận `https:` hoặc `data:image/…;base64,` |
+| `views/settings.js` | `viewSettings` (+ `applyImported` nội bộ) | `applyImported(result)` dùng chung cho ô "Nhập album từ JSON" và mục Sao lưu: file `addOnly` chỉ thêm album mới (bỏ qua trùng tên), file đầy đủ thay thế album + gần đây + Client-ID |
+| `imgurImport.js` | `extractAlbumId`, `fetchImgurAlbumImages`, `importImgurAlbum`, `clearImgurCache` | tách album id từ `imgur.com/a/<slug>-<id>`, gọi qua proxy `/api/xf/imgur/album/{id}/images`, tải base64 song song 5 ảnh/lô |
+| `spoilers.js` | `parseBbcode`, `restoreSpoilers` | parser stack; chỉ thay khi **số placeholder khớp số spoiler ngoài cùng** |
+| `userBadges.js` | `userBadges` | `User.banners` → `.user-badge`, validate `#rgb`/`#rrggbb` trước khi đưa vào CSS |
+
+**`ui/` — render HTML + wire sự kiện**
+
+| File | Export | Việc làm |
+|---|---|---|
+| `chrome.js` | `renderAccount`, `renderNavShortcuts`, `wireNavShortcuts`, `setBreadcrumbs`, `setActiveNav` | header account (menu hồ sơ/đánh dấu/theo dõi/**cài đặt**/đăng xuất + 3 menu tiện ích), vẽ lại phím tắt ở thanh nav khi `voz:settings` hoặc `storage` đổi, breadcrumb có nút CTA, tô nav active |
+| `headerMenus.js` | `closeHeaderMenus`, `wireHeaderMenus` | mở/đóng dropdown, tải 6 mục đầu, đánh dấu đã xem, Escape/click ngoài, submit form tìm kiếm nhanh |
+| `forumNodes.js` | `nodeTree` | dựng cây node từ `nodes` + `tree_map`, `SearchForum` trỏ `/s/…` nội bộ |
+| `feedback.js` | `toast`, `loading`, `errorBox` | toast 3,2 s; spinner; hộp lỗi đọc `ApiError.message` + `code` |
+| `pagination.js` | `pagination`, `wirePageJump` | `ul.pageNav-main` XenForo; `…` đổi thành `<input type=number>` (Enter đi, Esc/blur huỷ) |
+| `threadRow.js` | `threadRow`, `postRow` | 5 ô `structItem`; `postRow` cho bookmark/search, link dạng `?post={id}`. `is_unread` của API thêm class `is-unread` để CSS in đậm tiêu đề (đọc rồi thì hết đậm), giống voz.vn |
+| `post.js` | `postHtml` | 1 `.message`: cột user (avatar 96px, tên, chức danh, badge, 3 thống kê), attribution (thời gian, `#position+1`, bookmark), body, signature, actionBar, dải cảm xúc |
+| `reactions.js` | `reactionBar`, `invalidateReactionUsers`, `reactionSummary`, `hydrateReactionLists` | nút Ưng/Gạch + số lượng; dải tên best-effort từ `/p/{id}/reactions` |
+| `editor.js` | `editorHtml`, `clearEditorDraft`, `wireEditor` | textarea là nguồn sự thật; visual `contenteditable`; undo/redo 100 bước; nháp localStorage 30 ngày; override `.value` để handler quote gán trực tiếp vẫn cập nhật visual |
+| `stickerPicker.js` | `renderStickerPicker`, `STICKER_BBCODE` | popup chọn sticker dùng chung panel với emoji: tab album + "Gần đây", chèn `[IMG size="80x80"]<url>[/IMG]`, panel không đóng sau khi chọn |
+| `pikUpload.js` | `isPikImage`, `supportsWebp`, `sha256Hex`, `preparePikImage`, `uploadPikBlob`, `uploadImageFile`, `uploadImageFiles`, `pikBbcode`, `PIK_MAX_SIZE`, `PIK_QUALITY`, `PIK_ORIGINAL_MAX`, `PIK_PARALLEL`, `PIK_PROXY` | tải ảnh lên pik.vn qua proxy `/api/pik/upload`: nén còn ≤1920px WebP 0.85, `hash` = SHA-256 của bytes gửi lên, 3 ảnh song song, chèn `[IMG]<url>[/IMG]`; dùng cho dải upload trong panel *Ảnh từ URL*, Ctrl+V và kéo thả |
+| `editorTools.js` | `editorIcon`, `editorToolbar`, `showToolPanel`, `panelTools` | thanh công cụ 1 hàng + 3 menu nổi; panel chèn URL/ảnh/media/bảng/smilie/sticker |
+| `memberTooltip.js` | `wireMemberTooltips` | thẻ thành viên hover (desktop) / chạm (≤620px hoặc `hover: none`), cache theo `user_id`, tự ẩn khi cuộn/Escape/rời DOM |
+| `titleHold.js` | `wireTitleHold` | giữ tiêu đề 1,5 s (hoặc Enter/Space) để bật/tắt theo dõi; huỷ khi thả sớm, di chuyển > 10px, `pointercancel` |
+| `unreadCounts.js` | `refreshUnreadCounts`, `wireUnreadCounts` | badge đỏ từ `pagination.total` của `?unread=true` / `?unviewed=true`; `99+`; refresh khi focus, đổi tab, mỗi 60 s; `force=true` chờ request đang chạy rồi mới tải lại |
+| `inlineEdit.js` | `openInlineEdit`, `cancelInlineEdit` | sửa bài tại chỗ: thay `.message-main` bằng `.inline-edit` trong cùng `.message-cell--main.is-editing`, lưu xong vẽ lại thân bài + dòng attribution, huỷ thì trả DOM cũ | 
+| `modal.js` | `openModal`, `openReportModal` | modal shell; báo cáo gọi `/api/xf/posts/{id}/report` |
+| `session.js` | `loadSession`, `requireLogin` | boot session qua `/api/oauth/status`; chặn view khi chưa đăng nhập |
+
+**`views/` — một file cho mỗi nhóm route**
+
+| File | Export | Route |
+|---|---|---|
+| `forum.js` | `viewHome`, `viewForum`, `viewSearchForum`, `viewNewThreads` | `/`, `/f/…`, `/s/…`, `/new` |
+| `thread.js` | `viewThread` | `/t/…` — render bài + toàn bộ handler (bookmark, react, quote, reply, edit, delete, report, watch, gửi trả lời) |
+| `compose.js` | `viewCompose` | `/f/…/post-thread` |
+| `search.js` | `viewSearch` | `/search` |
+| `dm.js` | `viewDmList`, `viewDm`, `viewNewDm` | `/direct-messages…` |
+| `lists.js` | `viewAlerts`, `viewBookmarks`, `viewWatched` | `/alerts`, `/bookmarks`, `/watched` |
+| `user.js` | `viewUser` | `/u/…` |
+| `login.js` | `viewLogin` | `/login` |
+
+`api.js` xuất `ApiError`, `xf()`, object `api` và object `auth`. `api.createPost()` và
+`api.stats()` có khai báo nhưng **không nơi nào gọi**: form trả lời trong `views/thread.js`
+gọi `fetch('/api/xf/posts/')` trực tiếp.
+
+### 4.3 Hành vi cần biết khi sửa code
+
+| Chỗ | Chi tiết |
+|---|---|
+| `xf()` | `credentials: 'same-origin'`; body luôn `application/x-www-form-urlencoded`; mảng → `key[]=v`; boolean → `1`/`0`; giá trị rỗng/`null`/`undefined` bị bỏ |
+| `ApiError` | `message` lấy từ `payload.errors[0].message`, fallback `payload.error`, fallback `HTTP {status}`; giữ `status`, `code`, `params`, `payload` |
+| `parsePath()` | tách `/page-{n}` khỏi segment **cuối**; sau đó `?page=` ghi đè nếu có |
+| `/p/{id}/` | `api.post(id)` → `api.thread(thread_id, 1)` → `floor(position / per_page) + 1` → `navigate(..., { replace: true })` + `#post-{id}`. Không giả định 20 bài/trang |
+| `/t/…?post={id}` | `viewThread(id, page, focusPost)` cuộn tới `#post-{id}` sau khi render |
+| Gửi trả lời | `navigate()` sang trang rồi **gọi lại** `viewThread(threadId, 'last', post_id)` — render hai lần, lần hai mới đúng trang cuối |
+| `page === 'last'` | `viewThread` tải trang 1, đọc `pagination.last_page`, rồi đệ quy gọi lại với số trang thật (API không có shortcut `last`) |
+| `wireThreadActions()` | handler click gắn lên `#app` và lưu ở `app._threadHandler`; lần render sau `removeEventListener` handler cũ trước khi gắn mới, nên không bị nhân đôi |
+| `wireEditor()` | đánh dấu `editor.dataset.wired`; gọi lại trên cùng container là no-op |
+| `wireMemberTooltips()` | gọi `hide()` đầu tiên nên mỗi lần render chỉ có một thẻ mở |
+| `refreshUnreadCounts(force)` | `force === true` chờ promise đang chạy rồi mới tạo request mới; `force` khác `true` thì trả luôn promise đang chạy |
+| `state.nodes` | cache trong bộ nhớ; `viewHome()` chỉ gọi `/nodes/` lần đầu |
+| `state.reactions` | cache trong bộ nhớ; `viewThread()` chỉ gọi `/voz/reactions` lần đầu, lỗi thì gán `[]` |
+| Nháp editor | key `voz-editor:v1:{user_id|guest}:{pathname đã bỏ /page-N/}:{draftContext|textarea.id}`; TTL 30 ngày; `clearEditorDraft()` phát event `editor:clear-draft` |
+| `reply-silent` | **Đã gỡ.** Không còn checkbox "Không đẩy chủ đề (silent)" trong form trả lời; `silent` không được gửi nữa. API vẫn hỗ trợ cờ này (`POST /posts/`) nếu muốn thêm lại |
+| `dm` alias | router nhận cả `/dm/…` và `/direct-messages/…`; link trong UI luôn dùng `/direct-messages/` |
+| `login.js` message listener | đăng ký ở module scope (một lần), chỉ nhận `type === 'voz-oauth-code'`; kiểm tra origin bằng `location.origin` hoặc hostname kết thúc `voz.vn` |
+| `PKCE` | verifier 48 byte ngẫu nhiên → base64url; challenge = SHA-256 → base64url; `state` 16 byte; lưu `sessionStorage['voz_pkce']` để reload không mất |
+| `auth.exchange()` | trả `{ ok, data }` chứ không throw; view tự kiểm tra `ok` |
+| `openReportModal()` | gọi thẳng `/api/xf/posts/{id}/report` bằng `fetch` + `URLSearchParams`, không qua `xf()` |
+
 ---
 
 ## 5. Chức năng
@@ -290,18 +546,25 @@ thêm `Cache-Control: private, no-store`.
 | `/` | Danh sách node/forum (cây 61 node) | `GET /nodes/` |
 | `/f/{slug}.{node_id}/` | Danh sách chủ đề trong forum | `GET /forums/{id}/`, `GET /forums/{id}/threads` |
 | `/f/{slug}.{node_id}/page-{n}/` | Trang n của forum | `GET /forums/{id}/threads?page=n` |
+| `/s/{slug}.{node_id}/` | Node tổng hợp (SearchForum): Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức | `GET /search-forums/{id}/`, `GET /search-forums/{id}/threads` |
+| `/s/{slug}.{node_id}/page-{n}/` | Trang n của node tổng hợp | `GET /search-forums/{id}/threads?page=n` |
 | `/t/{slug}.{thread_id}/` | Bài viết trong chủ đề | `GET /threads/{id}/?with_posts=true` |
 | `/t/{slug}.{thread_id}/page-{n}/` | Trang n của chủ đề | `GET /threads/{id}/?page=n` |
 | `/t/{slug}.{thread_id}/page-{n}/#post-{post_id}` | Nhảy tới bài cụ thể | `scrollIntoView` |
-| `/new/` | Bài mới toàn diễn đàn | `GET /threads/?order=post_date` |
-| `/search?q=` | Tìm kiếm | `POST /search/` → `GET /search/{id}/` |
-| `/direct-messages/` | Hộp thư | `GET /conversations/` |
+| `/t/{slug}.{thread_id}/?post={post_id}` | Mở đúng trang chứa bài rồi cuộn tới | `GET /threads/{id}/?page=n` |
+| `/p/{post_id}/` | Permalink bài viết → redirect sang thread | `GET /posts/{id}/` → `GET /threads/{id}/` |
+| `/f/{slug}.{node_id}/post-thread` | Tạo chủ đề mới | `GET /forums/{id}/`, `POST /threads/` |
+| `/new/` | Bài mới toàn diễn đàn (mở trực tiếp bằng URL, không còn mục nav) | `GET /threads/?order=post_date` |
+| `/search?q=` | Tìm kiếm theo từ khoá | `POST /search/` → `GET /search/{id}/` |
+| `/search?member=` | Tìm bài của một thành viên | `GET /users/find-name` → `POST /search/member` |
+| `/direct-messages/` (alias `/dm/`) | Hộp thư | `GET /conversations/` |
 | `/direct-messages/{slug}.{id}/` | Đọc + trả lời tin nhắn | `GET /conversations/{id}/?with_messages=true`, `POST /conversation-messages/` |
 | `/direct-messages/new?to=` | Tạo tin nhắn mới | `GET /users/find-name`, `POST /conversations/` |
 | `/alerts/` | Thông báo | `GET /alerts/` |
 | `/bookmarks/` | Bài đánh dấu | `GET /voz/bookmarks` |
 | `/watched/` | Chủ đề theo dõi | `GET /voz/watched-threads` |
 | `/u/{slug}.{user_id}/` | Trang cá nhân | `GET /users/{id}/` |
+| `/cai-dat-tuivoz` | Cài đặt (phím tắt nav + JSON backup) | không gọi API |
 | `/login` | Đăng nhập | `/api/oauth/*` |
 
 ### 5.1.1 Routing — giống hệt voz.vn
@@ -309,10 +572,10 @@ thêm `Cache-Control: private, no-store`.
 URL **không dùng hash** và có slug, đúng như voz.vn:
 
 ```
-https://voz.vn/t/tong-hop-nhung-addon-chat-cho-firefox-chromium.682181/page-1581
-https://voz.vn/f/phan-mem.13/page-2
-https://voz.vn/u/frzzy.1/
-https://voz.vn/direct-messages/test-test-test.11502686/
+https://voz.vn/t/<slug>.<thread_id>/page-<n>
+https://voz.vn/f/<slug>.<node_id>/page-<n>
+https://voz.vn/u/<slug>.<user_id>/
+https://voz.vn/direct-messages/<slug>.<conversation_id>/
 ```
 
 Quy tắc (đã kiểm tra bằng cách so 20 thread thật, khớp 20/20):
@@ -324,17 +587,18 @@ Quy tắc (đã kiểm tra bằng cách so 20 thread thật, khớp 20/20):
 | Trang | `/page-{n}/` trong path, **không** dùng `?page=`; trang 1 bỏ hẳn `/page-1` |
 | Dấu `/` cuối | luôn có |
 | Bài cụ thể | `#post-{post_id}` (fragment), không phải query |
-| Legacy | `/t/682181/` (không slug) vẫn parse được — `idFromSegment()` lấy phần sau dấu `.` cuối |
+| Legacy | `/t/{id}/` (không slug) vẫn parse được — `idFromSegment()` lấy phần sau dấu `.` cuối |
 
-Hàm tương ứng trong `app.js`:
+Hàm tương ứng trong `core/paths.js`:
 
 ```js
-slugify(text)          // "Tổng hợp…" → "tong-hop-…"
-idFromSegment(seg)     // "slug.682181" → 682181
-threadPath(thread)     // → /t/slug.682181/
-forumPath(forum)       // → /f/slug.13/
-userPath(user)         // → /u/slug.1/
-dmPath(conversation)   // → /direct-messages/slug.11502686/
+slugify(text)          // "Tiêu đề có dấu" → "tieu-de-co-dau"
+idFromSegment(seg)     // "slug.123" → 123
+threadPath(thread)     // → /t/slug.<thread_id>/
+forumPath(forum)       // → /f/slug.<node_id>/
+searchForumPath(node)  // → /s/slug.<node_id>/   (SearchForum)
+userPath(user)         // → /u/slug.<user_id>/
+dmPath(conversation)   // → /direct-messages/slug.<conversation_id>/
 withPage(path, n)      // → path + "page-n/" (bỏ khi n = 1)
 ```
 
@@ -363,12 +627,17 @@ Vercel cần SPA fallback để deep link không 404:
 
 | Hành động | API | Scope |
 |---|---|---|
-| Trả lời chủ đề | `POST /posts/` `{thread_id, message}` | `thread:write` |
+| Trả lời chủ đề | `POST /posts/` `{thread_id, message}` (+ `silent=1` tuỳ chọn) | `thread:write` |
 | Trích dẫn + trả lời | như trên, message có `[QUOTE=…]` | `thread:write` |
 | Sửa bài | `POST /posts/{id}/` `{message}` | `thread:write` |
 | Xoá bài | `DELETE /posts/{id}/` | `thread:write` |
 | Thả cảm xúc | `POST /posts/{id}/react` `{reaction_id}` | `thread:write` |
 | Báo cáo | `POST /voz/posts/{id}/report` `{message}` | login |
+| Đánh dấu bài | `POST /voz/posts/{id}/bookmark` `{state}` | login |
+| Theo dõi chủ đề | `POST /voz/threads/{id}/watch` `{state}` | login |
+| Đánh dấu đã xem thông báo | `POST /alerts/mark-all` `{viewed:true}` | `alert:read` |
+| Đánh dấu DM đã đọc | `POST /conversations/{id}/mark-read` `{date}` | `conversation:write` |
+| Tạo chủ đề | `POST /threads/` `{node_id, title, message, prefix_id}` | `thread:write` |
 | Gửi DM | `POST /conversations/` `{recipient_ids[], title, message}` | `conversation:write` |
 | Trả lời DM | `POST /conversation-messages/` `{conversation_id, message}` | `conversation:write` |
 
@@ -399,8 +668,11 @@ Là **toggle**, không có endpoint xoá riêng:
 
 Danh mục lấy từ `GET /voz/reactions` (guest được). Chỉ `1 Ưng` và `2 Gạch` là `active`.
 
-UI chỉ hiện hai nút `Ưng` / `Gạch` (icon + nhãn), không hiện `reaction_score` tổng và
-không hiện số lượng từng loại. Nút đang chọn có class `.is-active`.
+`reactionBar()` lọc danh mục `/voz/reactions` theo `r.active || counts[r.reaction_id]`, nên
+thực tế chỉ hiện `Ưng` / `Gạch` (hai reaction `active`), cộng thêm bất kỳ reaction nào đã
+có số đếm trên bài đó. Mỗi nút hiện icon + nhãn + **số lượng**, không hiện `reaction_score`
+tổng. Nút đang chọn có class `.has-reaction` (màu cam); khi `post.can_react === false` thì
+nút có `aria-disabled="true"` và handler bỏ qua click.
 
 ### 5.5 Xoá bài
 
@@ -446,22 +718,59 @@ Bảng màu lấy trực tiếp từ voz.vn bằng `getComputedStyle`:
 Cấu trúc giống XenForo: `.p-header` → `.p-nav` → `.p-body` → `.block` →
 `.structItem` (danh sách) / `.message` (bài viết) → `.p-footer`.
 
+CSS chia theo khu vực, nạp đúng thứ tự trong `index.html`:
+
+| File | Phạm vi |
+|---|---|
+| `base.css` | biến màu `:root`, reset, utility (`.u-dimmed`, `.u-srOnly`, …) |
+| `layout.css` | `.p-header`, `.p-nav`, `.p-body`, `.block`, `.p-footer` |
+| `forum.css` | `.node-*`, `.structItem*`, `.pairs`, `.pageNav` |
+| `avatar.css` | `.avatar`, `.avatar-fallback`, `.label--*` |
+| `post.css` | `.message*`, `.inline-edit*`, `.member-card`, `.block-outer`, `.reactionsBar`, BBCode |
+| `media.css` | `.bbCodeBlock--unfurl`, `.media-embed`, `.media-frame` |
+| `reaction.css` | `.reaction`, `.reaction-count` |
+| `forms.css` | `.button`, `.input`, `.textarea`, `.tabs` |
+| `editor.css` | `.rich-editor`, `.editor-toolbar`, `.editor-overflow`, `.editor-panel` |
+| `account.css` | `.dm-*`, `.alert-*`, `.profile-*`, `.login-*`, `.code-box` |
+| `misc.css` | `.loading`, `.empty`, `.error-box`, `.toast`, `.modal*` |
+| `responsive.css` | override ≤900 / ≤860 / ≤650 / ≤620 px |
+| `headerMenus.css` | `.header-menu*`, `.header-unread`, `.button--cta` |
+| `home.css` | layout `.node-row` / `.node-extra` của trang chủ |
+
+`editor.css` phải đứng sau `forms.css` vì nó ghi đè `.editor-toolbar`; `responsive.css`,
+`headerMenus.css`, `home.css` phải đứng cuối để override thắng.
+
 Nội dung bài viết render từ `message_parsed` (HTML server trả về), được lọc qua
-`sanitizeHtml()`: bỏ `script/style/iframe/object/embed/form/input/button`, bỏ mọi thuộc
+`sanitizeHtml()`: bỏ `script/style/object/embed/form/input/button`, bỏ mọi thuộc
 tính `on*`, chặn `javascript:` trong `href`/`src`, thêm `target="_blank" rel="noopener
-nofollow ugc"` cho link.
+nofollow ugc"` cho link. `iframe` **không** bị xoá ngay — `restoreMedia()` dựng lại toàn bộ
+thuộc tính (xoá `srcdoc`, event handler, thêm `sandbox`) và chỉ giữ những host/path nằm
+trong allowlist; iframe ngoài allowlist bị `remove()`.
+
+Thứ tự xử lý trong `sanitizeHtml(html, bbcode)`:
+
+1. `restoreSpoilers(root, bbcode)` — thay placeholder bằng `details/summary`.
+2. Xoá thẻ nguy hiểm + thuộc tính `on*` + `javascript:`.
+3. `restoreQuoteLinks(root, bbcode)` — thêm link `↑` về `/p/{post_id}/`.
+4. `restoreMedia(root)` — dựng lại iframe/media.
+5. `applyImageSizes(root, bbcode)` — gán lại `width`/`height` từ BBCode.
+6. `renderSmilies(root)` — đổi mã smiley thành `<img>`.
+
+`sanitizeHtml` cũng được gọi cho `user.signature`, `user.about` và `message_parsed` của DM
+— các chỗ này truyền **không** có `bbcode`, nên spoiler/quote-link/kích thước ảnh không
+được khôi phục (chỉ sanitize + media + smiley).
 
 ### 6.1 Ảnh trong bài — API làm mất kích thước
 
-`message_parsed` **bỏ toàn bộ thuộc tính kích thước ảnh**. Ví dụ post `44240084`:
+`message_parsed` **bỏ toàn bộ thuộc tính kích thước ảnh**. Ví dụ một post thật:
 
 ```
-BBCode : [IMG size="80x80"]https://5.pik.vn/….webp[/IMG]
-HTML   : <img src="https://5.pik.vn/….webp" alt="" />
+BBCode : [IMG size="80x80"]https://<image-host>/….webp[/IMG]
+HTML   : <img src="https://<image-host>/….webp" alt="" />
 ```
 
 Ảnh gốc 512×512 nên render full-size, trong khi voz.vn hiển thị đúng 80×80. Các biến thể
-gặp trong thực tế (quét 3 trang của thread `682181`):
+gặp trong thực tế (quét 3 trang của một thread):
 
 | BBCode | Số lần | Kích thước bị mất |
 |---|---|---|
@@ -479,11 +788,11 @@ gán lại `width`/`height` lên `<img>` tương ứng trong HTML đã parse.
 ```js
 // [IMG size="80x80"]url[/IMG]      → width 80, height 80
 // [IMG width="150px"]url[/IMG]     → width 150
-// [ATTACH type="full" width="150px"]3823398[/ATTACH] → width 150
+// [ATTACH type="full" width="150px"]<attach_id>[/ATTACH] → width 150
 ```
 
 Khoá so khớp: URL ảnh thường bị chuẩn hoá khác nhau giữa BBCode và HTML
-(`/attachments/3823398/` so với `/attachments/1791259834896-webp.3823398/`), nên
+(`/attachments/<id>/` so với `/attachments/<hash>-webp.<id>/`), nên
 `normalizeImgSrc()` quy cả hai về `attach:<id>`; ảnh ngoài thì bỏ scheme/host
 `voz.vn`, query và dấu `/` cuối.
 
@@ -494,32 +803,42 @@ CSS đi kèm để không méo ảnh:
 .bbWrapper img:not(.smilie) { max-width: 100%; height: auto; }
 ```
 
-Kết quả so với voz.vn (cùng post `42513430`):
+Kết quả so với voz.vn (cùng một post):
 
 | Ảnh | BBCode | voz.vn | Web client |
 |---|---|---|---|
-| imgchest 1 | `[IMG]` | 725×453 | 860×538 (khung rộng hơn) |
-| imgchest 2 | `width="150px"` | 150×29 | 150×29 |
-| attach 3823398 | `width="150px"` | 150×33 | 150×33 |
-| attach 3804175 | `width="345px"` | 345×158 | 345×158 |
-| attach 3775137 | không size | 725×1036 | 840×1200 (khung rộng hơn) |
+| ảnh ngoài 1 | `[IMG]` | 725×453 | 860×538 (khung rộng hơn) |
+| ảnh ngoài 2 | `width="150px"` | 150×29 | 150×29 |
+| attach A | `width="150px"` | 150×33 | 150×33 |
+| attach B | `width="345px"` | 345×158 | 345×158 |
+| attach C | không size | 725×1036 | 840×1200 (khung rộng hơn) |
 
 ### 6.2 Bố cục bài viết
 
 | Vị trí | Nội dung |
 |---|---|
-| Góc trên phải | `#<số bài>` (API trả `position` **0-based**, hiển thị `position + 1`) |
-| Dưới `#` | `Sửa` / `Xoá` (chỉ khi `can_edit` / `can_soft_delete`) |
-| Đáy trái | icon báo cáo (cờ) |
+| Góc trên phải | icon đánh dấu (`data-bookmark`) + `#<số bài>` (API trả `position` **0-based**, hiển thị `position + 1`) |
+| Đáy trái | icon báo cáo (cờ) → `Sửa` / `Xoá` (chỉ khi `can_edit` / `can_soft_delete`) |
 | Đáy phải | `Ưng` / `Gạch` → icon trích dẫn → icon trả lời |
 | Dải xám dưới đáy | icon cảm xúc + tên thành viên đã thả |
 
-`.message-content` là flex column và `.message-footer` có `margin-top: auto`, nên với bài
+`.message-content` là flex column và `.message-footer` có `margin: auto 0 0`, nên với bài
 ngắn (nội dung 1 dòng trong khi cột thông tin user cao 234px) footer vẫn bám đáy thay vì
 lơ lửng giữa bài.
 
 Cảm xúc hiện icon + nhãn `Ưng` / `Gạch` kèm **số lượng** (`Ưng 2`), không hiện điểm tổng
 (`+2`). Trạng thái đang chọn đánh dấu bằng `.has-reaction` (màu cam).
+
+Thời gian bài viết: `<time data-post-time title="<ngày giờ đầy đủ>">`. Trên mobile ≤620px,
+chạm vào thời gian sẽ `preventDefault()` và thay `textContent` bằng `title` tại chỗ —
+không nhảy tới permalink; liên kết `#post-…` cạnh đó vẫn hoạt động.
+
+Sửa bài mở **tại chỗ** giống voz.vn (`/p/{id}/edit`): `.inline-edit` thay `.message-main`
+trong cùng `.message-cell--main.is-editing`, không có modal. Editor dùng chung với
+`draftContext = edit-post-{post_id}` nên nháp từng bài không trộn vào nháp trả lời. `Esc`
+hoặc nút Huỷ trả DOM cũ nguyên vẹn; lưu xong chỉ vẽ lại thân bài + dòng attribution
+(không reload trang). Chỉ mở một editor tại một thời điểm — mở bài khác tự đóng bài trước.
+Xoá bài luôn hỏi `confirm()` trước khi gọi `DELETE /posts/{id}/`.
 
 ### 6.3 Thanh trên cùng của chủ đề
 
@@ -550,10 +869,17 @@ nằm ở route web `/p/{post_id}/reactions` (HTML), và route này:
 | `fetch` từ browser (cross-origin) | `200` nhưng **CORS chặn đọc body** |
 | `fetch` từ Node / Vercel Edge | `403` — Cloudflare challenge (TLS fingerprint) |
 
-Vì vậy dải này hiện là **placeholder**: `reactionSummary()` render
+Vì vậy dải này là **best-effort**: `reactionSummary()` render
 `<div class="reactionsBar" data-reaction-list="<post_id>">` với chữ "Đang tải thành viên…",
-`hydrateReactionLists()` gọi `loadReactionUsers()` để lấy tên. Khi cả hai đường đều bị
-chặn, dải tự xoá khỏi DOM (`strip.remove()`) nên không hiện khung rỗng.
+`hydrateReactionLists()` gọi `loadReactionUsers()` — `fetch` trực tiếp
+`https://voz.vn/p/{id}/reactions` từ browser, parse `.block-row--separated`, cache theo
+post trong `reactionUsersCache` (xoá bằng `invalidateReactionUsers()` sau khi đổi cảm xúc).
+Khi fetch lỗi hoặc CORS chặn đọc body, dải tự xoá khỏi DOM (`strip.remove()`) nên không
+hiện khung rỗng.
+
+`api/[...path].js` có thêm `fetchReactionUsers()` / `parseReactionList()` / `reactionCache`
+(TTL 60 s) chạy phía edge, nhưng **hiện không được route nào gọi** — giữ lại làm tham chiếu
+cho hướng xử lý server-side nếu Cloudflare ngừng chặn.
 
 Số lượng cảm xúc vẫn hiển thị đầy đủ trên nút `Ưng` / `Gạch` vì lấy từ `reaction_counts`
 trong response API.
@@ -622,10 +948,14 @@ chữ cái, không đoán (tránh 404).
 File: `public/userscript/voz-oauth-helper.user.js`
 
 ```
-@match  https://voz.vn/oauth2/*
-@match  https://voz.vn/*
-@grant  GM_setClipboard, GM_getValue, GM_setValue
-@run-at document-start
+@name        VOZ OAuth helper
+@namespace   https://voz-forum.vercel.app/
+@version     1.0.0
+@match       https://voz.vn/oauth2/*
+@match       https://voz.vn/*
+@grant       GM_setClipboard, GM_getValue, GM_setValue
+@run-at      document-start
+@noframes
 ```
 
 Cài bằng Tampermonkey / Violentmonkey, hoặc mở trực tiếp
@@ -645,38 +975,190 @@ Cơ chế:
 Panel hiện `code`, nút **Copy code**, nút **Gửi về web client**, và nhắc rằng code chỉ
 dùng được một lần.
 
+Chi tiết triển khai:
+
+| Mục | Giá trị |
+|---|---|
+| Panel id | `voz-oauth-helper-panel` (tạo lại thì xoá bản cũ trước) |
+| Storage key | `voz_oauth_last_code` — ghi cả `GM_setValue` và `sessionStorage` |
+| Trích code | `/[?&]code=([A-Za-z0-9._~-]+)/` trên chuỗi bất kỳ (URL, JSON, body) |
+| Trích state | `/[?&]state=([A-Za-z0-9._~-]+)/` |
+| `postMessage` | gửi `{ type: 'voz-oauth-code', code, state }` tới `window.opener` và `window.parent` với target `'*'` |
+| Copy | `GM_setClipboard` → `navigator.clipboard.writeText` → `textarea` + `execCommand('copy')` |
+| Hiện lại | Vào lại `/oauth2/*` mà chưa có panel thì dựng panel từ code đã lưu |
+| `@noframes` | Không chạy trong iframe, tránh panel nhân bản |
+
+`views/login.js` nhận message này và điền vào `#auth-code`; nếu tab đích đã đóng thì
+người dùng vẫn copy tay được từ panel.
+
+---
+
+## 7.1 Trang cài đặt (`/cai-dat-tuivoz`)
+
+Vào từ menu tài khoản (avatar góc phải) → **Cài đặt**. Trang không gọi API nào; mọi thứ
+lưu trong `localStorage['voz-settings:v1']` của trình duyệt.
+
+### Phím tắt thanh điều hướng
+
+- Mỗi phím tắt là một cặp `{ id, name, url }`. `name` tối đa 40 ký tự, `url` phải là
+  **http(s) tuyệt đối** hoặc đường dẫn nội bộ bắt đầu bằng `/`. `javascript:`, `data:`
+  và URL có credentials bị từ chối.
+- Danh sách hiển thị trên thanh nav (mục **Bài mới** mặc định đã bỏ), đúng thứ tự trong
+  danh sách, trái sang phải rồi xuống dòng. Không giới hạn số lượng trên giao diện (chặn
+  an toàn 200).
+- Khi localStorage chưa có `voz-settings:v1`, danh sách mặc định là **F33**
+  (`/f/diem-bao.33/`) và **F17** (`/f/chuyen-tro-linh-tinh.17/`). Mặc định chỉ để hiển
+  thị: lần sửa đầu tiên (thêm/xoá/sửa/đổi thứ tự) sẽ ghi danh sách thật, nên xoá hết vẫn
+  giữ trạng thái rỗng sau khi tải lại. `/new` vẫn mở trực tiếp bằng URL.
+- Kéo thả hàng trong danh sách để đổi thứ tự; vị trí thả tính theo nửa trên/nửa dưới của
+  hàng đích. Thứ tự lưu ngay vào localStorage.
+- Nút bút chì nạp lại phím tắt vào form để sửa, nút thùng rác xoá.
+- Nav dùng `flex-wrap` + `max-height: 40vh` + cuộn dọc, mỗi link cắt bằng ellipsis ở
+  240px. Đã thử 20–22 phím tắt: desktop 3 hàng, mobile 420px ~9 hàng, không tràn ngang
+  (`scrollWidth == clientWidth`).
+- Đổi ở tab khác tự cập nhật qua event `storage`; đổi trong trang qua event `voz:settings`.
+
+### Sticker
+
+Port từ userscript "Voz Emoji" v2.3 (Fioren) — cùng bộ tính năng, nhưng lưu bằng
+`localStorage` thay cho `GM_setValue` và dùng chung popup với emoji thay vì modal riêng.
+
+- Nút **Sticker** nằm cạnh **Emoji** trên thanh công cụ. Popup có tab album +
+  **Gần đây**; chọn sticker chèn `[IMG size="80x80"]<url>[/IMG]` và **không đóng popup**
+  để chèn liên tiếp, giống emoji. Ô sticker phóng to 1.05 khi rê chuột; popup **Emoji**
+  dùng cùng hiệu ứng (phóng 1.25 + nền xám nhạt) để hai picker có cảm giác giống nhau.
+- Tab **Gần đây** có nút xoá tất cả dạng **chỉ icon 🗑️** (26×26px, `title`/`aria-label`
+  "Xoá hết gần đây"), không còn chiếm cả một hàng chữ rộng.
+- Khoá lưu: `voz-stickers:v1` (album), `voz-stickers:recent:v1` (tối đa 30, mới nhất
+  trước, khử trùng theo URL), `voz-stickers:clientId:v1` (imgur Client-ID, mặc định
+  `66850c248e91c93`).
+- Album có `{ id, name, type, preview, images[], savedAt }`; mỗi ảnh
+  `{ url, base64, deleteUrl }`. `type` là `imgur` (nhập từ album imgur) hoặc `pikvn`
+  (tạo từ ảnh tự chọn). Ảnh thu nhỏ tối đa 400px và mã hoá WebP 0.8; GIF giữ nguyên.
+- Thêm album imgur: dán `https://imgur.com/a/<slug>-<id>` hoặc `https://imgur.com/a/<id>`,
+  ảnh tải song song 5 cái một lô rồi lưu base64. Gọi qua proxy `/api/xf/imgur/album/{id}/images`
+  (userscript dùng `GM_xmlhttpRequest` để né CORS; trang web không né được nên phải qua proxy).
+- Tạo album từ ảnh: chọn nhiều tệp, mỗi tệp thu nhỏ rồi lưu base64 ngay trên máy.
+- **📥 Nhập album từ JSON**: chọn một hoặc nhiều tệp `.json` (hoặc dán JSON trực tiếp).
+  Nhận cả file do nút *Xuất album* của trang này tạo lẫn file export của userscript
+  (`{ version, exportDate, addOnly, albums }`). File có `addOnly: true` (một album) chỉ
+  **thêm** album mới và bỏ qua album trùng tên; file sao lưu đầy đủ
+  (`{ albums, recent, clientId }`) thay thế album, sticker gần đây và Client-ID.
+- Quản lý: kéo thả đổi thứ tự, đổi tên, xoá từng album, chọn nhiều rồi **Xoá album đã chọn**,
+  xuất riêng một album (file `addOnly` — nhập lại chỉ thêm, bỏ qua album trùng tên),
+  mở lưới ảnh để kéo thả sắp xếp và xoá từng ảnh.
+- Xoá album `pikvn` chỉ xoá dữ liệu trong trình duyệt; ảnh đã tải lên máy chủ vẫn còn
+  (khác userscript ở chỗ không có mkdir/xoá server).
+
+### Tải ảnh lên pik.vn
+
+Port từ nhánh `5.pik.vn` của userscript, nhưng **không dùng iframe + `postMessage`** nữa.
+
+- `pik.vn` đã đổi từ `5.pik.vn` sang `https://pik.vn` và bỏ Cloudflare Turnstile: uploader
+  giờ chỉ là `POST /api/upload` multipart (`file` + `hash` + `format`), không cần token.
+  Site vẫn **không gửi header CORS**, nên trang không gọi trực tiếp được → đi qua proxy
+  riêng `POST /api/pik/upload` (`api/[...path].js`), proxy chuyển tiếp nguyên body multipart
+  và trả lại JSON `{ url, deleteUrl, exists }`.
+- Máy chủ pik.vn chỉ nhận **WebP** (GIF bị từ chối `not a webp image`), và trường `hash`
+  phải là **SHA-256 của đúng bytes gửi lên**, nếu không trả `hash mismatch`. Ảnh được nén
+  lại trước khi gửi: cạnh dài tối đa **1920px**, WebP **0.85** (JPEG 0.75 nếu trình duyệt
+  không mã hoá được WebP — giống cách pik.vn tự chọn). Giới hạn ảnh gốc 16384px, 12 MB.
+  GIF mất animation vì bị chuyển thành WebP.
+- Ba đường vào: nút **Ảnh từ URL** trên thanh công cụ (panel có cả ô URL và dải
+  *Chọn ảnh hoặc kéo thả vào đây*, nên không còn nút **Tải ảnh lên** riêng), **Ctrl+V**
+  dán ảnh trong khung soạn, và **kéo thả** tệp ảnh vào khung soạn. Cả ba dùng chung
+  `uploadImageFiles()` (3 ảnh song song) và chèn `[IMG]<url>[/IMG]`, ảnh hiện ngay trong
+  editor như sticker.
+- Panel ảnh **không tự đóng** sau khi tải ảnh để tải tiếp nhiều đợt, giống popup sticker;
+  mỗi ảnh có một dòng trạng thái thành công/lỗi, tệp không phải ảnh bị bỏ qua và báo số lượng.
+  Dải kéo thả chỉ cao ~30px (một dòng), danh sách kết quả hiện ra sau khi bắt đầu tải.
+- Dán văn bản thường vẫn chèn text như cũ; chỉ khi clipboard có mục `image/*` mới upload.
+  Ở chế độ BBCode (`textarea`) không upload, chỉ báo chuyển về chế độ soạn thảo.
+- Ảnh đã tải lên vẫn còn trên pik.vn khi xoá khỏi bài viết; `deleteUrl` chỉ dùng được
+  bằng một `POST` tới chính URL đó.
+
+### Sao lưu / phục hồi
+
+JSON có dạng (có album thì `version` là `"1.2"`, giống userscript):
+
+```json
+{
+  "app": "voz-web",
+  "version": "1.2",
+  "exportedAt": "2026-11-07T15:18:42.433Z",
+  "navShortcuts": [{ "id": "s1abcde", "name": "Overclock", "url": "https://voz.vn/f/…" }],
+  "albums": [
+    {
+      "id": "a1abcde",
+      "name": "Pepe",
+      "type": "imgur",
+      "link": "https://imgur.com/a/xxxxxxx",
+      "albumId": "xxxxxxx",
+      "preview": "data:image/webp;base64,…",
+      "images": [{ "url": "data:image/webp;base64,…", "base64": "data:image/webp;base64,…", "deleteUrl": null }],
+      "savedAt": "2026-11-07T15:20:00.000Z"
+    }
+  ],
+  "recent": [{ "url": "https://i.imgur.com/….png", "base64": "data:image/webp;base64,…" }],
+  "clientId": "66850c248e91c93"
+}
+```
+
+| Nút | Việc làm |
+|---|---|
+| **Xuất JSON** | đổ JSON (phím tắt + album sticker + gần đây + Client-ID) vào ô textarea |
+| **Tải tệp .json** | tải `voz-settings-YYYY-MM-DD.json` |
+| **Phục hồi từ JSON** | đọc ô textarea, kiểm tra hợp lệ rồi ghi đè toàn bộ (báo số phím tắt + album đã nạp) |
+| **Xoá toàn bộ thiết lập** | có `confirm()`, xoá cả phím tắt, album và gần đây |
+
+File backup của userscript nhập được nguyên vẹn: JSON chỉ cần có mảng `albums` cũng chấp
+nhận (không bắt buộc `navShortcuts`). File một album (`addOnly: true`) chỉ **thêm** album
+mới, bỏ qua album trùng tên, không ghi đè.
+
+Phục hồi bỏ qua mục không hợp lệ (tên rỗng hoặc URL sai) và báo lỗi khi JSON hỏng hoặc
+không có mảng `navShortcuts` lẫn `albums`.
+
 ---
 
 ## 8. Giới hạn đã biết
 
 | Giới hạn | Chi tiết |
 |---|---|
-| Không tạo chủ đề mới | `POST /threads/` tồn tại (`node_id`, `title`, `message`) nhưng chưa từng chạy thử; UI không có nút tạo thread. |
+| Không tạo chủ đề mới ở mọi diễn đàn | `views/compose.js` + `POST /threads/` đã nối cho `/f/{slug}.{id}/post-thread`, nhưng diễn đàn có `require_prefix` thiếu tiền tố, `min_tags > 0` hoặc `custom_fields` thì UI chặn và mở form trên voz.vn. Chưa chạy thử đăng thật. |
 | Không upload file | `POST /api/attachments/` luôn `404` dù có scope `attachment:write`. Đường duy nhất là route web `/attachments/upload` cần cookie session + `_xfToken`, không dùng được với bearer token. |
 | Không đăng ký tài khoản | API không có endpoint register. |
 | Không sửa profile | `POST /me/avatar`, `/me/password`, `/me/email` tồn tại nhưng chưa chạy thử (đổi thông tin đăng nhập). |
 | Không tìm user theo danh sách | `GET /users/` trả `403`. Chỉ tìm được bằng `find-name` (khớp chính xác username). |
 | `order` của `/threads/` | Chỉ `post_date` thay đổi kết quả; các giá trị khác trả về mặc định. |
 | Bookmark / watch | Chỉ có dưới tiền tố `/voz/`, không có ở đường XenForo chuẩn. |
-| Không có thông báo realtime | Phải tải lại trang; API không có SSE/WebSocket. |
+| Không có thông báo realtime | Phải tải lại trang; API không có SSE/WebSocket. Badge chỉ cập nhật khi focus/đổi tab/mỗi 60 s. |
 | Cookie không mã hoá | `voz_session` là base64url của JSON token, không phải JWT ký. Ai có cookie là có token — chấp nhận được vì cookie `HttpOnly` + `Secure`, nhưng không phải giải pháp bảo mật cao. |
+| Dải cảm xúc phụ thuộc CORS | Tên người thả cảm xúc lấy từ HTML `/p/{id}/reactions`; nếu trình duyệt chặn đọc body thì dải tự biến mất, chỉ còn số lượng trên nút. |
+| `api.createPost()` / `api.stats()` | Có khai báo trong `api.js` nhưng không dùng; form trả lời gọi `fetch` trực tiếp để gửi `silent`. |
+| `fetchReactionUsers()` ở edge | Đã viết trong `api/[...path].js` (cache 60 s) nhưng chưa có route nào gọi — Cloudflare vẫn chặn fetch server-side. |
+| `sanitizeHtml` cho chữ ký / about / DM | Gọi không kèm `bbcode`, nên spoiler, link quote và kích thước ảnh không được khôi phục ở các chỗ đó. |
+| `views/thread.js` render hai lần khi gửi bài | `navigate()` đã gọi `route()`, sau đó code gọi thêm `viewThread(threadId, 'last', post_id)` để chắc chắn ở trang cuối. |
+| `page === 'last'` | Không phải shortcut API: tải trang 1, đọc `last_page`, rồi gọi lại — tốn thêm một request. |
+| Cờ "đã đọc" của alert | `views/lists.js` kiểm tra `a.read_date`, còn `ui/headerMenus.js` kiểm tra `!item.view_date` — hai chỗ dùng hai tên trường khác nhau cho cùng một khái niệm. Cần đối chiếu response thật trước khi sửa. |
 
 ---
 
 ## 9. Kiểm thử đã chạy
 
-Tất cả trên `http://localhost:3111` với tài khoản thật, sau đó dọn dẹp.
+Tất cả trên `http://localhost:3111` với một tài khoản thử, sau đó dọn dẹp. Không ghi lại
+username, user id, thread id hay post id thật của bất kỳ ai.
 
 | Chức năng | Kết quả |
 |---|---|
 | Trang chủ | 61 node render đúng cây |
-| Forum `/f/13` | 24 item (4 sticky + 20), pager `1/490` |
-| Thread `/t/1251511` | 20 bài, BBCode + quote render, 40 nút cảm xúc |
-| `?page=last` | nhảy đúng trang `1581/1581` của thread `682181` |
+| Forum `/f/<id>` | 24 item (4 sticky + 20), pager `1/490` |
+| Thread `/t/<id>` | 20 bài, BBCode + quote render, 40 nút cảm xúc |
+| `?page=last` | nhảy đúng trang cuối của một thread nhiều trang |
 | Đăng nhập OAuth | popup → code → exchange → cookie → "Xin chào" |
-| Trả lời | `alo test web client` → post mới, nhảy tới đúng bài |
+| Trả lời | post mới xuất hiện, nhảy tới đúng bài |
 | Trích dẫn | sinh đúng 1 block `[QUOTE="…, post: …, member: …"]` |
-| Sửa bài | modal → lưu → nội dung đổi, vẫn ở trang cuối |
+| Sửa bài | editor tại chỗ trong bài (không modal) → lưu → thân bài + "Đã sửa" cập nhật, không reload |
+| Chủ đề chưa đọc | danh sách in đậm tiêu đề; mở trang cuối → `POST /threads/{id}/mark-read` → quay lại danh sách hết đậm |
 | Xoá bài | confirm → biến mất, `reply_count` giảm |
 | Cảm xúc | Ưng: `insert` → `.has-reaction`; bỏ: `delete` → mất `.has-reaction` |
 | Số bài | `position` 0-based → hiển thị `#1`, `#2`, `#3`… |
@@ -685,34 +1167,77 @@ Tất cả trên `http://localhost:3111` với tài khoản thật, sau đó d�
 | Icon trích dẫn / trả lời | SVG, click vẫn chèn quote và focus textarea |
 | Ảnh có size | `[IMG size="80x80"]` render đúng 80×80 (trước đó 512×512) |
 | Ảnh `width=` | `[IMG width="150px"]` và `[ATTACH width="345px"]` đúng |
-| Footer bài ngắn | `margin-top: auto` → gap đáy = 0 trên cả 16 bài của trang |
+| Footer bài ngắn | `margin: auto 0 0` → gap đáy = 0 trên cả 16 bài của trang |
 | DM trả lời | 1 → 2 tin nhắn |
-| DM mới | tìm `salin1810` → gửi → mở conversation mới |
-| Tìm kiếm | `firefox` → 184 kết quả, 10 trang |
+| DM mới | tìm một thành viên → gửi → mở conversation mới |
+| Tìm kiếm | một từ khoá phổ biến → nhiều trang kết quả |
 | Alerts / Bookmarks / Watched | 22 / 20 / 2 mục |
-| Trang cá nhân | `fRzzy`, 12.7K bài, nút "Gửi tin nhắn" |
+| Trang cá nhân | render đúng thống kê, nút "Gửi tin nhắn" |
 | Đăng xuất | cookie xoá, DM và form trả lời bị chặn |
 | Mobile 420px | footer không tràn, mọi nút vẫn hiện |
-| URL sạch | `/t/slug.682181/page-1581/`, không còn `#`; reload deep link OK |
+| URL sạch | `/t/<slug>.<id>/page-<n>/`, không còn `#`; reload deep link OK |
 | Slug khớp voz.vn | so 20 thread thật → 20/20 khớp `view_url` |
 | Back/forward | `popstate` khôi phục đúng trang |
-| Legacy hash | `/#/t/682181?page=5` → `/t/682181/page-5/` |
-| Legacy không slug | `/t/682181/` vẫn parse đúng |
-| Fragment `#post-` | click `#31601` → scroll tới bài, URL giữ `#post-44234456` |
+| Legacy hash | `/#/t/<id>?page=5` → `/t/<id>/page-5/` |
+| Legacy không slug | `/t/<id>/` vẫn parse đúng |
+| Fragment `#post-` | click link `#post-<id>` → scroll tới bài, URL giữ fragment |
 | Breadcrumb | màu `#d1d4d6` giống tên tác giả, đọc được trên nền tối |
 | Avatar thread | `/l/` (192×192) cho khung 96px, `srcset` thêm `/o/` cho 2x |
 
-Dữ liệu test đã dọn: bài `alo test web client` đã xoá, conversation `web client test`
-đã leave, cảm xúc đã bỏ.
+Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, cảm xúc đã bỏ.
 
 ---
 
-## 10. Ghi chú triển khai
+## 10. Trình soạn nội dung dùng chung
+
+- `ui/editor.js` cung cấp trình soạn trực quan độc lập và chế độ BBCode cho trả lời, tạo chủ đề, sửa bài, tạo/trả lời DM. Không dùng mã XenForo/Froala. `ui/editorTools.js` quản lý bảng chèn; `lib/editorCodec.js` parse/render/serialize; CSS riêng `css/editor.css`.
+- Thanh công cụ icon SVG tự vẽ, một hàng gọn: B/I/Thêm định dạng | liên kết/ảnh/Thêm nội dung | trích dẫn/spoiler trong dòng/emoji/sticker | undo/Thêm công cụ | xem trước bên phải. **Ảnh từ URL** là một nút duy nhất: panel của nó chứa cả ô URL lẫn dải tải ảnh lên pik.vn, nên không có nút *Tải ảnh lên* riêng. Mỗi nút mở bảng chèn đều bấm lần nữa để đóng; menu nổi đóng khi chọn công cụ, nhấn Escape hoặc bấm ra ngoài; giữ vùng chọn khi mở menu. Màu/cỡ/phông chữ, căn đoạn, danh sách, gạch ngang/gạch chân, mã trong dòng và cỡ chữ to nằm trong menu chữ; media/bảng/đường kẻ/spoiler khối/mã nguồn nằm trong menu nội dung; BBCode, redo, xoá định dạng, nháp và hướng dẫn nằm trong menu công cụ, không có footer nháp dài.
+- Có B/I/U/S, màu/cỡ/phông chữ, căn đoạn, danh sách số/bullet, URL ảnh/liên kết, **tải ảnh lên pik.vn**, media YouTube/X/TikTok/Reddit/Imgur, quote, spoiler, code, bảng, HR, cỡ chữ to, emoji và danh mục smilie API; undo/redo tối đa 100 trạng thái, xoá định dạng đoạn chọn, xem trước cục bộ. Bảng emoji chỉ dùng danh mục `/voz/smilies` của voz.vn (79 smilie, khớp 79/79 thứ tự với tab Smilies của editor voz.vn), không chèn sẵn emoji Unicode ngoài bộ đó; chọn emoji không đóng bảng để chèn liên tiếp và ảnh hiện ngay trong khung soạn. Ô chọn giới hạn 32px như voz.vn nên smilie nguồn 24px không bị phóng to gây mờ, kèm biến thể `_2x` cho màn hình hi-dpi. Media xem trước hiện liên kết nguồn, không chạy embed ngoài. Các BBCode chưa biết và ảnh có thuộc tính kích thước được giữ nguyên dưới dạng khối không chỉnh sửa; chuyển BBCode để sửa chúng.
+- Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
+- Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
+- Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test.
+
+## 11. Ghi chú triển khai
 
 - `package.json` có `"type": "module"` — bắt buộc để Vercel hiểu `api/*.js` là ESM.
 - Tên file `api/[...path].js` là catch-all của Vercel: mọi `/api/<bất kỳ>` vào cùng một
   function. `api/index.js` chỉ re-export để `/api` (không có sub-path) cũng chạy.
-- `vercel.json` không rewrite gì — Vercel tự phục vụ `public/` và route `api/`.
+- `vercel.json` khai báo `outputDirectory: "public"`, `regions: ["sin1"]`, SPA rewrite
+  `/((?!api/|assets/|userscript/).*)` → `/index.html`, và header
+  `Cache-Control: private, no-store, max-age=0` cho `/api/(.*)`.
+- `dev-server.mjs` import trực tiếp `api/[...path].js` và dựng `Request`/`Response` chuẩn
+  Web API, nên handler chạy y hệt trên Node và trên edge; `Set-Cookie` được chuyển qua
+  `getSetCookie()` để không mất nhiều header.
 - Không commit `tokens.json` hay bất kỳ file chứa token thật.
 - Token trong cookie hết hạn sau `expires_in` (thường 1 giờ); edge tự refresh, nhưng nếu
   refresh token cũng hết hạn thì người dùng phải đăng nhập lại.
+
+### 11.1 Checklist khi sửa code
+
+| Muốn đổi | Sửa ở đâu |
+|---|---|
+| Thêm route mới | `core/router.js` (`route()`) + tạo `views/<tên>.js` + thêm `*Path()` vào `core/paths.js` nếu cần URL mới |
+| Thêm endpoint voz.vn | thêm method vào object `api` trong `api.js`; nếu cần scope mới thì sửa `SCOPES` trong `api/[...path].js` |
+| Thêm endpoint riêng của edge | thêm nhánh `if (path === '/api/…')` trong `handler()` của `api/[...path].js` |
+| Đổi màu / kích thước | `css/base.css` (`:root`) trước, chỉ thêm rule cục bộ khi thật sự cần |
+| Đổi bố cục mobile | `css/responsive.css` (breakpoint 900/860/650/620) hoặc `@media` trong file khu vực |
+| Thêm BBCode mới | `lib/editorCodec.js` (`inline`/`block` map) + `lib/spoilers.js` nếu là block đặc biệt + `ui/editorTools.js` nếu cần nút |
+| Thêm provider media | `frameRules` + `restoreMedia()` trong `lib/media.js`, và nhánh tương ứng trong `editorTools.js` |
+| Đổi cách hiển thị thời gian | `core/utils.js` (`timeAgo` / `postDate` / `fullDate`) |
+| Đổi badge chưa đọc | `ui/unreadCounts.js` |
+| Đổi nháp editor | `ui/editor.js` (`draftKey`, `save()`, `editor:clear-draft`) |
+| Thêm thiết lập mới | `lib/settings.js` (thêm field vào `emptySettings`/`normalizeSettings`) + form trong `views/settings.js`; JSON backup tự động gồm field mới |
+
+### 11.2 Kiểm tra trước khi deploy
+
+```powershell
+cd "D:\Data 2\Github-Clone\siritami"
+node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs
+cd vtest
+node dev-server.mjs 3111
+# mở http://localhost:3111 — kiểm tra trang chủ, 1 thread, 1 DM, /login
+```
+
+`node --check` cho từng file `.js`/`.mjs` cũng hữu ích vì project không có bundler hay
+type-checker: `Get-ChildItem -Recurse -Include *.js,*.mjs | ForEach-Object { node --check $_.FullName }`.

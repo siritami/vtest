@@ -6,31 +6,34 @@
 <title>VOZ</title>
 <meta name="description" content="Diễn đàn VOZ — bản web dựng trên REST API của voz.vn">
 <link rel="preconnect" href="https://data.voz.vn">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/layout.css">
+<link rel="stylesheet" href="/assets/css/forum.css">
+<link rel="stylesheet" href="/assets/css/avatar.css">
+<link rel="stylesheet" href="/assets/css/post.css">
+<link rel="stylesheet" href="/assets/css/media.css">
+<link rel="stylesheet" href="/assets/css/reaction.css">
+<link rel="stylesheet" href="/assets/css/forms.css">
+<link rel="stylesheet" href="/assets/css/editor.css">
+<link rel="stylesheet" href="/assets/css/account.css">
+<link rel="stylesheet" href="/assets/css/misc.css">
+<link rel="stylesheet" href="/assets/css/responsive.css">
+<link rel="stylesheet" href="/assets/css/headerMenus.css">
+<link rel="stylesheet" href="/assets/css/home.css">
+<link rel="stylesheet" href="/assets/css/settings.css">
+<link rel="stylesheet" href="/assets/css/stickers.css">
 </head>
 <body>
 <header class="p-header">
   <div class="p-header-inner">
     <a class="p-header-logo" href="/">VOZ</a>
-    <form class="p-header-search" id="header-search" autocomplete="off">
-      <input type="search" name="q" placeholder="Tìm kiếm…" aria-label="Tìm kiếm">
-      <button type="submit" aria-label="Tìm">Tìm</button>
-    </form>
     <div class="p-header-account" id="header-account"></div>
   </div>
 </header>
 
 <nav class="p-nav">
   <div class="p-nav-inner">
-    <ul class="p-nav-list" id="nav-list">
-      <li><a href="/" data-nav="home">Diễn đàn</a></li>
-      <li><a href="/new" data-nav="new">Bài mới</a></li>
-      <li><a href="/search" data-nav="search">Tìm kiếm</a></li>
-      <li><a href="/direct-messages" data-nav="dm">Hộp thư</a></li>
-      <li><a href="/alerts" data-nav="alerts">Thông báo</a></li>
-      <li><a href="/bookmarks" data-nav="bookmarks">Đánh dấu</a></li>
-      <li><a href="/watched" data-nav="watched">Theo dõi</a></li>
-    </ul>
+    <ul class="p-nav-list" id="nav-list"></ul>
   </div>
 </nav>
 

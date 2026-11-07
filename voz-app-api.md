@@ -1,7 +1,19 @@
-# VOZ app (com.frzzy.vozma26) — decompile + API map
+# VOZ app (com.&lt;publisher&gt;.vozma26) — decompile + API map
 
 Reverse-engineering notes for `voz-app/base.apk`. Everything below was read out of the
 decompiled sources and verified against the live API on 2026-11-05.
+
+> **Note on personal data.** This file documents the app's API surface only. It contains
+> **no** member usernames, user ids, member ids, conversation ids, thread ids, post ids or
+> real post content. Every example uses placeholders such as `<your_id>`, `<your_name>`,
+> `<post_id>`, `<thread_id>`, `<conversation_id>`, `<message_id>`, `<unix_ts>`.
+> The publisher segment of the Android package name is redacted to `<publisher>` because it
+> is a personal handle; the rest of the package (`vozma26`) is kept.
+> The OAuth `client_id`, guest API key, Sentry/EAS identifiers and store links are kept
+> because they are app constants needed to reproduce the API calls, not personal
+> information. When adding new examples, keep the same rule: no real member identifiers,
+> no real URLs to member profiles or conversations, no copied post text.
+> The companion file `voz-forum-deploy.md` follows the same rule.
 
 ---
 
@@ -46,7 +58,7 @@ layer. Line numbers below refer to `voz-app\hermes_out.js`.
 
 | Field | Value |
 |---|---|
-| package | `com.frzzy.vozma26` |
+| package | `com.<publisher>.vozma26` |
 | display name | VOZ |
 | version | 1.0.0 (versionCode 3) |
 | min / target SDK | 24 / 36 |
@@ -207,7 +219,7 @@ Base URL: `https://voz.vn/api`. All paths below are relative to it.
 |---|---|---|---|
 | GET | `/me/` | – | returns `{ me: {...} }`; guest → `user_id: 0` |
 | GET | `/nodes/flattened` | – | 61 forum nodes (`node_id`, `title`, `node_type_id`) |
-| GET | `/forums/{node_id}/threads` | `page` | thread list of a forum |
+| GET | `/forums/{node_id}/threads` | `page` | thread list of a forum; mỗi thread có `is_unread` theo tài khoản đang đăng nhập |
 | GET | `/search-forums/{node_id}/threads` | `page` | thread list of a SearchForum node |
 | GET | `/threads/{thread_id}/` | `with_posts=true`, `page` | thread + first page of posts |
 | GET | `/threads/{thread_id}/posts` | `page` | posts only |
@@ -375,7 +387,7 @@ curl.exe -s -X POST "https://voz.vn/api/posts/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
   --data-urlencode "thread_id=<thread_id>" `
-  --data-urlencode "message=alo test est"
+  --data-urlencode "message=<bbcode>"
 ```
 
 Response (`success: true` + the created post):
@@ -384,8 +396,8 @@ Response (`success: true` + the created post):
 { "success": true,
   "post": { "post_id": <post_id>, "thread_id": <thread_id>, "position": <n>,
             "user_id": <your_id>, "username": "<your_name>",
-            "message": "alo test est", "message_parsed": "alo test est",
-            "message_state": "visible", "post_date": 1793893531,
+            "message": "<bbcode>", "message_parsed": "<html>",
+            "message_state": "visible", "post_date": <unix_ts>,
             "can_edit": true, "can_soft_delete": true, "can_hard_delete": false,
             "is_first_post": false, "is_last_post": true,
             "view_url": "https://voz.vn/p/<post_id>/" } }
@@ -432,17 +444,17 @@ Working example (quoting an existing post):
 
 ```
 [QUOTE="<author>, post: <post_id>, member: <user_id>"]
-Non-tech muốn hỏi sếp là các app trên github hình như đều là "open-source". ...
+<quoted message text, nested quotes already stripped>
 [/QUOTE]
 
-Tải source code về kêu AI nó review thôi nhanh gọn lẹ
+<your reply text>
 ```
 
 Server renders it to:
 
 ```html
 <blockquote class="xfBb-quote" data-name="<author>">…</blockquote><br />
-Tải source code về kêu AI nó review thôi nhanh gọn lẹ
+<your reply text>
 ```
 
 Helper script: `voz-app\quote_reply.py`
@@ -465,15 +477,14 @@ POST /api/posts/{post_id}/
 curl.exe -s -X POST "https://voz.vn/api/posts/<post_id>/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
-  --data-urlencode "message=alo test test"
+  --data-urlencode "message=<new bbcode>"
 ```
 
 Response: same `{ success, post }` envelope, with `last_edit_date` now set
 (Unix seconds) and `message` / `message_parsed` replaced.
 
-Verified: the post went from `alo test est` → `alo test test`,
-`last_edit_date = 1793893961`, and the web UI shows
-`Last edited: A moment ago`.
+Verified: the post's `message` changed to the new BBCode, `last_edit_date` was set to
+the edit time, and the web UI shows `Last edited: A moment ago`.
 
 Notes:
 - Editing replaces the whole message — send the full BBCode, not a diff.
@@ -529,7 +540,7 @@ xf-request-user-extras: {"conversations_unread":0,"alerts_unviewed":0}
 |---|---|
 | Post disappears from the thread listing | `GET /threads/{id}/posts` no longer returns it |
 | `GET /api/posts/{post_id}/` → `404` | `{"code":"requested_post_not_found"}` |
-| `reply_count` decrements | 31613 → 31612 |
+| `reply_count` decrements | `reply_count` drops by 1 |
 | Remaining posts are **renumbered** | `position` shifts down by 1 for every later post |
 | Post ID is **immutable** | the later post kept its ID; only `position` shifted down by 1 |
 | Moderator log entry | `Post removed from public view (reason: )` |
@@ -697,8 +708,8 @@ curl.exe -s -X POST "https://voz.vn/api/conversations/" `
   -H "Authorization: Bearer $token" -H "User-Agent: VOZ/MA26" `
   -H "Content-Type: application/x-www-form-urlencoded" `
   --data-urlencode "recipient_ids[]=<recipient_id>" `
-  --data-urlencode "title=test test test" `
-  --data-urlencode "message=test test test"
+  --data-urlencode "title=<subject>" `
+  --data-urlencode "message=<first message>"
 ```
 
 Response:
@@ -707,20 +718,20 @@ Response:
 { "success": true,
   "conversation": {
     "conversation_id": <conversation_id>,
-    "title": "test test test",
+    "title": "<subject>",
     "user_id": <your_id>, "username": "<your_name>",
     "recipients": { "<recipient_id>": "<recipient_name>" },
     "recipient_count": 2,
     "first_message_id": <message_id>,
     "last_message_id": <message_id>,
-    "last_message_date": 1793898104,
+    "last_message_date": <unix_ts>,
     "last_message_user_id": <your_id>,
     "reply_count": 0,
     "is_starred": false, "is_unread": false,
     "conversation_open": true,
     "can_edit": true, "can_reply": true, "can_invite": true,
     "can_upload_attachment": false,
-    "start_date": 1793898104,
+    "start_date": <unix_ts>,
     "view_url": "https://voz.vn/direct-messages/<slug>.<conversation_id>/",
     "Starter": { "user_id": <your_id>, "username": "<your_name>", "avatar_urls": {...} }
   } }
@@ -744,7 +755,7 @@ GET /api/conversations/{id}/?with_messages=true&page=1
 { "conversation": { ...same shape as above... },
   "messages": [ { "message_id": <message_id>, "user_id": <your_id>,
                   "username": "<your_name>", "message_date": <unix_ts>,
-                  "message": "test test test", "message_parsed": "test test test" } ] }
+                  "message": "<bbcode>", "message_parsed": "<html>" } ] }
 ```
 
 Without `with_messages=true` the response contains only `conversation`.
@@ -848,11 +859,27 @@ validation error rather than a success, so the shape is inferred from the error 
 | GET | `/threads/?order=post_date` | **all** threads, 819 218 total — the only `order` value that changes the result set |
 | GET | `/threads/?forum_id=13` | accepted but **ignored** (same total as unfiltered) |
 | GET | `/threads/?creator_id=…`, `?starter_id=…` | accepted but ignored |
-| GET | `/threads/?unread=1` | auth only; 11 054 total for this account |
+| GET | `/threads/?unread=1` | auth only; returns the account's unread threads |
 | GET | `/threads/?sticky=1`, `?prefix_id=`, `?with_tags=1`, `?since=`, `?direction=` | accepted, no observable effect |
 | GET | `/forums/{id}/` | forum detail: `node_id`, `title`, `description`, `breadcrumbs`, `type_data`, `view_url` |
 | GET | `/forums/{id}/threads` | `page`, `order`, `direction`, `sticky` |
-| GET | `/nodes/` | full node tree: `{ tree_map, nodes }`, 61 nodes |
+
+#### Read / unread state (thread list)
+
+Every thread in `/forums/{id}/threads`, `/search-forums/{id}/threads`, `/threads/` and
+`/threads/?unread=1` carries the read state **for the authenticated account**, so the bold
+"unread" title in a forum listing needs no extra endpoint:
+
+| Field | Meaning |
+|---|---|
+| `is_unread` | `true` when there are posts after `visitor_read_date` — voz.vn renders these rows with `is-unread` and a `font-weight: 600` title |
+| `first_unread_snippet` | preview text of the first unread post (`null` when everything is read) |
+| `visitor_read_date` | Unix seconds of the account's last read inside that thread |
+| `is_watching` | the account is watching the thread |
+
+With a guest key (`XF-Api-Key` only) the flag still parses but reflects no account, so it
+should be treated as "read". Reading a thread (`GET /threads/{id}/`) or marking it read
+(`POST /threads/{id}/mark-read` with `date`) flips `is_unread` back to `false`.| GET | `/nodes/` | full node tree: `{ tree_map, nodes }`, 61 nodes |
 | GET | `/nodes/{id}/` | single node |
 
 > `order=post_date` is the only ordering that actually works; `view_count`,
@@ -894,6 +921,10 @@ Guest-accessible. Note `totals` values are **strings**, `users` is a number.
 
 **Status: upload via REST API does not work. Use the web UI.**
 
+The shared editor in this client therefore offers image URLs, not file uploads. The
+proxy currently requests only `attachment:read`; it deliberately does not advertise
+an upload capability or request `attachment:write` for a non-working endpoint.
+
 #### What works
 
 | Method | Path | Notes |
@@ -908,9 +939,9 @@ Attachment object:
     "attachment_id": <attachment_id>,
     "content_id": <post_id>,
     "content_type": "post",
-    "filename": "1685413887274.png",
+    "filename": "<filename>.png",
     "file_size": 279828,
-    "attach_date": 1685413853,
+    "attach_date": <unix_ts>,
     "direct_url": "https://voz.vn/attachments/<slug>.<id>/",
     "thumbnail_url": "https://data.voz.vn/attachments/...",
     "width": 955, "height": 719,

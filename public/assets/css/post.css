@@ -1,0 +1,300 @@
+/* Posts (.message) — metrics copied from voz.vn, plus the BBCode renderer. */
+
+.message {
+  background: var(--content-bg);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.message:last-child { margin-bottom: 0; }
+.message:target { outline: 2px solid var(--nav-active); }
+.message-inner { display: flex; gap: 0; }
+
+/* The thread block is transparent so the dark page background separates posts. */
+.block--messages { background: transparent; }
+.block--messages .block-body { background: transparent; }
+.block--messages > .block-header { background: transparent; padding: 7px 0; }
+
+.bbWrapper img.smilie { display: inline-block; vertical-align: text-bottom; max-width: none; margin: 0; }
+
+.member-card { position: fixed; z-index: 150; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; background: var(--content-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 4px 16px #0005; font-size: 14px; }
+.member-card-header { display: flex; gap: 12px; padding: 12px; background: var(--quote-bg); }
+.member-card-header > div { min-width: 0; overflow-wrap: anywhere; }
+.member-card-header .avatar { flex: 0 0 80px; width: 80px; height: 80px; }
+.member-card-name { font-size: 20px; font-weight: 600; }
+.member-card-stats { display: flex; justify-content: space-around; text-align: center; padding: 12px 6px; color: var(--dimmed); }
+.member-card-stats strong { display: block; font-size: 18px; font-weight: 400; color: var(--text); }
+.member-card-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-top: 1px solid var(--border); }
+
+/* Top row above the first post: page navigator. */
+.block-outer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.block-outer--bottom { padding: 6px 0 10px; }
+.block-outer-main { flex: 1 1 auto; min-width: 0; }
+.block-outer .pageNav { padding: 0; }
+
+/* Icon button inside the blue block header (watch / unwatch). */
+.block-header-title { flex: 1 1 auto; min-width: 0; }
+.block-header-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .14);
+  color: var(--block-header-fg);
+  cursor: pointer;
+  line-height: 1;
+}
+.block-header-icon:hover { background: rgba(255, 255, 255, .28); }
+.block-header-icon.is-on { background: var(--nav-active); color: #fff; }
+.block-header-icon[aria-disabled="true"] { opacity: .6; cursor: default; }
+.block-header-icon svg { display: block; }
+
+.message-cell { padding: 10px; }
+.message-cell--user {
+  flex: 0 0 140px;
+  background: var(--quote-bg);
+  border-radius: 3px 0 0 3px;
+}
+.message-cell--main {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 0 3px 3px 0;
+}
+.message-main { display: flex; flex-direction: column; min-height: 100%; }
+
+/* Inline edit: the message body is swapped for the editor inside the same cell. */
+.message-cell--main.is-editing { padding: 10px; }
+.message-main[hidden] { display: none !important; }
+.inline-edit { display: block; }
+.inline-edit .rich-editor { border-radius: var(--radius); }
+.inline-edit .editor-visual,
+.inline-edit .rich-editor .editor-source { min-height: 140px; }
+.inline-edit-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.inline-edit-actions .button { font-size: 14px; }
+
+.message-user { text-align: center; }
+.message-avatar { margin-bottom: 8px; }
+.message-avatar .avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #dfe2e4;
+  display: block;
+  margin: 0 auto;
+}
+.message-userDetails { margin-bottom: 6px; }
+.message-userMeta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.message-userMeta .userTitle { flex-basis: 100%; }
+.user-badge { display: inline-block; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--badge-fg) 20%, var(--badge-bg)); border-radius: 2px; background: var(--badge-bg); color: var(--badge-fg); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
+.member-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.message-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.message-name .username { color: var(--link); }
+.message-name .username:hover { color: var(--link-hover); }
+.userTitle {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.message-userStats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dimmed);
+  text-align: left;
+}
+.message-userStats li { display: flex; justify-content: space-between; gap: 6px; }
+.message-userStats b { color: var(--text); font-weight: 600; }
+
+.post-bookmark { display: inline-flex; align-items: center; justify-content: center; padding: 3px; border: 0; background: transparent; color: var(--dimmed); cursor: pointer; vertical-align: middle; }
+.post-bookmark svg { width: 16px; height: 16px; }
+.post-bookmark:hover, .post-bookmark[aria-pressed="true"] { color: var(--link); }
+.post-bookmark[aria-pressed="true"] svg { fill: currentColor; }
+.post-bookmark:disabled { opacity: .5; cursor: wait; }
+
+.message-attribution {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 3px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dimmed);
+}
+.message-attribution-main,
+.message-attribution-opposite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.message-attribution-opposite { margin-left: auto; }
+.message-attribution a { color: var(--dimmed); }
+.message-attribution a:hover { color: var(--link-hover); }
+.message-postNumber {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--link) !important;
+}
+.message-postNumber:hover { color: var(--link-hover) !important; }
+
+.message-content { display: flex; flex-direction: column; flex: 1 1 auto; }
+.message-userContent { margin-top: 10px; }
+.message-body {
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.message-body img { border-radius: 3px; }
+
+.message-footer {
+  margin: auto 0 0;
+  padding: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+.message-actionBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+}
+.actionBar-set { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.actionBar-set--right { margin-left: auto; }
+.actionBar-action {
+  display: inline-block;
+  padding: 3px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--link);
+  white-space: nowrap;
+}
+.actionBar-action:hover { color: var(--link-hover); }
+.actionBar-action--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+.actionBar-action--icon svg { display: block; }
+.actionBar-set--left .actionBar-action { color: var(--dimmed); }
+.actionBar-set--left .actionBar-action:hover { color: var(--link-hover); }
+.actionBar-set--left .actionBar-action--danger:hover { color: #c62828; }
+
+.message-signature {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+  color: var(--dimmed);
+  max-height: 90px;
+  overflow: hidden;
+}
+
+/* Grey strip listing who reacted, like voz.vn. */
+.reactionsBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 6px;
+  background: var(--quote-bg);
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dimmed);
+}
+.reactionsBar-icons { display: inline-flex; align-items: center; gap: 2px; }
+.reactionsBar-icons .reaction-image { width: 16px; height: 16px; }
+.reactionsBar-users { color: var(--dimmed); }
+.reactionsBar-user { color: var(--link); }
+.reactionsBar-user:hover { color: var(--link-hover); }
+.reactionsBar-loading { color: var(--dimmed); }
+
+/* ---------- bbcode rendering ---------- */
+.post-spoiler { margin: 8px 0; }
+.post-spoiler > summary { display: list-item; width: fit-content; max-width: 100%; padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--quote-bg); color: var(--link); font-size: 13px; cursor: pointer; }
+.post-spoiler[open] { padding-bottom: 8px; }
+.post-spoiler[open] > summary { margin-bottom: 10px; }
+.post-spoiler > .post-spoiler { margin-left: 10px; }
+.bbWrapper blockquote {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: var(--quote-bg);
+  border-left: 3px solid var(--quote-border);
+  border-radius: 0 3px 3px 0;
+  font-size: 15px;
+  color: #3a3d40;
+}
+.bbWrapper blockquote .bbCodeBlock-title,
+.bbWrapper blockquote[data-name]::before {
+  content: attr(data-name);
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dimmed);
+  margin-bottom: 4px;
+}
+.bbWrapper blockquote[data-name=""]::before,
+.bbWrapper blockquote.has-quote-source::before { content: none; }
+.bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; }
+.bbWrapper h2, .bbWrapper h3, .bbWrapper h4 { margin: 12px 0 6px; font-size: 18px; }
+.bbWrapper ul, .bbWrapper ol { margin: 6px 0; padding-left: 22px; }
+.bbWrapper code {
+  background: #e6e8ea;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 14px;
+}
+.bbWrapper pre {
+  background: #2b3138;
+  color: #e6e8ea;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+.bbWrapper pre code { background: none; color: inherit; padding: 0; }
+.bbWrapper .bbCodeBlock {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 8px 0;
+  overflow: hidden;
+}
+.bbWrapper .bbCodeBlock-title {
+  background: var(--content-bg-alt);
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dimmed);
+}
+.bbWrapper .bbCodeBlock-content { padding: 8px 10px; }
+.bbWrapper .bbImage { max-width: 100%; height: auto; }
+.bbWrapper img:not(.smilie) { max-width: 100%; height: auto; }
+.bbWrapper .smilie { vertical-align: middle; }
+.bbWrapper .username { color: var(--link); font-weight: 600; }

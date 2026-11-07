@@ -1,0 +1,66 @@
+/* VOZ-style theme — palette sampled from voz.vn */
+
+:root {
+  --header-bg: #363d45;
+  --header-fg: #d1d4d6;
+  --nav-bg: #363d45;
+  --nav-fg: #d1d4d6;
+  --nav-active: #ff6600;
+  --block-header-bg: #5c7099;
+  --block-header-fg: #ebecED;
+  --link: #23497b;
+  --link-hover: #ff6600;
+  --text: #202122;
+  --dimmed: #8a8e93;
+  --page-bg: #373d43;
+  --content-bg: #f4f5f5;
+  --content-bg-alt: #eef0f1;
+  --border: #d5d8db;
+  --border-faint: #e2e5e8;
+  --dimmed-2: #6b7075;
+  --quote-bg: #eaeaeb;
+  --quote-border: #ff944c;
+  --footer-bg: #102138;
+  --footer-fg: #ebf1f9;
+  --radius: 4px;
+  --max-width: 1058px;
+  --font: "Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--page-bg); }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--page-bg);
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hover); }
+
+img { max-width: 100%; }
+
+/* ---------- utilities ---------- */
+.u-dimmed { color: var(--dimmed); }
+.u-smaller { font-size: 13px; }
+.u-muted { color: var(--dimmed); }
+.u-nowrap { white-space: nowrap; }
+.u-right { text-align: right; }
+.u-center { text-align: center; }
+.u-hidden { display: none !important; }
+.u-srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

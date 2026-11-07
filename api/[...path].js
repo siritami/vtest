@@ -283,6 +283,58 @@ export default async function handler(request) {
     });
   }
 
+  // Sticker albums are imported straight from imgur. The userscript used
+  // GM_xmlhttpRequest to skip CORS; a page cannot, so relay it here.
+  if (path.startsWith('/api/xf/imgur/')) {
+    const sub = path.replace('/api/xf/imgur', '');
+    const clientId = url.searchParams.get('client_id') || '';
+    if (!/^[\w-]{1,64}$/.test(clientId)) return json({ success: false, error: 'client_id không hợp lệ' }, { status: 400 });
+    const upstream = await fetch(`https://api.imgur.com/3${sub}`, {
+      headers: { Authorization: `Client-ID ${clientId}`, Accept: 'application/json' },
+    });
+    const text = await upstream.text();
+    const headers = new Headers(corsHeaders(request));
+    headers.set('Content-Type', 'application/json');
+    headers.set('Cache-Control', 'private, max-age=300');
+    if (!upstream.ok) {
+      return new Response(JSON.stringify({ success: false, status: upstream.status, error: text.slice(0, 300) }), { status: upstream.status, headers });
+    }
+    return new Response(text, { status: 200, headers });
+  }
+
+  // pik.vn image host. Its uploader sends no CORS headers, so the page cannot call it
+  // directly and we relay here. The body is multipart (file + hash + format) and must be
+  // forwarded untouched so pik.vn's SHA-256 check still matches the bytes it receives.
+  if (path === '/api/pik/upload' && request.method === 'POST') {
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.startsWith('multipart/form-data')) {
+      return json({ error: 'Cần multipart/form-data.' }, { status: 400, headers: corsHeaders(request) });
+    }
+    let upstream;
+    try {
+      // Buffered (not streamed) so the relay works identically on Node and the edge runtime,
+      // where forwarding a request stream requires the non-portable `duplex: 'half'`.
+      const body = await request.arrayBuffer();
+      upstream = await fetch('https://pik.vn/api/upload', {
+        method: 'POST',
+        headers: { 'User-Agent': UA, Accept: 'application/json', 'Content-Type': contentType },
+        body,
+      });
+    } catch {
+      return json({ error: 'Không kết nối được pik.vn.' }, { status: 502, headers: corsHeaders(request) });
+    }
+    const text = await upstream.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = { error: text.slice(0, 300) || `pik.vn trả về HTTP ${upstream.status}.` };
+    }
+    const headers = new Headers(corsHeaders(request));
+    headers.set('Cache-Control', 'private, no-store, max-age=0');
+    return json(payload, { status: upstream.ok && payload.url ? 200 : upstream.status || 502, headers });
+  }
+
   if (path === '/api/oauth/status') {
     const tokens = readSession(request);
     if (!tokens) return json({ loggedIn: false, me: null });

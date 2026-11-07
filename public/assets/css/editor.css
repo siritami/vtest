@@ -1,0 +1,91 @@
+.rich-editor { border: 1px solid var(--border); border-radius: var(--radius); background: var(--content-bg, #fff); overflow: visible; }
+.rich-editor [hidden] { display: none !important; }
+.rich-editor .editor-toolbar { position: relative; display: flex; flex-wrap: nowrap; gap: 0; margin: 0; padding: 5px 6px; min-height: 43px; background: var(--content-bg-alt, #f5f5f5); border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; align-items: center; }
+.rich-editor button, .rich-editor select, .rich-editor input { font: inherit; }
+.rich-editor button { cursor: pointer; }
+.rich-editor button:disabled { opacity: .35; cursor: default; }
+.rich-editor button:focus-visible, .rich-editor select:focus-visible, .rich-editor input:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+.rich-editor .editor-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 32px; padding: 6px; border: 0; border-radius: 2px; background: transparent; color: var(--text); flex: 0 0 auto; }
+.rich-editor .editor-toolbar button:hover:not(:disabled), .rich-editor .editor-toolbar button[aria-expanded="true"], .rich-editor button[aria-pressed="true"] { background: #dce3ed; color: var(--link); }
+.rich-editor .editor-toolbar svg { width: 18px; height: 18px; flex: 0 0 auto; pointer-events: none; }
+.rich-editor .editor-toolbar .editor-more { width: 22px; }
+.editor-group { display: flex; align-items: center; padding: 0 5px; border-right: 1px solid var(--border); }
+.editor-group:first-child { padding-left: 0; }
+.editor-group:last-of-type { border-right: 0; }
+.editor-history { margin-left: auto; border-left: 1px solid var(--border); }
+.editor-preview-toggle { border-right: 0; padding-right: 0; }
+.editor-overflow { position: absolute; z-index: 20; top: calc(100% + 1px); left: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; max-width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 0 0 3px 3px; background: var(--content-bg, #fff); box-shadow: 0 3px 7px #0002; }
+.editor-overflow[data-menu-panel="rich"] { left: min(90px, 10%); }
+.editor-overflow[data-menu-panel="misc"] { left: auto; right: 0; width: 255px; }
+.editor-menu-icons { display: flex; }
+.rich-editor .editor-option { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 32px; margin: 0; }
+.editor-option:hover { background: #dce3ed; }
+.editor-option select, .editor-option input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.editor-option:focus-within { outline: 2px solid var(--link); outline-offset: -2px; }
+.rich-editor .editor-toolbar .editor-drafts button { width: auto; height: auto; padding: 7px 8px; font-size: 12px; }
+.editor-drafts { width: 100%; border-top: 1px solid var(--border); display: flex; }
+.editor-visual, .rich-editor .editor-source { border: 0; border-radius: 0; min-height: 190px; max-height: 70vh; overflow: auto; padding: 12px; line-height: 1.6; width: 100%; font-size: 15px; outline-offset: -2px; }
+.editor-visual { overflow-wrap: anywhere; white-space: pre-wrap; }
+.editor-visual:empty::before { content: attr(data-placeholder); color: var(--dimmed); pointer-events: none; }
+.rich-editor .editor-source { font-family: ui-monospace, Consolas, monospace; resize: vertical; }
+.editor-visual img, .editor-preview img { max-width: 100%; max-height: 450px; object-fit: contain; }
+/* Stickers and attachments carry an explicit size; keep it instead of being clamped
+   by the editor's max-height, which would shrink the picture inside its own box. */
+.editor-visual img[data-bb-tag="img"], .editor-preview img[data-bb-tag="img"],
+.editor-visual img[data-bb-tag="attach"], .editor-preview img[data-bb-tag="attach"] { max-height: none; }
+.editor-visual img[style*="width:"], .editor-preview img[style*="width:"] { max-width: none; }
+/* A block-level picture follows the editor's own alignment, not a stale centred box. */
+.editor-visual img[data-bb-tag="attach"] { display: inline-block; }
+.editor-visual blockquote, .editor-preview blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--link); background: #eef3f9; }
+.editor-visual blockquote[aria-label]::before { content: attr(aria-label); display: block; font-size: 12px; color: var(--dimmed); }
+.editor-visual pre, .editor-preview pre { white-space: pre-wrap; background: #edf0f5; padding: 10px; }
+.editor-inline-spoiler { background: #dce3ed; border-radius: 2px; padding: 0 2px; }
+.editor-preview .editor-inline-spoiler { color: transparent; background: #555; }
+.editor-preview .editor-inline-spoiler:hover, .editor-preview .editor-inline-spoiler:focus { color: var(--text); background: #dce3ed; }
+.editor-spoiler { border: 1px dashed var(--border); padding: 8px; margin: 6px 0; }
+.editor-spoiler::before { content: 'Spoiler: ' attr(aria-label); display: block; color: var(--dimmed); font-size: 12px; }
+.editor-atomic { display: inline-block; max-width: 100%; padding: 3px 6px; background: #edf0f5; border: 1px dashed #8999b4; font-family: ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.editor-visual table, .editor-preview table { border-collapse: collapse; margin: 6px 0; max-width: 100%; }
+.editor-visual td, .editor-visual th, .editor-preview td, .editor-preview th { border: 1px solid #a3adc0; padding: 5px 10px; min-width: 36px; }
+.editor-panel { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; padding: 10px; background: #f4f6fb; border-bottom: 1px solid var(--border); }
+.editor-panel label { flex: 1 1 180px; margin: 0; font-size: 13px; }
+.editor-panel input { display: block; width: 100%; padding: 6px; border: 1px solid var(--border); }
+.editor-panel button, .editor-footer button { padding: 5px 8px; border: 1px solid var(--border); border-radius: 3px; background: #fff; color: var(--text); }
+.editor-panel [role="alert"] { color: #a12626; font-size: 12px; }
+.editor-smilies { display: flex; flex-wrap: wrap; gap: 3px; max-height: 210px; overflow-y: auto; width: 100%; }
+.editor-smilies button { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; padding: 2px; border-radius: 4px; transition: transform .15s, background-color .15s; }
+/* Same pop-on-hover feedback as the sticker grid, so both pickers feel alike. */
+.editor-smilies button:hover { transform: scale(1.25); background: #dce3ed; }
+/* voz.vn caps picker smilies at 32px, so the 24px sources are never upscaled and stay sharp. */
+.editor-smilies img { display: block; width: auto; height: auto; max-width: 32px; max-height: 32px; object-fit: contain; }
+.editor-status { display: block; min-height: 0; padding: 0 8px; text-align: right; font-size: 10px; line-height: 1.6; color: var(--dimmed); }
+/* pik.vn upload strip inside the shared image panel. Kept compact: a single-line
+   drop target, then status and per-file rows only once an upload starts.
+   Scoped to `.editor-panel` because `.editor-panel label` (font-size, flex-basis
+   180px) is more specific than a bare `.editor-upload-drop`. */
+.editor-upload-slot { display: block; width: 100%; }
+.editor-upload { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.editor-panel .editor-upload-drop { display: flex; flex: 0 0 auto; flex-direction: row; align-items: center; justify-content: center; gap: 6px; width: auto; margin: 0; padding: 6px 10px; border: 1px dashed var(--border); border-radius: 4px; background: #fff; color: var(--text); font-size: 12px; line-height: 1.4; text-align: center; cursor: pointer; }
+.editor-upload-drop:hover, .editor-upload-drop.is-over { border-color: var(--link); color: var(--link); }
+.editor-upload-drop.is-busy { opacity: .6; pointer-events: none; }
+.editor-upload-status { font-size: 11px; color: var(--dimmed); }
+.editor-upload-status:empty { display: none; }
+.editor-upload-list { display: flex; flex-direction: column; gap: 3px; max-height: 96px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.editor-upload-list:empty { display: none; }
+.editor-upload-row { padding: 3px 6px; border-radius: 3px; background: var(--quote-bg); font-size: 11px; overflow-wrap: anywhere; }
+.editor-upload-row.is-ok { color: #1b6e2d; }
+.editor-upload-row.is-error { color: #a12626; }
+.editor-status:empty { display: none; }
+.editor-hint { margin: 0; padding: 5px 8px; color: var(--dimmed); font-size: 11px; line-height: 1.5; }
+.editor-preview { border-top: 1px solid var(--border); padding: 12px; min-height: 60px; overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 600px) {
+  .rich-editor .editor-toolbar { padding: 4px 3px; flex-wrap: wrap; row-gap: 2px; }
+  .editor-group { padding: 0 2px; }
+  .editor-history { margin-left: auto; }
+  .editor-visual { min-height: 160px; }
+}
+@media (max-width: 360px) {
+  .rich-editor .editor-toolbar button { width: 27px; padding: 4px; }
+  .rich-editor .editor-toolbar .editor-more { width: 18px; }
+  .editor-group { padding: 0 1px; }
+}
