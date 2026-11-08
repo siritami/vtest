@@ -103,8 +103,17 @@
 
   --radius: 4px;
   --max-width: 1058px;
-  --font: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+    --font-post: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-control: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font: var(--font-control);
+    /* Cỡ chữ: --ui-scale sizes everything outside a post body, --post-scale sizes the prose
+       inside one. Both are unitless multipliers set from Cài đặt (lib/settings.js). Sizes that
+       can appear inside a post use calc(<px> * var(--post-scale)); everything else uses
+       var(--ui-scale). A post body sets --ui-scale to var(--post-scale) for its subtree so a
+       nested component (a quoted card, a code block) keeps scaling with the post, not the page. */
+    --ui-scale: 1;
+    --post-scale: 1;
+  }
 
 /* Dark reading surface: same token names, re-pointed. Values keep body text and links at or
    above WCAG AA against their own background — see the contrast notes in
@@ -180,7 +189,7 @@ html { scroll-padding-top: var(--chrome-h, 0px); }
 body {
   margin: 0;
   font-family: var(--font);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale));
   line-height: 1.5;
   color: var(--text);
   background: var(--page-bg);
@@ -193,7 +202,7 @@ img { max-width: 100%; }
 
 /* ---------- utilities ---------- */
 .u-dimmed { color: var(--dimmed); }
-.u-smaller { font-size: 13px; }
+.u-smaller { font-size: calc(13px * var(--ui-scale)); }
 .u-muted { color: var(--dimmed); }
 .u-nowrap { white-space: nowrap; }
 .u-right { text-align: right; }

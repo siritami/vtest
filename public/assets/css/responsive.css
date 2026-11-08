@@ -1,8 +1,8 @@
 /* Responsive overrides — keep last so they win. */
 
 @media (max-width: 900px) {
-  .structItem-cell--meta { width: 115px; font-size: 12px; }
-  .structItem-cell--latest { width: 140px; font-size: 12px; }
+  .structItem-cell--meta { width: 115px; font-size: calc(12px * var(--ui-scale)); }
+  .structItem-cell--latest { width: 140px; font-size: calc(12px * var(--ui-scale)); }
 }
 @media (max-width: 860px) {
   .message-cell--user { flex: 0 0 110px; padding: 8px; }
@@ -35,7 +35,7 @@
   .message-avatar { flex: 0 0 48px; }
   .message-avatar .avatar { width: 48px; height: 48px; }
   .message-userDetails { flex: 1; margin-bottom: 0; min-width: 0; overflow-wrap: anywhere; }
-  .message-userStats { display: block; flex: 0 0 auto; margin-left: auto; min-width: 92px; font-size: 11px; }
+  .message-userStats { display: block; flex: 0 0 auto; margin-left: auto; min-width: 92px; font-size: calc(11px * var(--ui-scale)); }
   .message-userStats li { gap: 8px; white-space: nowrap; }
   .message-userMeta { justify-content: flex-start; }
   .message-userMeta .userTitle { flex-basis: auto; }

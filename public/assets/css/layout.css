@@ -51,7 +51,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
 }
 .p-header-account .avatar {
   width: 24px;
@@ -65,7 +65,7 @@
   color: var(--on-dark);
   border-radius: 10px;
   padding: 0 6px;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   font-weight: 700;
 }
 
@@ -109,7 +109,7 @@
   display: block;
   padding: 6px 12px;
   color: var(--nav-fg);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   font-weight: 600;
   border-bottom: 3px solid transparent;
   max-width: 240px;
@@ -130,7 +130,7 @@
   padding: 14px 12px 40px;
 }
 .p-breadcrumbs {
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   color: var(--nav-fg);
   margin-bottom: 10px;
   min-height: 1px;
@@ -151,7 +151,7 @@
   background: var(--block-header-bg);
   color: var(--block-header-fg);
   padding: 7px 12px;
-  font-size: 19px;
+  font-size: calc(19px * var(--ui-scale));
   font-weight: 400;
   display: flex;
   align-items: center;
@@ -160,7 +160,7 @@
 .block-header a { color: var(--block-header-fg); }
 .block-header .block-header-extra {
   margin-left: auto;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale));
   font-weight: 400;
   opacity: .9;
 }
@@ -169,7 +169,7 @@
 .block-footer {
   padding: 10px 12px;
   border-top: 1px solid var(--border);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   color: var(--dimmed);
 }
 
@@ -177,7 +177,7 @@
 .p-footer {
   background: var(--footer-bg);
   color: var(--footer-fg);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
 }
 .p-footer-inner {
   max-width: var(--max-width);

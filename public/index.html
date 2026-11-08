@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VOZ</title>
-<meta name="description" content="Diễn đàn VOZ — bản web dựng trên REST API của voz.vn">
+<meta name="description" content="Voz của tui, xài voz theo cách của tui">
 <link rel="preconnect" href="https://data.voz.vn">
 <link rel="stylesheet" href="/assets/css/base.css">
 <link rel="stylesheet" href="/assets/css/theme.css">
@@ -32,7 +32,20 @@
         else if (s.font === 'be-vietnam-pro') r.style.setProperty('--font', '"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif');
         else if (s.font === 'be-vietnam') r.style.setProperty('--font', '"Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif');
       }
-    } catch (e) { /* storage disabled: fall through to the light default */ }
+              // Font size percentages. Applied pre-paint so a non-default size never flashes the
+              // stock one; mirrored by applyFontScale() in ui/theme.js.
+              var scale = function (v) {
+                var isText = typeof v === 'string';
+                if (isText && v.trim() === '') return 100;
+                if (!isText && typeof v !== 'number') return 100;
+                var n = Number(v);
+                if (!isFinite(n)) return 100;
+                n = Math.round(n / 5) * 5;
+                return Math.min(200, Math.max(80, n));
+              };
+              r.style.setProperty('--post-scale', String(scale(s.postSize) / 100));
+              r.style.setProperty('--ui-scale', String(scale(s.uiSize) / 100));
+            } catch (e) { /* storage disabled: fall through to the light default */ }
   })();
 </script>
 <link rel="stylesheet" href="/assets/css/layout.css">

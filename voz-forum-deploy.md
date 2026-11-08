@@ -64,7 +64,7 @@ vtest/
 │   │   │   ├── unreadCounts.js # badge hộp thư / thông báo
 │   │   │   ├── inlineEdit.js # sửa bài tại chỗ (không modal)
 │   │   │   ├── modal.js      # modal shell + báo cáo
-│   │   │   ├── theme.js      # áp data-theme (sáng/tối/auto) + nạp font lười
+│   │   │   ├── theme.js      # áp data-theme (sáng/tối/auto) + cỡ chữ + nạp font lười
 │   │   │   ├── chromeAutoHide.js # ẩn/hiện header + nav theo hướng cuộn
 │   │   │   └── session.js    # loadSession / requireLogin
 │   │   ├── views/        # 1 file / nhóm route
@@ -80,12 +80,12 @@ vtest/
 │   │   ├── fonts/        # woff2 (roboto / be-vietnam-pro / be-vietnam) + OFL.txt, OFL-BeVietnam.txt
 │   │   ├── img/          # voz-lockup.svg — logo header, chép từ voz.vn
 │   │   └── css/          # theme, tách theo khu vực
-│   │       ├── base.css      # bảng màu sáng + bảng tối + reset + utility
+│   │       ├── base.css      # bảng màu sáng + bảng tối + reset + utility + token cỡ chữ
 │   │       ├── theme.css     # color-scheme, giảm sáng ảnh, selection
 │   │       ├── layout.css    # header / nav / block / footer
 │   │       ├── forum.css     # node list / structItem / pageNav
 │   │       ├── avatar.css    # avatar + label tiền tố
-│   │       ├── post.css      # .message + bbWrapper
+│   │       ├── post.css      # .message + bbWrapper (chữ trong bài theo --post-scale)
 │   │       ├── media.css     # unfurl + iframe media
 │   │       ├── reaction.css
 │   │       ├── forms.css     # button / input / tabs
@@ -95,7 +95,7 @@ vtest/
 │   │       ├── responsive.css
 │   │       ├── headerMenus.css
 │   │       ├── home.css
-│   │       ├── settings.css   # trang cài đặt + danh sách phím tắt
+│   │       ├── settings.css   # trang cài đặt + danh sách phím tắt + thanh trượt cỡ chữ
 │   │       ├── stickers.css   # popup sticker + quản lý album
 │   │       └── fonts.css      # @font-face — chỉ được link khi người dùng chọn phông
 │   └── userscript/
@@ -111,7 +111,8 @@ vtest/
 ```
 
 Thứ tự thẻ `<link>` trong `index.html` quan trọng: `base.css` (biến màu) phải đứng đầu,
-ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống nhấp nháy;
+ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống nhấp nháy
+(đặt `data-theme`/`--font`/`--post-scale`/`--ui-scale` trước lần vẽ đầu);
 `responsive.css` chứa override chung; `headerMenus.css` và `home.css` đứng sau để giữ layout responsive riêng cho menu và trang chủ.
 `editor.css` phải đứng **sau** `forms.css` vì nó ghi đè `.editor-toolbar`; `media.css`
 đứng ngay sau `post.css` để style unfurl/iframe nằm cạnh style bài viết. `settings.css` và
@@ -478,7 +479,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | `prefix.js` | `prefixLabel` | `prefix_id` → `label--{green,red,royalBlue,orange,primary,accent,gray,olive}` |
 | `quotes.js` | `restoreQuoteLinks` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/` |
 | `smilies.js` | `smilieChoices`, `loadSmilies`, `smiliesReady`, `splitSmilieText`, `renderSmilies` | tải `/voz/smilies` một lần, dựng regex từ mã đã escape, chỉ thay trong text node không nằm trong `a/code/pre/script/style`, chỉ nhận ảnh `https://data.voz.vn/`; trả `true` khi có thay đổi để editor biết khi nào cần đặt lại caret |
-| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`) và `font` (`system`/`roboto`/`be-vietnam-pro`/`be-vietnam`, mặc định `system`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent})` gộp cả dữ liệu sticker vào cùng file JSON (không còn khoá `clientId` — imgur Client-ID là hằng số) |
+| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `getFontScale`, `setFontScale`, `normalizeFontScale`, `FONT_SCALE_MIN/MAX/STEP/DEFAULT`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`), `font` (`system`/`roboto`/`be-vietnam-pro`/`be-vietnam`, mặc định `system`) và cỡ chữ (`postSize`/`uiSize`, % 80–200 bước 5, mặc định `100`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; `normalizeFontScale()` chỉ nhận number hoặc chuỗi số (vì `Number(null)`/`Number('')`/`Number([])` đều là `0` và sẽ kẹp về sàn 80%); phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent})` gộp cả dữ liệu sticker vào cùng file JSON (không còn khoá `clientId` — imgur Client-ID là hằng số) |
 | `stickers.js` | `getAlbums`, `addAlbum`, `updateAlbum`, `renameAlbum`, `removeAlbums`, `moveAlbum`, `setAlbumImages`, `getRecentStickers`, `addRecentSticker`, `removeRecentSticker`, `clearRecentStickers`, `getClientId`, `imageFileToBase64`, `downscaleDataUrl`, `urlToBase64`, `downloadImagesInParallel`, `DEFAULT_CLIENT_ID` | album sticker trong `localStorage['voz-stickers:v1']`, gần đây ở `voz-stickers:recent:v1` (tối đa 30); `getClientId()` luôn trả `DEFAULT_CLIENT_ID` (không còn override lưu localStorage); ảnh thu nhỏ ≤ 400px, mã hoá WebP 0.8 (GIF giữ nguyên); chỉ nhận `https:` hoặc `data:image/…;base64,` |
 | `views/settings.js` | `viewSettings` (+ `applyImported` nội bộ) | `applyImported(result)` dùng chung cho ô "Nhập album từ JSON" và mục Sao lưu: file `addOnly` chỉ thêm album mới (bỏ qua trùng tên), file đầy đủ thay thế album + gần đây; khoá `clientId` trong file cũ bị bỏ qua |
 | `imgurImport.js` | `extractAlbumId`, `fetchImgurAlbumImages`, `importImgurAlbum`, `clearImgurCache` | tách album id từ `imgur.com/a/<slug>-<id>`, gọi qua proxy `/api/xf/imgur/album/{id}/images`, tải base64 song song 5 ảnh/lô |
@@ -1157,8 +1158,8 @@ lưu trong `localStorage['voz-settings:v1']` của trình duyệt.
 
 ### Tab
 
-Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao diện`,
-`Cuộn trang liên tục`, `Phím tắt`, `Sticker`, `Sao lưu / phục hồi`.
+Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao diện` (sáng/tối, phông,
+cỡ chữ), `Cuộn trang liên tục`, `Phím tắt`, `Sticker`, `Sao lưu / phục hồi`.
 
 - Tab đang chọn nằm ở **fragment**: `/cai-dat-tuivoz#stickers`. Nhờ vậy F5 mở lại đúng tab,
   và link **Quản lý sticker** trong popup sticker (`ui/stickerPicker.js` →
@@ -1207,9 +1208,9 @@ Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao di�
   (`scrollWidth == clientWidth`).
 - Đổi ở tab khác tự cập nhật qua event `storage`; đổi trong trang qua event `voz:settings`.
 
-### Giao diện (sáng / tối / phông chữ)
+### Giao diện (sáng / tối / phông chữ / cỡ chữ)
 
-`ui/theme.js` + `lib/settings.js` + `css/theme.css` + `css/fonts.css`. Hai thiết lập độc lập
+`ui/theme.js` + `lib/settings.js` + `css/theme.css` + `css/fonts.css`. Ba thiết lập độc lập
 trong `/cai-dat-tuivoz` → **Giao diện**.
 
 **Chế độ màu** (`theme`: `auto` | `light` | `dark`, mặc định `auto`). Chỉ đổi vùng **nội
@@ -1288,6 +1289,42 @@ tương phản với nền chrome tối.
   `python vtest/tools/build-be-vietnam.py --src <BeVietnam-master/ttf> --out vtest/public/assets/fonts`
   cho Be Vietnam. Cả hai cần `fonttools` + `brotli`. Script Be Vietnam tự xoá các file
   `be-vietnam-400-*.woff2` chia dải cũ (tắt bằng `--no-prune-legacy`).
+
+**Cỡ chữ** (`postSize` + `uiSize`: phần trăm 80–200, bước 5, mặc định `100`).
+
+Hai thanh trượt độc lập, đúng như tên gọi:
+
+| Thiết lập | Field | Token | Áp cho |
+|---|---|---|---|
+| Cỡ chữ nội dung bài viết | `postSize` | `--post-scale` | `.message-body` (và chữ ký) |
+| Cỡ chữ những chỗ khác | `uiSize` | `--ui-scale` | mọi thứ còn lại |
+
+- **Cơ chế.** `base.css` khai báo `--ui-scale: 1` và `--post-scale: 1`. **Mọi** `font-size`
+  dạng px trong `assets/css/*.css` được viết `calc(<px> * var(--ui-scale))`; riêng chữ
+  trong bài dùng `calc(<px> * var(--post-scale))`. Thêm một `font-size: 14px` mới là bug —
+  `vtesst1/font-scale.test.mjs` quét toàn bộ file CSS và fail nếu còn px trần.
+- **Không đụng nhau.** `.message-body` đặt `font-size: calc(16px * var(--post-scale))`
+  **và** `--ui-scale: var(--post-scale)` cho cây con của nó. Nhờ vậy một `<blockquote>` bên
+  trong bài (`calc(15px * var(--ui-scale))`) đi theo thang của bài chứ không theo thang
+  trang. Đo trên trang thật: 100% → body `16px`, quote `15px`; `postSize 150` → `24px` /
+  `22.5px`, còn `.message-name` (chrome) vẫn `16px`.
+- **Ranh giới.** Tên người gửi, ngày tháng, số bài, thanh nút hành động, dải cảm xúc, thẻ
+  thành viên là **chrome** → `--ui-scale`. Chữ ký là văn bản do người dùng viết → `postSize`.
+- **Sliders.** `min`/`max`/`step` lấy từ `FONT_SCALE_MIN/MAX/STEP` trong `lib/settings.js`.
+  `input` áp ngay (xem trước khi kéo), `change` mới bắn toast — nếu không, một lần kéo sẽ
+  bắn hàng chục toast.
+- **Chống nhấp nháy.** Script inline ở `index.html` đặt `--post-scale`/`--ui-scale` trước
+  lần vẽ đầu, cùng chỗ với `data-theme`/`--font`; `ui/theme.js` (`applyFontScale()`) chỉ lo
+  phần sau đó. F5 ở 150% không thấy nhấp sang 100%.
+- **Bẫy `Number()`.** `Number(null)`, `Number('')` và `Number([])` đều là `0` — sẽ kẹp về
+  sàn 80% thay vì về mặc định. `normalizeFontScale()` chỉ nhận number hoặc chuỗi số, còn
+  lại trả 100%. Test chặn đúng các giá trị này.
+- **`--font` phải là alias.** Để `--font: <stack>` (giá trị trực tiếp) thì nó **thắng**
+  `--font-post` ngay bên trong `.message-body`, và tùy chọn phông riêng cho bài sẽ chết
+  lặng. Vì vậy `base.css` có `--font-post` và `--font-control` (cùng giá trị mặc định) và
+  `--font: var(--font-control)` — `ui/theme.js` chỉ ghi `--font`, nội dung bài giữ nguyên
+  `--font-post`. Phông chữ dùng chung cho cả site (một thiết lập), nhưng tách token để việc
+  ghi đè không vô hiệu hoá nhánh bài viết.
 
 **Độ tương phản.** Toàn bộ vùng nội dung được đo bằng công cụ chạy trong trình duyệt (đọc
 `getComputedStyle`, tự tìm nền đục gần nhất ở tổ tiên, tính tỉ lệ WCAG, xét ngưỡng 4.5 cho
@@ -1579,6 +1616,13 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Giao diện, không nhấp nháy | F5 khi đang Tối → `data-theme` có sẵn từ script inline, nền `#1b1f24` ngay lần vẽ đầu |
 | Giao diện, tương phản | 13 view × 2 chế độ, đo WCAG bằng getComputedStyle → 0 lỗi (4.5 chữ thường / 3.0 chữ lớn) |
 | Giao diện, mobile | 390px: card xếp dọc, `scrollWidth == innerWidth`, không tràn ngang |
+| Cỡ chữ, mặc định | cả hai thanh trượt ở `100%`, `--post-scale`/`--ui-scale` = `1`, body `16px` |
+| Cỡ chữ, áp riêng | `postSize 150` + `uiSize 120` ⇒ body `24px`, `.message-name` `19.2px`, chữ ký `18px`, quote trong bài `22.5px` |
+| Cỡ chữ, chrome tách bài | `postSize 150`/`uiSize 100` ⇒ body `24px` nhưng `.message-name`, `.actionBar-action`, dải cảm xúc vẫn `16px`/`14px`/`12px` |
+| Cỡ chữ, không nhấp nháy | F5 ở 150% → `--post-scale` có sẵn từ script inline trước lần vẽ đầu |
+| Cỡ chữ, giới hạn | kéo tới `80%` và `200%`: `scrollWidth == innerWidth` ở 1265px lẫn 390px, nav không tràn |
+| Cỡ chữ, nhãn `em` | `.label` (prefix) `12.8px` ở 100%, `28.8px` ở `uiSize 150` — không nhân hai lần |
+| Cỡ chữ, lưu bền | reload ở 130%/90% → thanh trượt và `--*-scale` khôi phục đúng, backup JSON mang cả hai key |
 | Phông, mặc định | `system` → **không** có `<link id="font-faces">`, không tải file font nào |
 | Phông, chọn Roboto | link `fonts.css` được chèn, `--font` đổi, `document.fonts` báo Roboto 400/500/700 `loaded` |
 | Phông, chọn Be Vietnam Pro | vẫn đúng **1** link (không nhân bản), stack đổi sang `"Be Vietnam Pro"` |
@@ -1656,7 +1700,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 - Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
 - Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
 - Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
-- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **125/125** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **139/139** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `font-scale.test.mjs` (chuẩn hoá cỡ chữ, giới hạn 80–200, không còn px trần, script pre-paint), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
 
 ## 11. Ghi chú triển khai
 
@@ -1688,6 +1732,8 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 | Đổi badge chưa đọc | `ui/unreadCounts.js` |
 | Đổi nháp editor | `ui/editor.js` (`draftKey`, `save()`, `editor:clear-draft`) |
 | Thêm thiết lập mới | `lib/settings.js` (thêm field vào `emptySettings`/`normalizeSettings` + getter/setter + hằng số nhãn) + form trong `views/settings.js`; JSON backup tự động gồm field mới. Có hai nguồn nhãn cần cập nhật nếu thiết lập là giao diện: script inline trong `index.html` và `ui/theme.js` |
+| Thêm một `font-size` mới | luôn viết `calc(<px> * var(--ui-scale))`, hoặc `var(--post-scale)` nếu nằm trong `.message-body`. `vtesst1/font-scale.test.mjs` fail khi còn px trần, nên chạy lại bộ test sau khi sửa CSS |
+| Thêm một thiết lập cần `--font` | dùng `--font-control` (UI) hoặc `--font-post` (nội dung bài), **không** ghi trực tiếp `--font`: bên trong `.message-body` thì `--font` thắng `--font-post` và nhánh bài viết chết lặng |
 | Thêm phông chữ mới | bỏ `.ttf` gốc vào thư mục `--src`, thêm mức vào `WEIGHTS`/`FONT_STACKS`/`FONTS`/`FONT_LABELS`, chạy lại `tools/build-fonts.py`, thêm khối `@font-face` vào `css/fonts.css`, thêm nhánh trong script inline của `index.html` |
 
 ### 11.2 Kiểm tra trước khi deploy

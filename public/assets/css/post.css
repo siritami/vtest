@@ -17,13 +17,13 @@
 
 .bbWrapper img.smilie { display: inline-block; vertical-align: text-bottom; max-width: none; margin: 0; }
 
-.member-card { position: fixed; z-index: 150; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; background: var(--content-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-card); font-size: 14px; }
+.member-card { position: fixed; z-index: 150; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; background: var(--content-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-card); font-size: calc(14px * var(--ui-scale)); }
 .member-card-header { display: flex; gap: 12px; padding: 12px; background: var(--quote-bg); }
 .member-card-header > div { min-width: 0; overflow-wrap: anywhere; }
 .member-card-header .avatar { flex: 0 0 80px; width: 80px; height: 80px; }
-.member-card-name { font-size: 20px; font-weight: 600; }
+.member-card-name { font-size: calc(20px * var(--ui-scale)); font-weight: 600; }
 .member-card-stats { display: flex; justify-content: space-around; text-align: center; padding: 12px 6px; color: var(--dimmed); }
-.member-card-stats strong { display: block; font-size: 18px; font-weight: 400; color: var(--text); }
+.member-card-stats strong { display: block; font-size: calc(18px * var(--ui-scale)); font-weight: 400; color: var(--text); }
 .member-card-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-top: 1px solid var(--border); }
 
 /* Top row above the first post: page navigator. */
@@ -80,7 +80,7 @@
 .inline-edit .editor-visual,
 .inline-edit .rich-editor .editor-source { min-height: 140px; }
 .inline-edit-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.inline-edit-actions .button { font-size: 14px; }
+.inline-edit-actions .button { font-size: calc(14px * var(--ui-scale)); }
 
 .message-user { text-align: center; }
 .message-avatar { margin-bottom: 8px; }
@@ -95,11 +95,11 @@
 .message-userDetails { margin-bottom: 6px; }
 .message-userMeta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
 .message-userMeta .userTitle { flex-basis: 100%; }
-.user-badge { display: inline-block; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--badge-fg) 20%, var(--badge-bg)); border-radius: 2px; background: var(--badge-bg); color: var(--badge-fg); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
+.user-badge { display: inline-block; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--badge-fg) 20%, var(--badge-bg)); border-radius: 2px; background: var(--badge-bg); color: var(--badge-fg); font-size: calc(12px * var(--ui-scale)); font-weight: 400; line-height: 1.5; white-space: nowrap; }
 .member-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 .message-name {
   margin: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale));
   font-weight: 600;
   line-height: 1.5;
   word-break: break-word;
@@ -108,7 +108,7 @@
 .message-name .username:hover { color: var(--link-hover); }
 .userTitle {
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   line-height: 1.5;
   color: var(--text);
 }
@@ -116,7 +116,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   line-height: 1.5;
   color: var(--dimmed);
   text-align: left;
@@ -136,7 +136,7 @@
   gap: 8px;
   padding: 0 0 3px;
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   line-height: 1.5;
   color: var(--dimmed);
 }
@@ -154,7 +154,7 @@
 .message-attribution a:hover { color: var(--link-hover); }
 .message-postNumber {
   font-weight: 700;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale));
   color: var(--link) !important;
 }
 .message-postNumber:hover { color: var(--link-hover) !important; }
@@ -162,16 +162,19 @@
 .message-content { display: flex; flex-direction: column; flex: 1 1 auto; }
 .message-userContent { margin-top: 10px; }
 .message-body {
-  font-size: 16px;
+  font-size: calc(16px * var(--post-scale));
   line-height: 1.5;
   overflow-wrap: anywhere;
+  /* Anything nested inside a post — a quote card, a code block, a spoiler summary — is part
+     of the post's prose, so it must scale with --post-scale rather than with the page. */
+  --ui-scale: var(--post-scale);
 }
 .message-body img { border-radius: 3px; }
 
 .message-footer {
   margin: auto 0 0;
   padding: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale));
   color: var(--text);
 }
 .message-actionBar {
@@ -187,7 +190,7 @@
   display: inline-block;
   padding: 3px;
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   line-height: 1.5;
   color: var(--link);
   white-space: nowrap;
@@ -210,7 +213,7 @@
   margin: 10px 0 0;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
-  font-size: 12px;
+  font-size: calc(12px * var(--post-scale));
   color: var(--dimmed);
   max-height: 90px;
   overflow: hidden;
@@ -225,12 +228,12 @@
   padding: 6px;
   background: var(--quote-bg);
   border-radius: 3px;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   line-height: 1.5;
   color: var(--dimmed);
 }
 .reactionsBar-icons { display: inline-flex; align-items: center; gap: 2px; }
-.reactionsBar-icons .reaction-image { width: 16px; height: 16px; }
+.reactionsBar-icons .reaction-image { width: calc(16px * var(--ui-scale)); height: calc(16px * var(--ui-scale)); }
 .reactionsBar-users { color: var(--dimmed); }
 .reactionsBar-user { color: var(--link); }
 .reactionsBar-user:hover { color: var(--link-hover); }
@@ -238,7 +241,7 @@
 
 /* ---------- bbcode rendering ---------- */
 .post-spoiler { margin: 8px 0; }
-.post-spoiler > summary { display: list-item; width: fit-content; max-width: 100%; padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--quote-bg); color: var(--link); font-size: 13px; cursor: pointer; }
+.post-spoiler > summary { display: list-item; width: fit-content; max-width: 100%; padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--quote-bg); color: var(--link); font-size: calc(13px * var(--ui-scale)); cursor: pointer; }
 .post-spoiler[open] { padding-bottom: 8px; }
 .post-spoiler[open] > summary { margin-bottom: 10px; }
 .post-spoiler > .post-spoiler { margin-left: 10px; }
@@ -248,29 +251,29 @@
   background: var(--quote-bg);
   border-left: 3px solid var(--quote-border);
   border-radius: 0 3px 3px 0;
-  font-size: 15px;
+  font-size: calc(15px * var(--ui-scale));
   color: var(--text);
 }
 .bbWrapper blockquote .bbCodeBlock-title,
 .bbWrapper blockquote[data-name]::before {
   content: attr(data-name);
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale));
   font-weight: 700;
   color: var(--dimmed);
   margin-bottom: 4px;
 }
 .bbWrapper blockquote[data-name=""]::before,
 .bbWrapper blockquote.has-quote-source::before { content: none; }
-.bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; }
-.bbWrapper h2, .bbWrapper h3, .bbWrapper h4 { margin: 12px 0 6px; font-size: 18px; }
+.bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui-scale)); font-weight: 700; }
+.bbWrapper h2, .bbWrapper h3, .bbWrapper h4 { margin: 12px 0 6px; font-size: calc(18px * var(--ui-scale)); }
 .bbWrapper ul, .bbWrapper ol { margin: 6px 0; padding-left: 22px; }
 .bbWrapper code {
   background: var(--surface-raised);
   padding: 1px 4px;
   border-radius: 3px;
   font-family: Consolas, "Courier New", monospace;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
 }
 .bbWrapper pre {
   background: var(--chip-bg);
@@ -289,7 +292,7 @@
 .bbWrapper .bbCodeBlock-title {
   background: var(--content-bg-alt);
   padding: 5px 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale));
   font-weight: 600;
   color: var(--dimmed);
 }

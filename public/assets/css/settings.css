@@ -1,6 +1,6 @@
 /* Settings page: nav shortcuts + JSON backup/restore. */
 
-.settings-note { margin: 0; padding: 10px 12px; font-size: 13px; color: var(--dimmed); background: var(--content-bg); }
+.settings-note { margin: 0; padding: 10px 12px; font-size: calc(13px * var(--ui-scale)); color: var(--dimmed); background: var(--content-bg); }
 
 /* Tabbed layout: one panel at a time instead of one long scroll. The tab strip sits inside
    the block so it shares the card edges. Panels carry no heading of their own — the tab
@@ -21,7 +21,7 @@
   background: none;
   color: var(--dimmed);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale));
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -36,7 +36,7 @@
 .settings-panel[hidden] { display: none; }
 .settings-panel > .block-body--pad { padding: 12px; }
 /* Panel-level count that used to ride in the removed block-header. */
-.settings-count { margin: 0 0 8px; font-size: 13px; color: var(--dimmed); }
+.settings-count { margin: 0 0 8px; font-size: calc(13px * var(--ui-scale)); color: var(--dimmed); }
 
 .shortcut-list { list-style: none; margin: 0 0 16px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .shortcut-row {
@@ -54,19 +54,19 @@
 .shortcut-row.is-drop-after { box-shadow: inset 0 -2px 0 var(--nav-active); }
 .shortcut-handle { flex: 0 0 auto; color: var(--dimmed); cursor: grab; display: inline-flex; }
 .shortcut-handle:active { cursor: grabbing; }
-.shortcut-index { flex: 0 0 22px; text-align: right; font-size: 12px; color: var(--dimmed); font-variant-numeric: tabular-nums; }
+.shortcut-index { flex: 0 0 22px; text-align: right; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); font-variant-numeric: tabular-nums; }
 .shortcut-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .shortcut-name { font-weight: 600; color: var(--link); overflow-wrap: anywhere; }
-.shortcut-url { font-size: 12px; color: var(--dimmed); overflow-wrap: anywhere; }
+.shortcut-url { font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); overflow-wrap: anywhere; }
 .shortcut-row .button--small { padding: 4px; flex: 0 0 auto; }
 .shortcut-row .button--small svg { display: block; }
-.shortcut-empty { padding: 14px; text-align: center; color: var(--dimmed); font-size: 14px; }
+.shortcut-empty { padding: 14px; text-align: center; color: var(--dimmed); font-size: calc(14px * var(--ui-scale)); }
 
 .shortcut-form { border-top: 1px solid var(--border); padding-top: 14px; }
 .shortcut-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Radio-card groups (Giao diện theme/font, Cuộn trang liên tục). */
-.settings-subhead { margin: 16px 0 4px; font-size: 15px; font-weight: 600; color: var(--text); }
+.settings-subhead { margin: 16px 0 4px; font-size: calc(15px * var(--ui-scale)); font-weight: 600; color: var(--text); }
 .settings-subhead:first-child { margin-top: 0; }
 .option-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .option-card {
@@ -86,8 +86,17 @@
 .option-card.is-active { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); }
 .option-card input { grid-area: radio; margin: 2px 0 0; flex: 0 0 auto; }
 .option-card-name { grid-area: name; font-weight: 600; color: var(--text); }
-.option-card-desc { grid-area: desc; font-size: 12px; color: var(--dimmed); line-height: 1.5; }
-.settings-backup .code-box { min-height: 190px; font-family: Consolas, "Courier New", monospace; font-size: 12px; white-space: pre; }
+.option-card-desc { grid-area: desc; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); line-height: 1.5; }
+
+/* Cỡ chữ sliders. One row per axis; the value sits in an <output> on the label line so it
+   stays readable while dragging. */
+.size-row { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.size-row:last-child { margin-bottom: 0; }
+.size-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.size-row-head label { font-weight: 600; color: var(--text); }
+.size-value { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--link); }
+.size-slider { display: block; width: 100%; margin: 0 0 4px; accent-color: var(--link); }
+.settings-backup .code-box { min-height: 190px; font-family: Consolas, "Courier New", monospace; font-size: calc(12px * var(--ui-scale)); white-space: pre; }
 .settings-backup .shortcut-form-actions { margin-top: 10px; }
 
 @media (max-width: 620px) {

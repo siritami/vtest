@@ -39,7 +39,9 @@ export const emptySettings = () => ({
   infiniteScroll: SCROLL_DEFAULT,
   theme: THEME_DEFAULT,
   font: FONT_DEFAULT,
-});
+    postSize: FONT_SCALE_DEFAULT,
+    uiSize: FONT_SCALE_DEFAULT,
+  });
 
 // Colour scheme for the content area. The page chrome (header, nav) keeps its dark
 // VOZ styling in both modes — only the reading surface flips.
@@ -73,6 +75,29 @@ export const FONT_STACKS = {
   'be-vietnam': '"Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };
 
+// Cỡ chữ. The two axes are independent: `postSize` scales prose inside a post, `uiSize`
+// scales the rest (lists, chrome, controls, settings). Both are percentages of the stock
+// size and are applied as --post-scale / --ui-scale, which the layout CSS multiplies its
+// px sizes by — so the two can never fight over the same element's font-size.
+export const FONT_SCALE_MIN = 80;
+export const FONT_SCALE_MAX = 200;
+export const FONT_SCALE_STEP = 5;
+export const FONT_SCALE_DEFAULT = 100;
+
+export function normalizeFontScale(value) {
+  // `Number(null)`, `Number('')` and `Number([])` are all 0, which would clamp to the 80%
+  // floor instead of falling back — so only accept a number or a numeric string.
+  if (typeof value === 'string') {
+    if (value.trim() === '') return FONT_SCALE_DEFAULT;
+  } else if (typeof value !== 'number') {
+    return FONT_SCALE_DEFAULT;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) return FONT_SCALE_DEFAULT;
+  const rounded = Math.round(number / FONT_SCALE_STEP) * FONT_SCALE_STEP;
+  return Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, rounded));
+}
+
 // Infinite scroll for thread lists and threads:
 //   on     — load the next page automatically when the bottom is reached
 //   manual — show a button in the pager; auto-load only after the user clicks it
@@ -96,6 +121,8 @@ export function normalizeSettings(raw) {
   out.infiniteScroll = SCROLL_MODES.includes(raw?.infiniteScroll) ? raw.infiniteScroll : SCROLL_DEFAULT;
   out.theme = THEME_MODES.includes(raw?.theme) ? raw.theme : THEME_DEFAULT;
   out.font = FONTS.includes(raw?.font) ? raw.font : FONT_DEFAULT;
+  out.postSize = normalizeFontScale(raw?.postSize);
+  out.uiSize = normalizeFontScale(raw?.uiSize);
   const list = Array.isArray(raw?.navShortcuts) ? raw.navShortcuts : [];
   const seen = new Set();
   for (const item of list.slice(0, MAX_SHORTCUTS)) {
@@ -201,6 +228,18 @@ export function getFont() {
   return FONTS.includes(font) ? font : FONT_DEFAULT;
 }
 
+export function setFontScale({ postSize, uiSize } = {}) {
+  const settings = loadSettings();
+  if (postSize !== undefined) settings.postSize = normalizeFontScale(postSize);
+  if (uiSize !== undefined) settings.uiSize = normalizeFontScale(uiSize);
+  return saveSettings(settings);
+}
+
+export function getFontScale() {
+  const { postSize, uiSize } = loadSettings();
+  return { postSize, uiSize };
+}
+
 export function exportSettingsJson({ albums = [], recent = [] } = {}) {
   const settings = loadSettings();
   const payload = {
@@ -211,6 +250,8 @@ export function exportSettingsJson({ albums = [], recent = [] } = {}) {
     infiniteScroll: settings.infiniteScroll,
     theme: settings.theme,
     font: settings.font,
+    postSize: settings.postSize,
+    uiSize: settings.uiSize,
   };
   // Sticker payload mirrors the userscript backup so either file can be restored.
   if (albums.length || recent.length) {

@@ -9,7 +9,8 @@ import {
   loadSettings, addShortcut, updateShortcut, removeShortcut, moveShortcut,
   exportSettingsJson, importSettingsJson, setInfiniteScroll,
   SCROLL_MODES, SCROLL_LABELS,
-  setTheme, setFont, THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
+  setTheme, setFont, setFontScale, getFontScale, THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
+  FONT_SCALE_MIN, FONT_SCALE_MAX, FONT_SCALE_STEP,
 } from '../lib/settings.js';
 import {
   getAlbums, addAlbum, renameAlbum, removeAlbums, moveAlbum, setAlbumImages,
@@ -40,6 +41,11 @@ const FONT_HELP = {
   'be-vietnam': 'Tải phông Be Vietnam (400/500/700 + nghiêng) kèm chữ Việt, chỉ tải khi bạn chọn.',
 };
 
+const SIZE_HELP = {
+  post: 'Cỡ chữ của phần nội dung bài viết, tính theo % so với mặc định. Không ảnh hưởng tới phần tên, ngày tháng hay nút bên dưới bài.',
+  ui: 'Cỡ chữ của mọi chỗ khác: danh sách chủ đề, thanh trên cùng, nút, biểu mẫu và trang cài đặt.',
+};
+
 // Radio-card group shared by the appearance settings. `name` keys the input group and the
 // data attribute the change handler reads back.
 function optionCards(name, values, labels, help, active) {
@@ -54,6 +60,17 @@ function optionCards(name, values, labels, help, active) {
       </li>`
     ).join('')}
   </ul>`;
+}
+
+function sizeRow(id, label, help, value) {
+  return `<div class="size-row">
+    <div class="size-row-head">
+      <label for="${id}">${esc(label)}</label>
+      <output class="size-value" id="${id}-value" for="${id}">${value}%</output>
+    </div>
+    <input class="size-slider" type="range" id="${id}" min="${FONT_SCALE_MIN}" max="${FONT_SCALE_MAX}" step="${FONT_SCALE_STEP}" value="${value}">
+    <span class="option-card-desc">${esc(help)}</span>
+  </div>`;
 }
 
 function shortcutRows() {
@@ -139,7 +156,7 @@ function tabsHtml(active) {
 }
 
 function settingsHtml(active = settingsTabFromHash()) {
-  const { navShortcuts, infiniteScroll, theme, font } = loadSettings();
+  const { navShortcuts, infiniteScroll, theme, font, postSize, uiSize } = loadSettings();
   const albums = getAlbums();
   return `<div class="block settings-block">
       <h1 class="block-header">Cài đặt</h1>
@@ -155,6 +172,10 @@ function settingsHtml(active = settingsTabFromHash()) {
           <h3 class="settings-subhead">Phông chữ</h3>
           <p class="formHint">Phông nằm trong máy chủ của trang này và chỉ được tải khi bạn chọn, nên mặc định không tốn thêm dữ liệu.</p>
           ${optionCards('font-family', FONTS, FONT_LABELS, FONT_HELP, font)}
+          <h3 class="settings-subhead">Cỡ chữ</h3>
+          <p class="formHint">Tính theo % so với cỡ mặc định (100%). Hai mục dưới đây độc lập nhau nên có thể chỉnh riêng phần nội dung bài viết.</p>
+          ${sizeRow('size-post', 'Cỡ chữ nội dung bài viết', SIZE_HELP.post, postSize)}
+          ${sizeRow('size-ui', 'Cỡ chữ những chỗ khác', SIZE_HELP.ui, uiSize)}
         </div>
       </section>
       <section class="settings-panel" id="panel-scroll" role="tabpanel" aria-labelledby="tab-scroll"${active === 'scroll' ? '' : ' hidden'}>
@@ -726,6 +747,11 @@ export function viewSettings() {
     setFont(value);
     toast(`Phông chữ: ${FONT_LABELS[value]}`);
   });
+  // Size sliders apply on `input` so the page resizes while dragging, but only `change`
+  // toasts — otherwise a single drag would fire dozens of them. ui/theme.js re-applies the
+  // custom properties from the voz:settings event saveSettings fires.
+  wireSizeSlider('size-post', (value) => setFontScale({ ...getFontScale(), postSize: value }));
+  wireSizeSlider('size-ui', (value) => setFontScale({ ...getFontScale(), uiSize: value }));
   wireOptionGroup('infinite-scroll', (value) => {
     setInfiniteScroll(value);
     toast(`Cuộn trang liên tục: ${SCROLL_LABELS[value]}`);
@@ -925,6 +951,22 @@ function wireSettingsTabs() {
     if (!next) return;
     event.preventDefault();
     activate(next, { focus: true });
+  });
+}
+
+// Wires one size slider: live preview on `input`, one toast on `change`. Kept beside
+// wireOptionGroup so every Giao diện control is handled the same way.
+function wireSizeSlider(id, onPick) {
+  const input = document.getElementById(id);
+  const output = document.getElementById(`${id}-value`);
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const value = Number(input.value);
+    if (output) output.textContent = `${value}%`;
+    onPick(value);
+  });
+  input.addEventListener('change', () => {
+    toast(`Cỡ chữ: ${input.value}%`);
   });
 }
 

@@ -1,6 +1,6 @@
 .header-menu-wrap { position: relative; }
 .header-icon[data-header-menu] { position: relative; }
-.header-unread { position: absolute; top: 0; right: 0; min-width: 16px; padding: 1px 4px; border-radius: 3px; background: #e02e2e; color: #fff; font-size: 11px; font-weight: 700; line-height: 14px; text-align: center; pointer-events: none; }
+.header-unread { position: absolute; top: 0; right: 0; min-width: 16px; padding: 1px 4px; border-radius: 3px; background: #e02e2e; color: #fff; font-size: calc(11px * var(--ui-scale)); font-weight: 700; line-height: 14px; text-align: center; pointer-events: none; }
 .header-unread[hidden] { display: none; }
 .header-icon { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 4px; padding: 5px; background: transparent; color: var(--on-chrome-muted); cursor: pointer; font: inherit; min-width: 32px; min-height: 32px; }
 .header-icon svg { width: 17px; height: 17px; }
@@ -8,7 +8,7 @@
 .header-icon:focus-visible { outline: 2px solid var(--focus-ring-warm); outline-offset: 2px; }
 .header-menu { position: absolute; right: 0; top: calc(100% + 9px); z-index: 100; width: 340px; max-width: calc(100vw - 24px); color: var(--text); background: var(--content-bg); border: 1px solid var(--border); border-top: 3px solid var(--quote-border); border-radius: 4px; box-shadow: var(--shadow-menu); }
 .header-menu[hidden] { display: none; }
-.header-menu h2 { font-size: 16px; font-weight: 400; margin: 0; padding: 10px 12px; color: var(--link); background: var(--content-bg-alt); border-bottom: 1px solid var(--border); }
+.header-menu h2 { font-size: calc(16px * var(--ui-scale)); font-weight: 400; margin: 0; padding: 10px 12px; color: var(--link); background: var(--content-bg-alt); border-bottom: 1px solid var(--border); }
 .header-menu-body { max-height: 380px; overflow-y: auto; }
 .quick-search { padding: 12px; display: grid; gap: 12px; }
 .menu-footer { display: block; padding: 10px 12px; text-align: center; background: var(--content-bg-alt); border-top: 1px solid var(--border); }
@@ -31,7 +31,7 @@
 @media (max-width: 620px) {
   .p-header-inner { gap: 4px; flex-wrap: nowrap; }
   .p-breadcrumbs:has(.breadcrumb-trail) { gap: 8px; }
-  .p-breadcrumbs .button--cta { padding: 6px 8px; font-size: 12px; gap: 4px; }
+  .p-breadcrumbs .button--cta { padding: 6px 8px; font-size: calc(12px * var(--ui-scale)); gap: 4px; }
   .header-menu-wrap { position: static; }
   .header-menu { right: 12px; top: 54px; }
   .header-icon { padding: 4px; min-width: 30px; min-height: 30px; }

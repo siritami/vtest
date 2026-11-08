@@ -1,12 +1,17 @@
-.bbCodeBlock--unfurl { margin: 1em 0; max-width: 650px; padding: 12px; border: 1px solid var(--border); border-left: 3px solid var(--block-header-bg); border-radius: 4px; background: var(--quote-bg); font-size: 13px; }
-.bbCodeBlock--unfurl .contentRow { display: flex; align-items: center; gap: 12px; }
-.bbCodeBlock--unfurl .contentRow-figure { flex: 0 0 80px; margin: 0; }
-.bbCodeBlock--unfurl .bbCodeBlockUnfurl-image { display: block; width: 80px; height: 80px; object-fit: cover; margin: 0; }
-.bbCodeBlock--unfurl .contentRow-main { flex: 1; min-width: 0; }
-.bbCodeBlock--unfurl .contentRow-header { margin: 0 0 4px; font-size: 15px; line-height: 1.4; }
-.bbCodeBlock--unfurl .contentRow-snippet { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.4; }
-.bbCodeBlock--unfurl .contentRow-minor { margin-top: 5px; color: var(--dimmed); font-size: 12px; }
-.bbCodeBlock--unfurl .bbCodeBlockUnfurl-icon { display: inline-block; width: 16px; height: 16px; margin: 0 4px 0 0; vertical-align: text-bottom; }
+/* Unfurl (link preview) cards. `height: auto` from `.bbWrapper img:not(.smilie)` in post.css
+   would otherwise win on specificity (0,2,1 vs 0,2,0) and a failed favicon — naturalHeight is
+   0, e.g. discord.com's .ico under a cross-origin policy — would render its alt text in a
+   16px-wide column hundreds of pixels tall. The unfurl rules are therefore scoped under
+   `.bbWrapper` to reach (0,3,2)/(0,3,1) and pin both images to their box. */
+.bbWrapper .bbCodeBlock--unfurl { margin: 1em 0; max-width: 650px; padding: 12px; border: 1px solid var(--border); border-left: 3px solid var(--block-header-bg); border-radius: 4px; background: var(--quote-bg); font-size: calc(13px * var(--ui-scale)); }
+.bbWrapper .bbCodeBlock--unfurl .contentRow { display: flex; align-items: center; gap: 12px; }
+.bbWrapper .bbCodeBlock--unfurl .contentRow-figure { flex: 0 0 80px; margin: 0; }
+.bbWrapper .bbCodeBlock--unfurl .bbCodeBlockUnfurl-image { display: block; width: 80px; height: 80px; object-fit: cover; margin: 0; }
+.bbWrapper .bbCodeBlock--unfurl .contentRow-main { flex: 1; min-width: 0; }
+.bbWrapper .bbCodeBlock--unfurl .contentRow-header { margin: 0 0 4px; font-size: calc(15px * var(--ui-scale)); line-height: 1.4; }
+.bbWrapper .bbCodeBlock--unfurl .contentRow-snippet { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.4; }
+.bbWrapper .bbCodeBlock--unfurl .contentRow-minor { margin-top: 5px; color: var(--dimmed); font-size: calc(12px * var(--ui-scale)); }
+.bbWrapper .bbCodeBlock--unfurl .bbCodeBlockUnfurl-icon { display: inline-block; width: 16px; height: 16px; max-height: 16px; object-fit: cover; margin: 0 4px 0 0; vertical-align: text-bottom; }
 .media-embed { width: 100%; max-width: 560px; margin: 12px auto; }
 .media-frame { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; background: var(--content-bg); }
 .media-embed--portrait { max-width: 325px; }
@@ -15,12 +20,12 @@
 .media-embed--imgur > .media-frame { aspect-ratio: auto; height: 500px; }
 .media-embed--social { max-width: 550px; }
 .media-embed--social > .media-frame { aspect-ratio: auto; height: 650px; }
-.media-source { display: inline-block; margin-top: 5px; font-size: 12px; }
+.media-source { display: inline-block; margin-top: 5px; font-size: calc(12px * var(--ui-scale)); }
 /* oEmbed embeds resolve to a picture (the fallback provider link shows briefly). */
 .media-embed--oembed { max-width: 100%; margin: 12px 0; }
 .media-embed--oembed > a { display: inline-block; max-width: 100%; }
 .media-embed--oembed img { max-width: min(100%, 683px); height: auto; }
-.media-embed--oembed.media-embed--fallback { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+.media-embed--oembed.media-embed--fallback { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: calc(13px * var(--ui-scale)); }
 .media-embed--oembed.media-embed--fallback img { max-height: 40px; width: auto; }
 .media-embed--fallback { padding: 10px; border: 1px solid var(--border); overflow-wrap: anywhere; }
 .media-embed--fallback svg { width: 20px; height: 20px; vertical-align: middle; }

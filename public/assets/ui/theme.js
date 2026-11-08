@@ -1,15 +1,20 @@
 // Applies the "Giao diện" preferences from Cài đặt to the document.
 //
-// Two independent axes:
+// Three independent axes:
 //   theme — light / dark / auto. `auto` follows prefers-color-scheme and keeps following it,
 //           so switching the OS theme while the tab is open updates the page.
 //   font  — which family the reading surface uses. Only the downloadable options pull in
 //           assets/css/fonts.css, and only once chosen, so the default costs no font bytes.
+//   size  — two percentages (post prose vs. everything else) published as --post-scale and
+//           --ui-scale; see applyFontScale below.
 //
-// Both are expressed as attributes on <html> so the CSS can own all the actual values:
-//   <html data-theme="light|dark" data-theme-mode="auto|light|dark" data-font="system|roboto|be-vietnam-pro|be-vietnam">
+// All three are expressed as attributes (and two custom properties) on <html> so the CSS can
+// own all the actual values:
+//   <html data-theme="light|dark" data-theme-mode="auto|light|dark"
+//         data-font="system|roboto|be-vietnam-pro|be-vietnam"
+//         data-post-size="100" data-ui-size="100">
 
-import { getTheme, getFont, FONT_STACKS } from '../lib/settings.js';
+import { getTheme, getFont, getFontScale, FONT_STACKS } from '../lib/settings.js';
 
 const FONT_HREF = '/assets/css/fonts.css';
 
@@ -54,9 +59,22 @@ function applyFont(font) {
   }
 }
 
+// Font size follows the same attribute-plus-custom-property shape. The numbers are published
+// as unitless multipliers in --post-scale / --ui-scale, both 1 by default, and the layout
+// stylesheets multiply their px sizes by them. The inline script in index.html sets the same
+// two properties before the first paint, so a non-default size never flashes the stock one.
+function applyFontScale({ postSize, uiSize }) {
+  const root = document.documentElement;
+  root.dataset.postSize = String(postSize);
+  root.dataset.uiSize = String(uiSize);
+  root.style.setProperty('--post-scale', String(postSize / 100));
+  root.style.setProperty('--ui-scale', String(uiSize / 100));
+}
+
 export function applyAppearance() {
   applyTheme(getTheme());
   applyFont(getFont());
+  applyFontScale(getFontScale());
 }
 
 // Called once at boot. The media listener is permanent: it only ever reads the current

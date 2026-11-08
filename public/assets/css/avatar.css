@@ -43,7 +43,7 @@
   padding: 1px .35em;
   border: 1px solid transparent;
   border-radius: 4px;
-  font-size: 80%;
+  font-size: calc(.8em * var(--ui-scale));
   line-height: 1.35;
   text-decoration: none;
   vertical-align: middle;
