@@ -14,6 +14,11 @@ this UI is full of — stay in a range that is always kept.
 
 The upstream files are OFL-licensed. OFL.txt is copied next to the output so the licence
 travels with the binaries.
+
+Not covered here: the plain `Be Vietnam` family (assets/fonts/be-vietnam-400-*.woff2). Its
+upstream project publishes a single 400 weight and Google already ships it pre-split into
+three unicode-range files, so those are copied from fonts.gstatic.com verbatim — see
+css/fonts.css. Re-running this script leaves them alone.
 """
 
 import argparse

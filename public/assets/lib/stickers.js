@@ -4,15 +4,15 @@
 // Storage keys (mirrors the userscript, namespaced under voz-stickers):
 //   voz-stickers:v1            → album list (see normalizeAlbum)
 //   voz-stickers:recent:v1     → recently used stickers
-//   voz-stickers:clientId:v1   → imgur Client-ID override
 
 const ALBUM_KEY = 'voz-stickers:v1';
 const RECENT_KEY = 'voz-stickers:recent:v1';
-const CLIENT_KEY = 'voz-stickers:clientId:v1';
 
 export const MAX_RECENT = 30;
 export const PARALLEL_DOWNLOADS = 5;
-// Same fallback Client-ID the userscript shipped with; users can override it in settings.
+// The Client-ID the userscript shipped with. It is not configurable: the previous "nhập key
+// riêng" field only ever produced 403s for anyone who did not own an imgur app, so the
+// default is used unconditionally.
 export const DEFAULT_CLIENT_ID = '66850c248e91c93';
 export const MAX_ALBUMS = 100;
 export const MAX_IMAGES = 500;
@@ -40,19 +40,9 @@ function writeJson(key, value) {
   }
 }
 
+// Kept as a function so callers read as "the key to use" rather than importing a constant,
+// and so a future build could swap the value without touching every call site.
 export function getClientId() {
-  const stored = readJson(CLIENT_KEY, null);
-  return typeof stored === 'string' && stored.trim() ? stored.trim() : DEFAULT_CLIENT_ID;
-}
-
-export function setClientId(value) {
-  const id = String(value ?? '').trim().slice(0, 64);
-  writeJson(CLIENT_KEY, id || DEFAULT_CLIENT_ID);
-  return getClientId();
-}
-
-export function resetClientId() {
-  writeJson(CLIENT_KEY, DEFAULT_CLIENT_ID);
   return DEFAULT_CLIENT_ID;
 }
 

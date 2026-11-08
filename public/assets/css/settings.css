@@ -1,10 +1,10 @@
 /* Settings page: nav shortcuts + JSON backup/restore. */
 
 .settings-note { margin: 0; padding: 10px 12px; font-size: 13px; color: var(--dimmed); background: var(--content-bg); }
-.settings-block .block-header { border-radius: 0; }
 
 /* Tabbed layout: one panel at a time instead of one long scroll. The tab strip sits inside
-   the block so it shares the card edges; panels keep their own block-header inside. */
+   the block so it shares the card edges. Panels carry no heading of their own — the tab
+   label above is the heading, and repeating it inside the panel only wastes a bar. */
 .settings-tabbed { padding: 0; }
 .settings-tabs {
   display: flex;
@@ -26,14 +26,17 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* Blue, not the brand orange: these are in-page tabs, and the strip has to read as part of
+   the reading surface (--link), not as chrome navigation (--nav-active). */
 .settings-tabs button:hover { color: var(--link); background: var(--surface-hover); }
-.settings-tabs button.is-active { color: var(--link); border-bottom-color: var(--nav-active); }
+.settings-tabs button.is-active { color: var(--link); border-bottom-color: var(--link); }
 .settings-tabs button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .settings-panel { display: block; }
 /* [hidden] must win over the display above, or the inactive panels stay visible. */
 .settings-panel[hidden] { display: none; }
-.settings-panel > .block-header { border-radius: 0; }
 .settings-panel > .block-body--pad { padding: 12px; }
+/* Panel-level count that used to ride in the removed block-header. */
+.settings-count { margin: 0 0 8px; font-size: 13px; color: var(--dimmed); }
 
 .shortcut-list { list-style: none; margin: 0 0 16px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .shortcut-row {

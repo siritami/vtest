@@ -54,14 +54,15 @@ export const THEME_LABELS = {
   dark: 'Tối',
 };
 
-// Typography. `system` keeps the original stack and downloads nothing; the other two load a
+// Typography. `system` keeps the original stack and downloads nothing; the others load a
 // vendored woff2 set (assets/css/fonts.css) only once they are selected.
-export const FONTS = ['system', 'roboto', 'be-vietnam-pro'];
+export const FONTS = ['system', 'roboto', 'be-vietnam-pro', 'be-vietnam'];
 export const FONT_DEFAULT = 'system';
 export const FONT_LABELS = {
   system: 'Mặc định hệ thống',
   roboto: 'Roboto',
   'be-vietnam-pro': 'Be Vietnam Pro',
+  'be-vietnam': 'Be Vietnam',
 };
 // Family name + the stylesheet to load for each downloadable option. `null` means "use the
 // --font stack as-is" and inject nothing.
@@ -69,6 +70,7 @@ export const FONT_STACKS = {
   system: null,
   roboto: 'Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
   'be-vietnam-pro': '"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  'be-vietnam': '"Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };
 
 // Infinite scroll for thread lists and threads:
@@ -199,7 +201,7 @@ export function getFont() {
   return FONTS.includes(font) ? font : FONT_DEFAULT;
 }
 
-export function exportSettingsJson({ albums = [], recent = [], clientId } = {}) {
+export function exportSettingsJson({ albums = [], recent = [] } = {}) {
   const settings = loadSettings();
   const payload = {
     app: 'voz-web',
@@ -211,11 +213,10 @@ export function exportSettingsJson({ albums = [], recent = [], clientId } = {}) 
     font: settings.font,
   };
   // Sticker payload mirrors the userscript backup so either file can be restored.
-  if (albums.length || recent.length || clientId) {
+  if (albums.length || recent.length) {
     payload.version = '1.2';
     payload.albums = albums;
     payload.recent = recent;
-    payload.clientId = clientId;
   }
   return JSON.stringify(payload, null, 2);
 }
@@ -247,7 +248,6 @@ export function importSettingsJson(text) {
     settings: settings || loadSettings(),
     albums: albumSource,
     recent: Array.isArray(source.recent) ? source.recent : null,
-    clientId: typeof source.clientId === 'string' ? source.clientId : null,
     addOnly: source.addOnly === true,
   };
 }

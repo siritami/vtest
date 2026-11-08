@@ -7,7 +7,7 @@
 //           assets/css/fonts.css, and only once chosen, so the default costs no font bytes.
 //
 // Both are expressed as attributes on <html> so the CSS can own all the actual values:
-//   <html data-theme="light|dark" data-theme-mode="auto|light|dark" data-font="system|roboto|be-vietnam-pro">
+//   <html data-theme="light|dark" data-theme-mode="auto|light|dark" data-font="system|roboto|be-vietnam-pro|be-vietnam">
 
 import { getTheme, getFont, FONT_STACKS } from '../lib/settings.js';
 

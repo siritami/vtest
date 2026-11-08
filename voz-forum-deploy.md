@@ -38,7 +38,7 @@ vtest/
 │   │   │   ├── quotes.js     # khôi phục link nguồn của quote
 │   │   │   ├── attachments.js # [ATTACH]id → URL thật cho trình soạn
 │   │   │   ├── smilies.js    # danh mục /voz/smilies → <img>
-│   │   │   ├── stickers.js   # album sticker + recent + clientId (localStorage)
+│   │   │   ├── stickers.js   # album sticker + recent (localStorage)
 │   │   │   ├── imgurImport.js # tách album id + tải album imgur
 │   │   │   ├── pikUpload.js  # nén + tải ảnh lên pik.vn qua proxy
 │   │   │   ├── spoilers.js   # parser BBCode → details/summary
@@ -75,7 +75,7 @@ vtest/
 │   │   │   ├── user.js
 │   │   │   ├── settings.js  # /cai-dat-tuivoz — giao diện + phím tắt nav + sticker + JSON backup
 │   │   │   └── login.js
-│   │   ├── fonts/        # woff2 tự dựng (roboto / be-vietnam-pro) + OFL.txt
+│   │   ├── fonts/        # woff2 (roboto / be-vietnam-pro / be-vietnam) + OFL.txt, OFL-BeVietnam.txt
 │   │   ├── img/          # voz-lockup.svg — logo header, chép từ voz.vn
 │   │   └── css/          # theme, tách theo khu vực
 │   │       ├── base.css      # bảng màu sáng + bảng tối + reset + utility
@@ -477,9 +477,9 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | `prefix.js` | `prefixLabel` | `prefix_id` → `label--{green,red,royalBlue,orange,primary,accent,gray,olive}` |
 | `quotes.js` | `restoreQuoteLinks` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/` |
 | `smilies.js` | `smilieChoices`, `loadSmilies`, `smiliesReady`, `splitSmilieText`, `renderSmilies` | tải `/voz/smilies` một lần, dựng regex từ mã đã escape, chỉ thay trong text node không nằm trong `a/code/pre/script/style`, chỉ nhận ảnh `https://data.voz.vn/`; trả `true` khi có thay đổi để editor biết khi nào cần đặt lại caret |
-| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`) và `font` (`system`/`roboto`/`be-vietnam-pro`, mặc định `system`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent, clientId})` gộp cả dữ liệu sticker vào cùng file JSON |
-| `stickers.js` | `getAlbums`, `addAlbum`, `updateAlbum`, `renameAlbum`, `removeAlbums`, `moveAlbum`, `setAlbumImages`, `getRecentStickers`, `addRecentSticker`, `removeRecentSticker`, `clearRecentStickers`, `getClientId`, `setClientId`, `resetClientId`, `imageFileToBase64`, `downscaleDataUrl`, `urlToBase64`, `downloadImagesInParallel`, `DEFAULT_CLIENT_ID` | album sticker trong `localStorage['voz-stickers:v1']`, gần đây ở `voz-stickers:recent:v1` (tối đa 30), Client-ID ở `voz-stickers:clientId:v1`; ảnh thu nhỏ ≤ 400px, mã hoá WebP 0.8 (GIF giữ nguyên); chỉ nhận `https:` hoặc `data:image/…;base64,` |
-| `views/settings.js` | `viewSettings` (+ `applyImported` nội bộ) | `applyImported(result)` dùng chung cho ô "Nhập album từ JSON" và mục Sao lưu: file `addOnly` chỉ thêm album mới (bỏ qua trùng tên), file đầy đủ thay thế album + gần đây + Client-ID |
+| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`) và `font` (`system`/`roboto`/`be-vietnam-pro`/`be-vietnam`, mặc định `system`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent})` gộp cả dữ liệu sticker vào cùng file JSON (không còn khoá `clientId` — imgur Client-ID là hằng số) |
+| `stickers.js` | `getAlbums`, `addAlbum`, `updateAlbum`, `renameAlbum`, `removeAlbums`, `moveAlbum`, `setAlbumImages`, `getRecentStickers`, `addRecentSticker`, `removeRecentSticker`, `clearRecentStickers`, `getClientId`, `imageFileToBase64`, `downscaleDataUrl`, `urlToBase64`, `downloadImagesInParallel`, `DEFAULT_CLIENT_ID` | album sticker trong `localStorage['voz-stickers:v1']`, gần đây ở `voz-stickers:recent:v1` (tối đa 30); `getClientId()` luôn trả `DEFAULT_CLIENT_ID` (không còn override lưu localStorage); ảnh thu nhỏ ≤ 400px, mã hoá WebP 0.8 (GIF giữ nguyên); chỉ nhận `https:` hoặc `data:image/…;base64,` |
+| `views/settings.js` | `viewSettings` (+ `applyImported` nội bộ) | `applyImported(result)` dùng chung cho ô "Nhập album từ JSON" và mục Sao lưu: file `addOnly` chỉ thêm album mới (bỏ qua trùng tên), file đầy đủ thay thế album + gần đây; khoá `clientId` trong file cũ bị bỏ qua |
 | `imgurImport.js` | `extractAlbumId`, `fetchImgurAlbumImages`, `importImgurAlbum`, `clearImgurCache` | tách album id từ `imgur.com/a/<slug>-<id>`, gọi qua proxy `/api/xf/imgur/album/{id}/images`, tải base64 song song 5 ảnh/lô |
 | `spoilers.js` | `parseBbcode`, `restoreSpoilers` | parser stack; chỉ thay khi **số placeholder khớp số spoiler ngoài cùng** |
 | `userBadges.js` | `userBadges` | `User.banners` → `.user-badge`, validate `#rgb`/`#rrggbb` trước khi đưa vào CSS |
@@ -639,7 +639,11 @@ Vercel cần SPA fallback để deep link không 404:
 ]
 ```
 
-`dev-server.mjs` đã có fallback tương tự (mọi path không khớp file → `index.html`).
+`dev-server.mjs` có fallback tương tự (path không khớp file → `index.html`) **nhưng chỉ cho
+route, không cho asset**: mọi path bắt đầu `/assets/` hoặc `/userscript/` mà không có file
+thật sẽ trả **404**. Trước đây nó trả `index.html` kèm `200` cho tất cả, nên một file đã xoá
+trông như vẫn phục vụ được (đúng ca đã gặp: 3 file phông cũ đã xoá trên đĩa mà vẫn `200`), và
+một đường dẫn script gõ sai biến thành lỗi khó hiểu `Unexpected token '<'` thay vì 404.
 
 ### 5.2 Ghi dữ liệu
 
@@ -744,8 +748,8 @@ Cấu trúc giống XenForo: `.p-header` → `.p-nav` → `.p-body` → `.block`
   inline `<path>` để chỉ có một tệp cache và giữ nguyên bản gốc không sửa.
 - Artwork gốc màu trắng `#f2f4f7` nên hợp với header tối của cả hai chế độ; **không** áp
   filter hay đổi màu.
-- Kích thước: `height: 32px; width: auto` → 63×32, đúng tỉ lệ `348 / 177.28`. voz.vn đặt
-  `width: 98px` (cao ~50px) nhưng header bên này thấp hơn nên scale theo chiều cao.
+- Kích thước: `height: 26px; width: auto` → 51×26, đúng tỉ lệ `348 / 177.28`. voz.vn đặt
+  `width: 98px` (cao ~50px) nhưng header bên này là dải mỏng nên scale theo chiều cao.
 - Bấm logo vẫn về `/`; tên truy cập đọc được nhờ `aria-label="VOZ — về trang chủ"` trên thẻ
   `<a>` và `alt="VOZ"` trên `<img>`.
 - Footer chỉ còn **một dòng**: “Voz của tui, xài voz theo cách của tui”. Hai câu cũ (dữ liệu
@@ -769,18 +773,50 @@ lên, đúng kiểu nút dừng cuộn liên tục.
   và logo là đường về trang chủ.
 - Menu thả xuống nằm trong header sẽ **tự đóng** khi thanh ẩn (`closeHeaderMenus()`), nếu không
   nó sẽ lơ lửng trên nội dung.
-- `z-index: 100` cho cả hai thanh: trên nội dung và nút dừng cuộn (40), dưới thẻ thành viên
-  (150), toast (900) và modal (1000).
+- `z-index` tách lớp: nav **100**, header **110**. Cả hai đều tạo stacking context, nên nếu
+  bằng nhau thì nav (đứng sau trong DOM) sẽ vẽ đè lên menu thả xuống của header — menu mở
+  xuống và cắt ngang dải của nav, càng nhiều phím tắt (nav cao nhiều dòng) càng lộ rõ. Nav 100
+  vẫn trên nội dung và nút dừng cuộn (40); header 110 vẫn dưới thẻ thành viên (150), toast
+  (900) và modal (1000).
 - **`html { scroll-padding-top: var(--chrome-h) }`** là bắt buộc: không có nó, mọi nhảy tới
   `#post-<id>` và `scrollIntoView()` sẽ chui xuống dưới thanh sticky (đã kiểm chứng: bài viết
-  nằm ở `top: 110px` sau khi thêm, thay vì `top: 0`).
+  nằm ở `top: 82px` sau khi thêm, thay vì `top: 0`).
 - Cuộn do chương trình (permalink, sửa bài tại chỗ) không bị hiểu nhầm là người dùng cuộn
   xuống: `suppressBriefly()` bỏ qua delta trong 250 ms, `suppressChromeAutoHide()` cho view gọi
   trước `scrollIntoView()` của mình. Khi mở trang bằng deep link có `#`, module khởi động ở
   trạng thái chưa "armed" và chờ cử chỉ thật (`wheel`/`touchmove`) rồi mới theo dõi hướng.
 - `prefers-reduced-motion` tắt transition.
-- Mobile 390px: `--header-h` 62px, `--chrome-h` 106px, `scroll-padding-top` khớp, không tràn
+- Mobile 390px: `--header-h` 45px, `--chrome-h` 81px, `scroll-padding-top` khớp, không tràn
   ngang.
+
+### Kích thước hai thanh
+
+Đây là dải mỏng để nhường chỗ cho nội dung; cả desktop lẫn mobile dùng cùng một bộ số, chỉ khác
+nhau ở chỗ nào bị ẩn.
+
+| Phần | Desktop | Mobile ≤620px |
+|---|---|---|
+| `.p-header-inner` | `padding: 6px 12px`, `gap: 14px` | `gap: 4px` |
+| logo `img` | `height: 26px` → 51×26 | 51×26 |
+| `.header-icon` | 32×32 (`padding: 5px`, icon SVG 17px) | 30×30 |
+| `.p-header-account .avatar` | 24×24 | 24×24 |
+| `.p-nav-list a` | `padding: 6px 12px`, `font-size: 14px` → cao 36px | giống desktop → 36px |
+| **Header** | **46px** | **45px** |
+| **Nav** | **36px** | **36px** |
+
+- Bề rộng thật của header do `.header-icon` quyết định (`min-height: 32px`), không phải padding
+  của `.p-header-inner` — giảm padding mà không giảm icon thì thanh không thấp đi. Vì vậy cả
+  hai phải chỉnh cùng lúc.
+- `font-size` icon SVG đặt thẳng ở `.header-icon svg` để nút bấm nhỏ lại nhưng glyph không bị
+  tràn ra ngoài hộp.
+- **Không có ô tìm kiếm trên header.** Bản trước có một ô nhập chữ + nút *Tìm* đặt giữa logo
+  và ô tài khoản, nhưng nó chiếm gần hết chiều ngang (input 375px) để rồi trùng chức năng với
+  menu Tìm kiếm. Nay chỉ còn **icon kính lúp** trong cụm tiện ích bên phải (cùng chỗ với
+  Hộp thư / Thông báo), bấm vào mở menu tìm kiếm — đúng một lối vào cho tìm kiếm ở mọi kích
+  thước màn hình. CSS `.p-header-search` đã xoá hẳn (trước đó nó là CSS chết: chưa từng có
+  phần tử nào trong DOM cho tới lần thêm rồi gỡ này).
+- `.p-nav-list` vẫn giới hạn `max-height: 40vh; overflow-y: auto`; các phím tắt do người dùng
+  thêm vẫn hiện đủ, chỉ cao hơn theo hàng khi cần.
 
 CSS chia theo khu vực, nạp đúng thứ tự trong `index.html`:
 
@@ -1082,6 +1118,17 @@ Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao di�
 - Bàn phím: `role="tablist"`/`role="tab"`/`aria-selected`, roving `tabindex` (chỉ tab đang
   chọn nhận focus). `←`/`→` chạy vòng, `Home`/`End` nhảy hai đầu.
 - Mobile ≤ 620px: dải tab tự xuống 2 hàng, không tràn ngang (`scrollWidth == innerWidth`).
+- **Tab dùng màu xanh `--link`, không dùng `--nav-active` (cam thương hiệu).** Đây là tab
+  trong nội dung, phải đọc như một phần của mặt đọc; `--nav-active` dành cho chrome (gạch
+  chân thanh điều hướng, badge). Đo WCAG: tab đang chọn 7.95:1 (sáng) / 6.68:1 (tối),
+  tab thường 5.16:1 / 5.4:1 — đều đạt AA.
+- **Panel không có `<h2 class="block-header">` riêng.** Nhãn tab phía trên đã là tiêu đề;
+  lặp lại tên tab trong panel chỉ chiếm thêm một thanh màu xanh đậm và trông như hai tiêu đề
+  trùng nhau. Chỉ khối ngoài cùng của trang còn `<h1 class="block-header">Cài đặt</h1>`.
+  Số đếm từng đi kèm tiêu đề đó (số phím tắt, số album) chuyển thành dòng
+  `<p class="settings-count" id="shortcut-count">` / `id="sticker-count">` ngay dưới dòng tab,
+  vẫn cập nhật khi thêm/xoá. (Ô đếm cũ bị tìm bằng `document.querySelector('.block-header-extra')`
+  — selector đó sẽ trúng nhầm sau khi bỏ tiêu đề, nên đổi sang id riêng.)
 
 ### Phím tắt thanh điều hướng
 
@@ -1099,7 +1146,7 @@ Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao di�
   hàng đích. Thứ tự lưu ngay vào localStorage.
 - Nút bút chì nạp lại phím tắt vào form để sửa, nút thùng rác xoá.
 - Nav dùng `flex-wrap` + `max-height: 40vh` + cuộn dọc, mỗi link cắt bằng ellipsis ở
-  240px. Đã thử 20–22 phím tắt: desktop 3 hàng, mobile 420px ~9 hàng, không tràn ngang
+  240px. Đã thử 14–22 phím tắt: desktop 2–3 hàng, mobile ~9 hàng, không tràn ngang
   (`scrollWidth == clientWidth`).
 - Đổi ở tab khác tự cập nhật qua event `storage`; đổi trong trang qua event `voz:settings`.
 
@@ -1112,7 +1159,8 @@ trong `/cai-dat-tuivoz` → **Giao diện**.
 dung**; thanh trên cùng, thanh điều hướng và footer giữ nguyên kiểu voz.vn ở cả hai chế độ —
 nên các điều khiển nằm *trên* chrome (ô tìm kiếm ở header, avatar, màu chữ nav) được đóng
 băng bằng token riêng `--chrome-*`, không đi theo bảng màu nội dung. Nếu để chúng đi theo,
-ô tìm kiếm sẽ sáng trên nền tối khi bật chế độ tối.
+ô tìm kiếm sẽ sáng trên nền tối khi bật chế độ tối — và ngược lại, ở chế độ sáng nó mất độ
+tương phản với nền chrome tối.
 
 - Cơ chế: `base.css` khai báo bảng **sáng** trong `:root`, rồi `:root[data-theme="dark"]`
   trỏ lại **cùng tên token** sang giá trị tối. Thành phần chỉ dùng `var(--token)`, không
@@ -1131,25 +1179,58 @@ băng bằng token riêng `--chrome-*`, không đi theo bảng màu nội dung. 
   không thuộc hệ token. Giữ nguyên (không viết lại nội dung người dùng) nên một màu chữ tối
   do tác giả chọn có thể chìm trên nền tối — giống voz.vn.
 
-**Phông chữ** (`font`: `system` | `roboto` | `be-vietnam-pro`, mặc định `system`).
+**Phông chữ** (`font`: `system` | `roboto` | `be-vietnam-pro` | `be-vietnam`, mặc định `system`).
 
-- Phông nằm trong repo tại `public/assets/fonts/` (6 file woff2 + `OFL.txt`), dựng bằng
-  `tools/build-fonts.py` từ font gốc OFL của Google Fonts: mỗi họ được cắt còn
+- Phông nằm trong repo tại `public/assets/fonts/`: 6 file woff2 của Roboto + Be Vietnam Pro
+  dựng bằng `tools/build-fonts.py`, cộng **4 file của Be Vietnam** dựng bằng
+  `tools/build-be-vietnam.py`, và hai tệp giấy phép `OFL.txt` + `OFL-BeVietnam.txt`.
+- Roboto và Be Vietnam Pro được dựng từ font gốc OFL của Google Fonts: mỗi họ cắt còn
   `latin` + `vietnamese` ở 3 mức 400/500/700. Tổng ~186 KB thay vì ~1 MB bản đầy đủ, và
   dấu tiếng Việt (vốn là phần lớn nội dung) luôn được giữ đủ.
 - Roboto ở upstream là variable font (`wght` 100–900, `wdth` 75–100) nên script
   **instance** ra ba mức tĩnh trước khi subset; Be Vietnam Pro upstream đã là file tĩnh.
+- **Be Vietnam** (`be-vietnam`) là họ *tiền nhiệm* của Be Vietnam Pro, và là họ mà các
+  userscript trên voz.vn dùng. Nguồn là repo upstream
+  `github.com/bettergui/BeVietnam` v2.000 (7 mức + nghiêng, file `.ttf` tĩnh).
+  - **Vì sao không dùng CDN nữa:** Google chỉ phát hành **một mức 400** của họ này. Bản đầu
+    tiên chép 3 file đó về, hệ quả là chữ đậm bị trình duyệt **giả lập** (kéo ngang 4%) và
+    chữ nghiêng là **nghiêng giả**. Đo trên trang thật: `font-weight: 600` và `700` ra cùng
+    một bề rộng `189.82px`, tức hai mức đậm giống hệt nhau — trong khi username là 600 và
+    một trang chủ đề có ~18 chỗ như vậy. Nay dựng thật 400/500/700 + italic 400.
+  - **Bẫy name table:** chỉ `Regular`/`Bold`/`Italic` khai họ là `"Be Vietnam"`. Các mức
+    khác tự nhận là họ riêng — `Medium` là `"Be Vietnam Medium"` **và** nameID 2 của
+    Windows là `Regular`, nên trình duyệt thấy đó là một "regular" của họ khác chứ không
+    phải mức 500. Script chuẩn hoá lại toàn bộ nameID 1/2/4/6/16/17 + `usWeightClass` +
+    bit `fsSelection`/`macStyle`; đã kiểm chứng bằng cách đọc lại name table **trong file
+    woff2 đã build**, không chỉ tin bản gốc.
+  - **Một file cho mỗi mức, không `unicode-range`.** File build ra gộp cả `latin` +
+    `vietnamese` giống Roboto/Be Vietnam Pro, nên không cần chia dải. Bản 400 chia dải cũ
+    đã bị xoá (script tự xoá `be-vietnam-400-*.woff2`): nếu còn, `unicode-range` của chúng
+    sẽ chồng một phần lên face 400 mới.
+  - Tổng **121.3 KB** cho 4 file (từ 495.9 KB file gốc): 400 = 29.4 KB, 500 = 29.7 KB,
+    700 = 31.5 KB, italic 400 = 30.7 KB.
+  - Bản quyền: `OFL-BeVietnam.txt` chép từ thư mục nguồn, ghi "Copyright 2019 The Be Vietnam
+    Project Authors". **Khác** `OFL.txt` của Be Vietnam Pro ("2021 … Pro Project Authors"),
+    nên hai tệp tồn tại song song chứ không ghi đè nhau.
 - **Chỉ tải khi người dùng chọn:** `css/fonts.css` chứa toàn bộ `@font-face` nhưng chỉ được
   chèn `<link>` từ `ui/theme.js` (`ensureFontStylesheet()`) ở lần chọn đầu tiên. Mặc định
-  `system` không tải byte nào. `@font-face` khai báo `font-weight` tường minh vì tên họ nội
-  bộ của file 500 là "Roboto Medium" / "Be Vietnam Pro Medium".
+  `system` không tải byte nào (đã kiểm chứng: 0 request tới `assets/fonts/`, không có
+  `#font-faces`). `@font-face` khai báo `font-weight` tường minh vì tên họ nội bộ của file
+  500 là "Roboto Medium" / "Be Vietnam Pro Medium".
 - `FONT_STACKS` trong `lib/settings.js` là nguồn duy nhất cho stack chữ; `system` là `null`
   nên `--font` được gỡ về mặc định của `base.css`. Mọi stack đều kết thúc bằng một họ
-  generic để chữ vẫn hiện nếu woff2 lỗi.
+  generic để chữ vẫn hiện nếu woff2 lỗi. Stack của `be-vietnam` trỏ `"Be Vietnam"` **không**
+  kèm `Pro` — `vtesst1/settings-appearance.test.mjs` chặn việc để lẫn hai họ này.
 - Link phông không bị gỡ khi quay lại `system` (tránh tải lại nếu người dùng đổi qua đổi
   lại); chỉ `--font` đổi.
+- Thêm phông mới phải sửa **ba** nơi: `FONTS`/`FONT_LABELS`/`FONT_STACKS` +
+  `css/fonts.css`, và nhánh tương ứng trong script chống nhấp nháy ở `index.html` (test
+  `theme-tokens.test.mjs` đọc `FONT_STACKS` để kiểm tra chéo, nên quên script là fail).
 - Chi tiết dựng lại font: chạy `python vtest/tools/build-fonts.py --src <thư mục .ttf>
-  --out vtest/public/assets/fonts`, cần `fonttools` + `brotli`.
+  --out vtest/public/assets/fonts` cho Roboto + Be Vietnam Pro, và
+  `python vtest/tools/build-be-vietnam.py --src <BeVietnam-master/ttf> --out vtest/public/assets/fonts`
+  cho Be Vietnam. Cả hai cần `fonttools` + `brotli`. Script Be Vietnam tự xoá các file
+  `be-vietnam-400-*.woff2` chia dải cũ (tắt bằng `--no-prune-legacy`).
 
 **Độ tương phản.** Toàn bộ vùng nội dung được đo bằng công cụ chạy trong trình duyệt (đọc
 `getComputedStyle`, tự tìm nền đục gần nhất ở tổ tiên, tính tỉ lệ WCAG, xét ngưỡng 4.5 cho
@@ -1231,8 +1312,9 @@ Port từ userscript "Voz Emoji" v2.3 (Fioren) — cùng bộ tính năng, nhưn
 - Tab **Gần đây** có nút xoá tất cả dạng **chỉ icon 🗑️** (26×26px, `title`/`aria-label`
   "Xoá hết gần đây"), không còn chiếm cả một hàng chữ rộng.
 - Khoá lưu: `voz-stickers:v1` (album), `voz-stickers:recent:v1` (tối đa 30, mới nhất
-  trước, khử trùng theo URL), `voz-stickers:clientId:v1` (imgur Client-ID, mặc định
-  `66850c248e91c93`).
+  trước, khử trùng theo URL). **Không còn** khoá `voz-stickers:clientId:v1`: imgur
+  Client-ID là hằng số `66850c248e91c93` (`DEFAULT_CLIENT_ID`) và `getClientId()` luôn trả
+  về nó — xem mục *imgur Client-ID cố định* bên dưới.
 - Album có `{ id, name, type, preview, images[], savedAt }`; mỗi ảnh
   `{ url, base64, deleteUrl }`. `type` là `imgur` (nhập từ album imgur) hoặc `pikvn`
   (tạo từ ảnh tự chọn). Ảnh thu nhỏ tối đa 400px và mã hoá WebP 0.8; GIF giữ nguyên.
@@ -1244,12 +1326,49 @@ Port từ userscript "Voz Emoji" v2.3 (Fioren) — cùng bộ tính năng, nhưn
   Nhận cả file do nút *Xuất album* của trang này tạo lẫn file export của userscript
   (`{ version, exportDate, addOnly, albums }`). File có `addOnly: true` (một album) chỉ
   **thêm** album mới và bỏ qua album trùng tên; file sao lưu đầy đủ
-  (`{ albums, recent, clientId }`) thay thế album, sticker gần đây và Client-ID.
-- Quản lý: kéo thả đổi thứ tự, đổi tên, xoá từng album, chọn nhiều rồi **Xoá album đã chọn**,
-  xuất riêng một album (file `addOnly` — nhập lại chỉ thêm, bỏ qua album trùng tên),
-  mở lưới ảnh để kéo thả sắp xếp và xoá từng ảnh.
+  (`{ albums, recent }`) thay thế album và sticker gần đây. Khoá `clientId` trong file cũ
+  được **bỏ qua** (không còn khái niệm Client-ID tuỳ chỉnh), nên file backup cũ vẫn nhập được.
+- Quản lý: kéo thả đổi thứ tự album, xoá từng album, chọn nhiều rồi **Xoá album đã chọn**,
+  xuất riêng một album (file `addOnly` — nhập lại chỉ thêm, bỏ qua album trùng tên).
+- **Sửa album** (`openAlbumEditor`): nút ✏️ và nút 🖼️ trong mỗi hàng mở **cùng một hộp thoại**
+  — đổi tên và sắp xếp sticker là một việc, tách làm hai chỉ khiến phải mở hai lần. Hộp thoại
+  có ô tên album và lưới toàn bộ sticker, **kéo thả** để đổi vị trí, `✕` để bỏ một ảnh, badge
+  số thứ tự tự đánh lại. **Lưu thay đổi** ghi cả tên lẫn thứ tự; **Huỷ**/`✕`/bấm nền bỏ hết.
+  Thứ tự lưu vào `album.images` chính là thứ tự hiển thị trong bảng chọn sticker và ảnh đầu
+  tiên trở thành `preview` của hàng trong danh sách.
+  - Thao tác trên **bản nháp cục bộ**: kéo thả chỉ đổi mảng trong bộ nhớ, không ghi
+    localStorage cho tới khi bấm Lưu — nên Huỷ trả lại đúng thứ tự cũ (đã kiểm chứng).
+  - Tên được chuẩn hoá khoảng trắng + `trim`; tên rỗng hiện lỗi ngay trong hộp thoại và
+    **không** ghi gì. Album không còn ảnh nào cũng bị chặn (muốn xoá cả album thì dùng nút
+    thùng rác ở danh sách).
+  - Đổi tên chạy **trước** `setAlbumImages`; nếu tên bị từ chối thì ảnh cũng không bị lưu,
+    tránh trạng thái nửa vời.
+  - Trước đây hai chức năng này hỏng: nút ✏️ dùng `window.prompt`, còn nút 🖼️ dựng
+    `.confirm-modal` / `.confirm-box` — **hai class này không hề có CSS nào**, nên hộp thoại
+    render như một khối tĩnh nằm cuối trang, không nền, không `z-index`, không scrim. Nay dùng
+    `openModal()` trong `ui/modal.js` (backdrop `fixed` + `z-index: 1000` + `var(--scrim)`),
+    chỉ thêm tham số `{ className }` để mở rộng 780px cho vừa lưới ảnh.
+  - Trên thiết bị cảm ứng (`@media (hover: none)`) nút `✕` luôn hiện; trên desktop nó hiện
+    khi rê chuột hoặc focus bàn phím.
 - Xoá album `pikvn` chỉ xoá dữ liệu trong trình duyệt; ảnh đã tải lên máy chủ vẫn còn
   (khác userscript ở chỗ không có mkdir/xoá server).
+
+#### imgur Client-ID cố định
+
+Trước đây panel Sticker có ô **imgur Client-ID** + hai nút *Lưu* / *Về mặc định*, lưu ở
+`voz-stickers:clientId:v1`. Đã bỏ hoàn toàn:
+
+- Người dùng thường không có app imgur riêng, nên nhập key bừa chỉ nhận `403` — trường đó chỉ
+  tạo ra lỗi.
+- **Proxy cũng không còn nhận `client_id` từ query string.** Trước đây `api/[...path].js`
+  đọc `?client_id=` và gắn vào header `Authorization: Client-ID …`, nên bất kỳ ai cũng có thể
+  mượn proxy của trang này để tiêu quota của một app imgur bất kỳ (và tham số đó nằm ngay
+  trong URL nên lộ trong log). Nay proxy dùng hằng số `IMGBUR_CLIENT_ID` phía server; query
+  `?client_id=` bị bỏ qua (đã kiểm chứng: gọi kèm `client_id=deadbeef` vẫn trả 200 như khi
+  không kèm).
+- `getClientId()` giữ lại dạng hàm để call site đọc như "key đang dùng" và để sau này đổi giá
+  trị chỉ ở một chỗ, nhưng luôn trả `DEFAULT_CLIENT_ID`, kể cả khi localStorage còn rác từ
+  bản cũ.
 
 ### Tải ảnh lên pik.vn
 
@@ -1301,20 +1420,20 @@ JSON có dạng (có album thì `version` là `"1.2"`, giống userscript):
       "savedAt": "2026-11-07T15:20:00.000Z"
     }
   ],
-  "recent": [{ "url": "https://i.imgur.com/….png", "base64": "data:image/webp;base64,…" }],
-  "clientId": "66850c248e91c93"
+  "recent": [{ "url": "https://i.imgur.com/….png", "base64": "data:image/webp;base64,…" }]
 }
 ```
 
 | Nút | Việc làm |
 |---|---|
-| **Xuất JSON** | đổ JSON (phím tắt + album sticker + gần đây + Client-ID) vào ô textarea |
+| **Xuất JSON** | đổ JSON (phím tắt + album sticker + gần đây) vào ô textarea |
 | **Tải tệp .json** | tải `voz-settings-YYYY-MM-DD.json` |
 | **Phục hồi từ JSON** | đọc ô textarea, kiểm tra hợp lệ rồi ghi đè toàn bộ (báo số phím tắt + album đã nạp) |
 | **Xoá toàn bộ thiết lập** | có `confirm()`, xoá cả phím tắt, album và gần đây |
 
 File backup của userscript nhập được nguyên vẹn: JSON chỉ cần có mảng `albums` cũng chấp
-nhận (không bắt buộc `navShortcuts`). File một album (`addOnly: true`) chỉ **thêm** album
+nhận (không bắt buộc `navShortcuts`). Khoá `clientId` trong file userscript cũ bị bỏ qua.
+File một album (`addOnly: true`) chỉ **thêm** album
 mới, bỏ qua album trùng tên, không ghi đè.
 
 Phục hồi bỏ qua mục không hợp lệ (tên rỗng hoặc URL sai) và báo lỗi khi JSON hỏng hoặc
@@ -1413,19 +1532,51 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Tab cài đặt, bàn phím | `←`/`→` chạy vòng (backup → appearance), `Home`/`End`, focus đi theo, `tabindex` xoay vòng |
 | Tab cài đặt, link từ picker | click `/cai-dat-tuivoz#stickers` (kể cả khi đang ở trang cài đặt) → mở tab Sticker |
 | Tab cài đặt, mobile | 390px: dải tab 2 hàng, `scrollWidth == innerWidth`, không tràn ngang |
-| Tab cài đặt, tương phản | 5 panel (mở hết) + dải tab × 2 chế độ → 0 lỗi WCAG |
-| Logo header | `/assets/img/voz-lockup.svg` tải 200, natural 348×177, render 63×32 (đúng tỉ lệ 1.963), không chồng lên tài khoản |
-| Logo header, mobile | 390px: vẫn 63×32, không tràn ngang, header 62px |
+| Tab cài đặt, tương phản | 5 panel (mở hết) + dải tab × 2 chế độ → 0 lỗi WCAG; tab đang chọn 7.95:1 sáng / 6.68:1 tối, tab thường 5.16 / 5.4 |
+| Tab cài đặt, màu | tab đang chọn `rgb(35,73,123)` = `--link` (xanh) ở cả hai chế độ, không còn `--nav-active` cam |
+| Tab cài đặt, tiêu đề trùng | cả 5 panel đều **0** `.block-header` bên trong; chỉ khối ngoài còn `<h1>Cài đặt</h1>` |
+| Tab cài đặt, ô đếm | thêm 1 phím tắt qua form → `2 phím tắt` → `3 phím tắt`; xoá album qua nút → `1 album` → `0 album` |
+| imgur Client-ID | không còn `#sticker-client-id`, `#sticker-client-save`, `#sticker-client-reset` trong DOM |
+| imgur proxy, không `client_id` | `GET /api/xf/imgur/album/saitlzr/images` → **200**, `success: true` |
+| imgur proxy, `client_id` rác | `…?client_id=deadbeef` → vẫn **200** (tham số bị bỏ qua, dùng key phía server) |
+| imgur nhập album, end-to-end | nhập `https://imgur.com/a/liverpool-emoticons-saitlzr` → tạo album `PepeTest`, tải ảnh xong, không lỗi |
+| Sao lưu, khoá JSON | `settings-export` → `app, version, exportedAt, navShortcuts, infiniteScroll, theme, font`; **không** có `clientId`; phục hồi lại → "Đã phục hồi: 3 phím tắt" |
+| Logo header | `/assets/img/voz-lockup.svg` tải 200, natural 348×177, render 51×26 (đúng tỉ lệ 1.963), không chồng lên ô tìm kiếm/tài khoản |
+| Logo header, mobile | 390px: vẫn 51×26, không tràn ngang, header 45px |
+| Ô tìm kiếm header | đã xoá — `document.querySelector('.p-header-search')` trả `null`, không còn tham chiếu nào trong HTML/CSS/JS |
+| Icon Tìm kiếm header | bấm icon kính lúp → menu mở ở `top: 48`, không bị nav che (`elementFromPoint` 0 điểm lệch); nhập “cuộn liên tục” và submit → `/search?q=cu%E1%BB%99n+li%C3%AAn+t%E1%BB%A5c&member=`, 162 kết quả thật |
+| Icon Tìm kiếm, mobile | 390px: vẫn hiện (30×30) cùng Hộp thư / Thông báo; không tràn ngang |
+| Chiều cao hai thanh | desktop 46px header + 36px nav = `--chrome-h` 82px; mobile 45 + 36 = 81px; `scroll-padding-top` khớp từng nơi |
 | Footer | đúng 1 `<p>`: “Voz của tui, xài voz theo cách của tui”, không còn câu cũ |
-| Thanh tự ẩn, cuộn xuống | header `top: -66`, nav `bottom: 0` (khuất hẳn), `chrome-hidden` bật |
-| Thanh tự ẩn, cuộn lên | hiện lại ngay, `header top 0`, `nav bottom 110` |
+| Thanh tự ẩn, cuộn xuống | header `top: -46`, nav `bottom: 0` (khuất hẳn), `chrome-hidden` bật |
+| Thanh tự ẩn, cuộn lên | hiện lại ngay, `header top 0`, `nav bottom 82` |
 | Thanh tự ẩn, đầu trang | không bao giờ ẩn khi `scrollY <= 4` |
 | Thanh tự ẩn, rung 4px | dưới ngưỡng 8px nên không đổi trạng thái |
 | Thanh tự ẩn, menu mở | cuộn xuống khi menu tài khoản đang mở → menu tự đóng |
-| Thanh tự ẩn, neo `#post-` | `scroll-padding-top: 110px` → bài nằm ở `top: 110` thay vì bị thanh che |
+| Thanh tự ẩn, neo `#post-` | `scroll-padding-top: 82px` → bài nằm ở `top: 82` thay vì bị thanh che |
 | Thanh tự ẩn, deep link | mở `/t/...#post-...` → thanh vẫn hiện, chờ cử chỉ thật rồi mới theo dõi |
-| Thanh tự ẩn, FAB | `.infinite-stop` vẫn `position: fixed` ở góc phải dưới, không bị thanh che (z 40 < 100) |
-| Thanh tự ẩn, mobile | 390px: `--header-h` 62px, `--chrome-h` 106px, không tràn ngang |
+| Thanh tự ẩn, FAB | `.infinite-stop` vẫn `position: fixed` ở góc phải dưới (`bottom: 64px` desktop / `72px` mobile, 34×34), ẩn khi cuộn xuống, hiện khi cuộn lên |
+| Thanh tự ẩn, mobile | 390px: `--header-h` 45px, `--chrome-h` 81px, không tràn ngang |
+| Menu header × nav | 14 phím tắt (nav 2 dòng desktop, 314px mobile): menu tài khoản/hộp thư/thông báo/tìm kiếm không bị nav che, `elementFromPoint` quét từng 4px trong menu đều trả về node của menu |
+| Bảng soạn thảo cũ | chưa có thanh nav nào bị cắt: panel overflow 373×45 ở `top 543`, bảng emoji 1009×222 ở `top 369` — đều nằm dưới vùng thanh sticky |
+| Sửa album sticker, overlay | `.modal-backdrop` `position: fixed`, `z-index: 1000`, nền `rgba(0,0,0,.5)`; `.modal` rộng **780px** (rộng hơn mặc định 560px), canh giữa (`top 269` trên khung 900px) |
+| Sửa album, hai nút mở một hộp thoại | ✏️ (`data-rename`) và 🖼️ (`data-images`) đều mở "Sửa album sticker" |
+| Sửa album, kéo thả | kéo ô #1 thả lên ô #3 → `[a1,a2,a3]` → `[a2,a3,a1]`; badge đánh lại 1/2/3; Lưu → localStorage đúng thứ tự mới, `preview` = ảnh đầu mới |
+| Sửa album, huỷ | kéo thả đổi thứ tự + sửa tên rồi **Huỷ** → tên và thứ tự lưu vẫn nguyên như trước |
+| Sửa album, đổi tên | `"  Pepe Đổi Tên   Mới  "` → lưu `"Pepe Đổi Tên Mới"` (gộp khoảng trắng), hàng trong danh sách cập nhật |
+| Sửa album, tên rỗng | để trống + Lưu → hộp thoại vẫn mở, `#album-edit-error` = "Tên album không được để trống.", dữ liệu không đổi |
+| Sửa album, đóng | nút `✕` header, nút Huỷ, bấm nền đều đóng |
+| Sửa album, tương phản | ô nhập / tiêu đề / gợi ý / badge / hai nút × 2 chế độ → thấp nhất **4.51:1** (tiêu đề ở chế độ sáng), đều đạt AA |
+| Sửa album, mobile | 390px: hộp thoại 358px, không tràn ngang, lưới 330px |
+| Sửa album, cảm ứng | `@media (hover: none)` có trong CSS đã parse (`conditionText "(hover: none)"` → `.sticker-remove { opacity: 1 }`) |
+| Phông thay thế | đổi sang Be Vietnam Pro → 3 tệp woff2 tải xong, `--chrome-h` tự đo lại (47px khi nav rỗng rồi 81px khi phím tắt render), `scroll-padding-top` theo kịp |
+| Phông Be Vietnam | `data-font="be-vietnam"`, `--font` = `"Be Vietnam", …`, **4** file woff2 (400/500/700 + italic 400) đều 200 |
+| Be Vietnam, chữ Việt | đo bề rộng "Đặng ộ ữ ệ ĩ" bằng `"Be Vietnam"` so với `"Segoe UI"`: khác nhau ở cả 5 ký tự → file thật sự được dùng |
+| Be Vietnam, hết giả bold | cả 4 face `loaded`; bề rộng `Fioren Đặng` @32px: 400 = 191.97 → 500 = 194.03 → 700 = 197.43 (trước đây chỉ một face 400 nên 600 và 700 **bằng nhau** = 189.82) |
+| Be Vietnam, nghiêng thật | `font-style: italic` load `be-vietnam-italic-400.woff2` (bề rộng 187.42 ≠ 191.97 của upright) — hết nghiêng giả |
+| Be Vietnam, bền vững | F5 và điều hướng sang trang khác vẫn giữ phông; script pre-paint đặt `data-font` + `--font` trước lần vẽ đầu |
+| Bốn phông chuyển đổi | `roboto` → Roboto, `be-vietnam-pro` → Be Vietnam Pro, `be-vietnam` → Be Vietnam, `system` → gỡ `--font`, không tệp phông nào |
+| `system` không tải phông | 0 request tới `assets/fonts/`, `#font-faces` không tồn tại, `document.fonts` rỗng |
 | Breadcrumb | màu `#d1d4d6` giống tên tác giả, đọc được trên nền tối |
 | Avatar thread | `/l/` (192×192) cho khung 96px, `srcset` thêm `/o/` cho 2x |
 

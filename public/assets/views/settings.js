@@ -4,6 +4,7 @@ import { app } from '../core/dom.js';
 import { esc } from '../core/utils.js';
 import { setBreadcrumbs } from '../ui/chrome.js';
 import { toast } from '../ui/feedback.js';
+import { openModal } from '../ui/modal.js';
 import {
   loadSettings, addShortcut, updateShortcut, removeShortcut, moveShortcut,
   exportSettingsJson, importSettingsJson, setInfiniteScroll,
@@ -12,8 +13,8 @@ import {
 } from '../lib/settings.js';
 import {
   getAlbums, addAlbum, renameAlbum, removeAlbums, moveAlbum, setAlbumImages,
-  getRecentStickers, addRecentSticker, clearRecentStickers, getClientId, setClientId, resetClientId,
-  DEFAULT_CLIENT_ID, imageFileToBase64, MAX_NAME, MAX_RECENT,
+  getRecentStickers, addRecentSticker, clearRecentStickers,
+  imageFileToBase64, MAX_NAME, MAX_RECENT,
 } from '../lib/stickers.js';
 import { importImgurAlbum } from '../lib/imgurImport.js';
 import { ICON_DELETE, ICON_EDIT } from '../core/icons.js';
@@ -36,6 +37,7 @@ const FONT_HELP = {
   system: 'Dùng phông có sẵn của máy, không tải thêm gì.',
   roboto: 'Tải phông Roboto (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
   'be-vietnam-pro': 'Tải phông Be Vietnam Pro (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
+  'be-vietnam': 'Tải phông Be Vietnam (400/500/700 + nghiêng) kèm chữ Việt, chỉ tải khi bạn chọn.',
 };
 
 // Radio-card group shared by the appearance settings. `name` keys the input group and the
@@ -146,7 +148,6 @@ function settingsHtml(active = settingsTabFromHash()) {
     <div class="block settings-tabbed">
       ${tabsHtml(active)}
       <section class="settings-panel" id="panel-appearance" role="tabpanel" aria-labelledby="tab-appearance"${active === 'appearance' ? '' : ' hidden'}>
-        <h2 class="block-header">Giao diện</h2>
         <div class="block-body--pad">
           <h3 class="settings-subhead">Chọn giao diện</h3>
           <p class="formHint">Sáng/tối chỉ áp dụng cho vùng nội dung. Thanh trên cùng và thanh điều hướng giữ nguyên kiểu voz.vn.</p>
@@ -157,15 +158,14 @@ function settingsHtml(active = settingsTabFromHash()) {
         </div>
       </section>
       <section class="settings-panel" id="panel-scroll" role="tabpanel" aria-labelledby="tab-scroll"${active === 'scroll' ? '' : ' hidden'}>
-        <h2 class="block-header">Cuộn trang liên tục</h2>
         <div class="block-body--pad">
           <p class="formHint">Áp dụng cho danh sách chủ đề và trong chủ đề: khi cuộn tới cuối trang, trang kế tiếp được nối thêm vào bên dưới thay vì phải bấm số trang.</p>
           ${optionCards('infinite-scroll', SCROLL_MODES, SCROLL_LABELS, SCROLL_HELP, infiniteScroll)}
         </div>
       </section>
       <section class="settings-panel" id="panel-shortcuts" role="tabpanel" aria-labelledby="tab-shortcuts"${active === 'shortcuts' ? '' : ' hidden'}>
-        <h2 class="block-header">Phím tắt trên thanh điều hướng<span class="block-header-extra">${navShortcuts.length}</span></h2>
         <div class="block-body--pad">
+          <p class="settings-count" id="shortcut-count">${navShortcuts.length} phím tắt</p>
           <p class="formHint">Phím tắt hiện cạnh <strong>Bài mới</strong> trên thanh trên cùng, theo thứ tự từ trên xuống dưới, trái sang phải. Kéo thả để đổi thứ tự.</p>
           <ul class="shortcut-list" id="shortcut-list">${shortcutRows()}</ul>
           <form id="shortcut-form" class="shortcut-form" autocomplete="off">
@@ -186,8 +186,8 @@ function settingsHtml(active = settingsTabFromHash()) {
         </div>
       </section>
       <section class="settings-panel" id="panel-stickers" role="tabpanel" aria-labelledby="tab-stickers"${active === 'stickers' ? '' : ' hidden'}>
-        <h2 class="block-header">Sticker<span class="block-header-extra" id="sticker-count">${albums.length}</span></h2>
         <div class="block-body--pad">
+        <p class="settings-count" id="sticker-count">${albums.length} album</p>
         <p class="formHint">Album sticker dùng trong nút <strong>Sticker</strong> ở thanh công cụ soạn thảo. Thêm album từ imgur (tải ảnh về máy dưới dạng base64) hoặc tạo album từ ảnh tự chọn.</p>
         <ul class="sticker-album-list" id="sticker-album-list">${stickerAlbumRows()}</ul>
         <div class="sticker-actions">
@@ -233,7 +233,7 @@ function settingsHtml(active = settingsTabFromHash()) {
         <form id="sticker-import-form" class="sticker-form" hidden autocomplete="off">
           <p class="formHint">Nhập tệp <code>.json</code> xuất từ đây hoặc từ userscript (file một album có
             <code>addOnly</code> chỉ <strong>thêm</strong> album mới, bỏ qua album trùng tên).
-            File sao lưu đầy đủ sẽ thay thế toàn bộ album, sticker gần đây và Client-ID.</p>
+            File sao lưu đầy đủ sẽ thay thế toàn bộ album và sticker gần đây.</p>
           <div class="formRow">
             <label for="sticker-import-files">Tệp JSON</label>
             <input class="input" id="sticker-import-files" type="file" accept=".json,application/json" multiple>
@@ -247,15 +247,6 @@ function settingsHtml(active = settingsTabFromHash()) {
             <button class="button" type="button" id="sticker-import-cancel">Huỷ</button>
           </div>
         </form>
-        <div class="formRow sticker-client-id">
-          <label for="sticker-client-id">imgur Client-ID</label>
-          <input class="input" id="sticker-client-id" maxlength="64" spellcheck="false" value="${esc(getClientId())}">
-          <p class="formHint">Lấy key riêng tại <a href="https://imgur.com/account/settings/apps" target="_blank" rel="noopener">imgur.com/account/settings/apps</a>. Mặc định: <code>${esc(DEFAULT_CLIENT_ID)}</code>.</p>
-          <div class="shortcut-form-actions">
-            <button class="button" type="button" id="sticker-client-save">Lưu Client-ID</button>
-            <button class="button" type="button" id="sticker-client-reset">Về mặc định</button>
-          </div>
-        </div>
         <div class="formRow">
           <label>Sticker gần đây<span class="u-dimmed" id="sticker-recent-count"></span></label>
           <div class="sticker-recent-preview" id="sticker-recent-preview">${recentPreviewHtml()}</div>
@@ -266,7 +257,6 @@ function settingsHtml(active = settingsTabFromHash()) {
                   </div>
                 </section>
                 <section class="settings-panel" id="panel-backup" role="tabpanel" aria-labelledby="tab-backup"${active === 'backup' ? '' : ' hidden'}>
-        <h2 class="block-header">Sao lưu / phục hồi</h2>
         <div class="block-body--pad settings-backup">
           <p class="formHint">JSON chứa thiết lập của trang này <strong>và</strong> toàn bộ album sticker (kèm ảnh base64). Dán JSON vào ô dưới rồi bấm Phục hồi để ghi đè.</p>
           <label class="u-srOnly" for="settings-json">JSON thiết lập</label>
@@ -304,20 +294,14 @@ function applyImported(result) {
       const saved = result.albums.map((raw) => addAlbum(raw)).filter((res) => res.ok).length;
       parts.push(`${saved} album`);
     }
-    // Only a full backup carries these; add-only files must not clear them.
-    if (!result.addOnly) {
-      if (Array.isArray(result.recent)) {
-        clearRecentStickers();
-        for (const item of [...result.recent].reverse()) {
-          const url = typeof item === 'string' ? item : item?.url;
-          if (url) addRecentSticker(url, typeof item === 'object' ? item?.base64 : null);
-        }
-        parts.push(`${getRecentStickers().length} gần đây`);
+    // Only a full backup carries recents; add-only files must not clear them.
+    if (!result.addOnly && Array.isArray(result.recent)) {
+      clearRecentStickers();
+      for (const item of [...result.recent].reverse()) {
+        const url = typeof item === 'string' ? item : item?.url;
+        if (url) addRecentSticker(url, typeof item === 'object' ? item?.base64 : null);
       }
-      if (result.clientId) {
-        setClientId(result.clientId);
-        parts.push('Client-ID');
-      }
+      parts.push(`${getRecentStickers().length} gần đây`);
     }
   }
   renderStickerExtras();
@@ -332,7 +316,7 @@ function renderStickerExtras() {
 }
 
 // Sticker album management: add (imgur import / local files / JSON), rename, reorder,
-// bulk delete, per-album export, image viewer, Client-ID and recents.
+// bulk delete, per-album export, image viewer and recents.
 function wireStickerSettings() {
   const albumList = document.getElementById('sticker-album-list');
   if (!albumList) return () => {};
@@ -343,11 +327,9 @@ function wireStickerSettings() {
 
   const rerenderExtras = () => {
     albumList.innerHTML = stickerAlbumRows();
-    if (countEl) countEl.textContent = String(getAlbums().length);
+    if (countEl) countEl.textContent = `${getAlbums().length} album`;
     if (recentBox) recentBox.innerHTML = recentPreviewHtml();
     if (recentCount) recentCount.textContent = ` · ${getRecentStickers().length}/${MAX_RECENT}`;
-    const clientInput = document.getElementById('sticker-client-id');
-    if (clientInput) clientInput.value = getClientId();
   };
   window.__stickerRerenderExtras = rerenderExtras;
   rerenderExtras();
@@ -498,14 +480,7 @@ function wireStickerSettings() {
   albumList.addEventListener('click', (event) => {
     const renameBtn = event.target.closest('[data-rename]');
     if (renameBtn) {
-      const album = getAlbums().find((item) => item.id === renameBtn.dataset.rename);
-      if (!album) return;
-      const next = window.prompt('Tên album mới:', album.name);
-      if (next === null) return;
-      const result = renameAlbum(album.id, next);
-      if (!result.ok) return toast(result.error, true);
-      rerenderExtras();
-      toast('Đã đổi tên album');
+      openAlbumEditor(renameBtn.dataset.rename, rerenderExtras);
       return;
     }
     const exportBtn = event.target.closest('[data-export]');
@@ -533,7 +508,7 @@ function wireStickerSettings() {
     }
     const imagesBtn = event.target.closest('[data-images]');
     if (imagesBtn) {
-      openAlbumImages(imagesBtn.dataset.images, rerenderExtras);
+          openAlbumEditor(imagesBtn.dataset.images, rerenderExtras);
       return;
     }
     const deleteBtn = event.target.closest('[data-delete]');
@@ -600,16 +575,6 @@ function wireStickerSettings() {
     rerenderExtras();
   });
 
-  document.getElementById('sticker-client-save').addEventListener('click', () => {
-    const input = document.getElementById('sticker-client-id');
-    setClientId(input.value);
-    input.value = getClientId();
-    toast('Đã lưu Client-ID');
-  });
-  document.getElementById('sticker-client-reset').addEventListener('click', () => {
-    document.getElementById('sticker-client-id').value = resetClientId();
-    toast('Đã đặt lại Client-ID mặc định');
-  });
   document.getElementById('sticker-recent-clear').addEventListener('click', () => {
     if (!window.confirm('Xoá toàn bộ sticker gần đây?')) return;
     clearRecentStickers();
@@ -619,25 +584,42 @@ function wireStickerSettings() {
   return rerenderExtras;
 }
 
-// Per-album image manager: reorder by drag, remove single images, then save.
-function openAlbumImages(albumId, onChange) {
+// Album editor: rename and reorder the sticker images in one dialog. Opened by the row's
+// pencil button (data-rename) or its image-grid button (data-images) — both land here, since
+// renaming an album and arranging its stickers are the same task.
+function openAlbumEditor(albumId, onChange) {
   const album = getAlbums().find((item) => item.id === albumId);
   if (!album) return;
+  const originalName = album.name;
   let images = [...album.images];
-  const modal = document.createElement('div');
-  modal.className = 'confirm-modal';
-  modal.innerHTML = `<div class="confirm-box sticker-images-box" role="dialog" aria-modal="true" aria-label="Hình ảnh album ${esc(album.name)}">
-    <h3>📷 ${esc(album.name)}<span class="sticker-images-count" id="sticker-images-count">${images.length} hình ảnh</span></h3>
-    <p class="formHint">Kéo thả để sắp xếp · Nhấn ✕ để xoá hình ảnh.</p>
-    <div class="sticker-images-grid" id="sticker-images-grid"></div>
-    <div class="confirm-actions">
-      <button class="button button--primary" type="button" data-save>Lưu thay đổi</button>
-      <button class="button" type="button" data-close>Huỷ</button>
-    </div>
-  </div>`;
-  const grid = modal.querySelector('#sticker-images-grid');
-  const countEl = modal.querySelector('#sticker-images-count');
+  // Reordering is index bookkeeping, so keep a working copy and only write on save.
   let dragFrom = null;
+
+  const body = `
+    <div class="formRow">
+      <label for="album-edit-name">Tên album</label>
+      <input class="input" id="album-edit-name" maxlength="${MAX_NAME}" value="${esc(originalName)}" autocomplete="off">
+    </div>
+    <div class="formRow">
+      <label>Hình ảnh<span class="sticker-images-count" id="album-edit-count"></span></label>
+      <p class="formHint">Kéo thả một sticker sang vị trí khác để đổi thứ tự. Thứ tự này chính là thứ tự hiện trong bảng chọn sticker.</p>
+      <div class="sticker-images-grid" id="album-edit-grid"></div>
+    </div>
+    <p class="formError" id="album-edit-error" hidden></p>`;
+
+  const { close, root } = openModal('Sửa album sticker', body,
+    '<button class="button" type="button" data-cancel>Huỷ</button>' +
+    '<button class="button button--primary" type="button" data-save>Lưu thay đổi</button>',
+    { className: 'sticker-editor-modal' });
+
+  const grid = root.querySelector('#album-edit-grid');
+  const countEl = root.querySelector('#album-edit-count');
+  const nameInput = root.querySelector('#album-edit-name');
+  const errorEl = root.querySelector('#album-edit-error');
+  const showError = (message) => {
+    errorEl.textContent = message;
+    errorEl.hidden = !message;
+  };
 
   const render = () => {
     grid.replaceChildren();
@@ -646,25 +628,29 @@ function openAlbumImages(albumId, onChange) {
       const cell = document.createElement('div');
       cell.className = 'sticker-images-cell';
       cell.draggable = true;
-      cell.dataset.index = index;
+      cell.dataset.index = String(index);
+
       const image = document.createElement('img');
       image.src = img.base64 || img.url;
       image.alt = '';
       image.loading = 'lazy';
+
       const badge = document.createElement('span');
       badge.className = 'sticker-images-index';
-      badge.textContent = index + 1;
+      badge.textContent = String(index + 1);
+
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'sticker-remove';
-      remove.innerHTML = '✕';
+      remove.textContent = '✕';
       remove.setAttribute('aria-label', `Xoá hình ảnh ${index + 1}`);
       remove.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (!window.confirm(`Xóa hình ảnh #${index + 1}?`)) return;
+        if (!window.confirm(`Xoá hình ảnh #${index + 1}?`)) return;
         images.splice(index, 1);
         render();
       });
+
       cell.addEventListener('dragstart', (event) => {
         dragFrom = index;
         cell.classList.add('is-dragging');
@@ -677,37 +663,41 @@ function openAlbumImages(albumId, onChange) {
       cell.addEventListener('drop', (event) => {
         event.preventDefault();
         cell.classList.remove('is-drop-target');
+        // dragFrom is the in-page handle; the dataTransfer fallback covers a drop that
+        // arrives without a matching dragstart (e.g. dragged in from another window).
         const from = dragFrom ?? Number(event.dataTransfer.getData('text/plain'));
-        if (!Number.isInteger(from) || from === index) return;
+        if (!Number.isInteger(from) || from === index || from < 0 || from >= images.length) return;
         const [moved] = images.splice(from, 1);
         images.splice(index, 0, moved);
         dragFrom = null;
         render();
       });
+
       cell.append(image, badge, remove);
       grid.append(cell);
     });
   };
   render();
+  nameInput.focus();
+  nameInput.select();
 
-  modal.querySelector('[data-close]').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
-  modal.querySelector('[data-save]').addEventListener('click', () => {
-    if (!images.length) {
-      if (!window.confirm('Album sẽ trống. Bạn có muốn xoá album này không?')) return;
-      removeAlbums([album.id]);
-      modal.remove();
-      onChange();
-      toast('Đã xoá album');
-      return;
+  root.querySelector('[data-cancel]').addEventListener('click', close);
+  root.querySelector('[data-save]').addEventListener('click', () => {
+    const name = nameInput.value.replace(/\s+/g, ' ').trim();
+    if (!name) return showError('Tên album không được để trống.');
+    if (!images.length) return showError('Album cần ít nhất một hình ảnh. Dùng nút thùng rác ở danh sách để xoá cả album.');
+    // Rename first: setAlbumImages only touches images/preview, so the two are independent,
+    // but a rejected name must not leave the images half-saved.
+    if (name !== originalName) {
+      const renamed = renameAlbum(album.id, name);
+      if (!renamed.ok) return showError(renamed.error);
     }
     const result = setAlbumImages(album.id, images);
-    if (!result.ok) return toast(result.error, true);
-    modal.remove();
+    if (!result.ok) return showError(result.error);
+    close();
     onChange();
-    toast('Đã lưu thay đổi album');
+    toast('Đã lưu album');
   });
-  document.body.append(modal);
 }
 
 export function viewSettings() {
@@ -747,8 +737,8 @@ export function viewSettings() {
   };
   const rerenderList = () => {
     list.innerHTML = shortcutRows();
-    const count = document.querySelector('.block-header-extra');
-    if (count && count.closest('section')?.querySelector('#shortcut-list')) count.textContent = String(loadSettings().navShortcuts.length);
+    const count = document.getElementById('shortcut-count');
+    if (count) count.textContent = `${loadSettings().navShortcuts.length} phím tắt`;
   };
   const resetForm = () => {
     editingId = null;
@@ -840,13 +830,12 @@ export function viewSettings() {
     jsonError.hidden = !message;
   };
 
-  // Full payload = nav shortcuts + sticker albums + recents + imgur key,
-  // shaped like the userscript backup so either file restores in full.
+  // Full payload = nav shortcuts + sticker albums + recents, shaped like the userscript
+  // backup so either file restores in full.
   const buildBackup = () =>
     exportSettingsJson({
       albums: getAlbums(),
       recent: getRecentStickers(),
-      clientId: getClientId(),
     });
 
   document.getElementById('settings-export').addEventListener('click', () => {

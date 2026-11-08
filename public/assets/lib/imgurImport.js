@@ -5,7 +5,7 @@
 // CORS. From a page we must go through the same-origin edge proxy instead.
 
 import { xf } from '../api.js';
-import { getClientId, downloadImagesInParallel } from './stickers.js';
+import { downloadImagesInParallel } from './stickers.js';
 
 // Accepts https://imgur.com/a/<id> and https://imgur.com/a/<slug>-<id>.
 export function extractAlbumId(value) {
@@ -26,7 +26,7 @@ export function clearImgurCache() {
 // Returns [{ link }] for every image in the album.
 export async function fetchImgurAlbumImages(albumId, { signal } = {}) {
   if (imageCache.has(albumId)) return imageCache.get(albumId);
-  const request = xf(`/imgur/album/${encodeURIComponent(albumId)}/images`, { query: { client_id: getClientId() }, signal }).then((data) => {
+  const request = xf(`/imgur/album/${encodeURIComponent(albumId)}/images`, { signal }).then((data) => {
     if (data?.success !== true || !Array.isArray(data.data) || !data.data.length) {
       throw new Error('Album không được tìm thấy hoặc trống.');
     }

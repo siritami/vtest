@@ -5,10 +5,10 @@ import { esc } from '../core/utils.js';
 import { ApiError } from '../api.js';
 import { toast } from './feedback.js';
 
-export function openModal(title, bodyHtml, footerHtml) {
+export function openModal(title, bodyHtml, footerHtml, { className = '' } = {}) {
   modalRoot.innerHTML = `
     <div class="modal-backdrop">
-      <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal${className ? ` ${className}` : ''}" role="dialog" aria-modal="true">
         <div class="modal-header">${esc(title)}<button type="button" data-close>&times;</button></div>
         <div class="modal-body">${bodyHtml}</div>
         ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}

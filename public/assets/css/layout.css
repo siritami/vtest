@@ -5,11 +5,14 @@
    (ui/chromeAutoHide.js toggles .chrome-hidden on <html>). Both are sticky so the pair
    stays on screen while reading; the hide is a transform, not display:none, so the page
    content never reflows. z-index 100 keeps them under the modal (1000) and toast (900)
-   but above page content and the floating stop button (40). */
+   but above page content and the floating stop button (40).
+   The header sits one layer higher than the nav: both create stacking contexts, and on a
+   tie the later sibling (the nav) would paint over the header's dropdown menus, which open
+   downwards across the nav's band. */
 .p-header {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 110;
   background: var(--header-bg);
   color: var(--header-fg);
   transition: transform .2s ease;
@@ -24,12 +27,12 @@
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 6px 12px;
 }
-/* voz.vn sizes the same file by width (98px, height auto). Our header is shorter, so scale by
-   height instead and let the aspect ratio set the width — 32px keeps the wordmark legible
-   without stretching the 10px-padded bar. */
+/* voz.vn sizes the same file by width (98px, height auto). Ours is scaled by height so the
+   aspect ratio sets the width; the bar is only 6px-padded, so 26px keeps the wordmark
+   legible without eating the whole strip. */
 .p-header-logo {
   display: inline-flex;
   align-items: center;
@@ -37,39 +40,12 @@
 }
 .p-header-logo img {
   display: block;
-  height: 32px;
+  height: 26px;
   width: auto;
   /* The source artwork is white (#f2f4f7), which is what the dark header needs, so no filter
      or colour override is applied. */
 }
 .p-header-logo:hover { opacity: .85; }
-.p-header-search {
-  display: flex;
-  flex: 1 1 auto;
-  max-width: 420px;
-}
-.p-header-search input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: var(--radius) 0 0 var(--radius);
-  background: var(--chrome-field-bg);
-  color: var(--chrome-field-fg);
-  font: inherit;
-  font-size: 15px;
-}
-.p-header-search button {
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 0 var(--radius) var(--radius) 0;
-  background: var(--block-header-bg);
-  color: var(--block-header-fg);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.p-header-search button:hover { background: var(--chrome-field-hover); }
 .p-header-account {
   margin-left: auto;
   display: flex;
@@ -78,8 +54,8 @@
   font-size: 14px;
 }
 .p-header-account .avatar {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--chrome-avatar-bg);
 }
@@ -130,9 +106,9 @@
 .p-nav-list > li { min-width: 0; max-width: 100%; }
 .p-nav-list a {
   display: block;
-  padding: 9px 14px;
+  padding: 6px 12px;
   color: var(--nav-fg);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   border-bottom: 3px solid transparent;
   max-width: 240px;

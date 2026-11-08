@@ -38,6 +38,7 @@
    The fallback stack mirrors each family's metrics closely enough that the swap is quiet. */
 :root[data-font="roboto"] { font-family: var(--font); }
 :root[data-font="be-vietnam-pro"] { font-family: var(--font); }
+:root[data-font="be-vietnam"] { font-family: var(--font); }
 
 /* Selection colour follows the accent in both themes. */
 :root[data-theme="dark"] ::selection { background: #3f4e6c; color: var(--text); }

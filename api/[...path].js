@@ -12,6 +12,9 @@ const SITE = 'https://voz.vn';
 const API_BASE = `${SITE}/api`;
 const GUEST_KEY = '5tYQHu6ETKPFQ4W-fQGd_78ttL1LyZpD';
 const CLIENT_ID = '2424906941304717';
+// imgur Client-ID used by the sticker-album importer. Fixed, not user-supplied: see the
+// /imgur/ branch below.
+const IMGBUR_CLIENT_ID = '66850c248e91c93';
 const REDIRECT_URI = 'vozma26://oauth';
 const UA = 'VOZ/MA26';
 const SCOPES = [
@@ -330,13 +333,13 @@ export default async function handler(request) {
   }
 
   // Sticker albums are imported straight from imgur. The userscript used
-  // GM_xmlhttpRequest to skip CORS; a page cannot, so relay it here.
+  // GM_xmlhttpRequest to skip CORS; a page cannot, so relay it here. The Client-ID is fixed
+  // server-side: accepting one from the query string let any caller burn an arbitrary
+  // third party's imgur quota, and the settings field that produced it is gone.
   if (path.startsWith('/api/xf/imgur/')) {
     const sub = path.replace('/api/xf/imgur', '');
-    const clientId = url.searchParams.get('client_id') || '';
-    if (!/^[\w-]{1,64}$/.test(clientId)) return json({ success: false, error: 'client_id không hợp lệ' }, { status: 400 });
     const upstream = await fetch(`https://api.imgur.com/3${sub}`, {
-      headers: { Authorization: `Client-ID ${clientId}`, Accept: 'application/json' },
+      headers: { Authorization: `Client-ID ${IMGBUR_CLIENT_ID}`, Accept: 'application/json' },
     });
     const text = await upstream.text();
     const headers = new Headers(corsHeaders(request));

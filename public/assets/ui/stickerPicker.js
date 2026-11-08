@@ -6,7 +6,7 @@
 
 import {
   getAlbums, getRecentStickers, addRecentSticker, removeRecentSticker, clearRecentStickers,
-  getClientId, albumToStickerCount,
+  albumToStickerCount,
 } from '../lib/stickers.js';
 
 const IMG_SIZE = 80;
@@ -153,5 +153,4 @@ export function renderStickerPicker(panel, insert) {
   }
 
   renderTabs();
-  status.textContent = getClientId() ? '' : '';
 }

@@ -6,7 +6,12 @@
 
    Only referenced when the user picks a font in Cài đặt → Giao diện: the `@font-face` blocks
    are inert on their own, and ui/theme.js adds the link for the chosen family, so a visitor
-   who keeps the default never downloads any of these files. */
+   who keeps the default never downloads any of these files.
+
+   `Be Vietnam` (no "Pro") is built from the upstream beVietnam project sources by
+   tools/build-be-vietnam.py — see that script for why the upstream name tables need fixing
+   before a browser will match the weights. All the files in this folder, both families, are
+   covered by the OFL: OFL.txt for Be Vietnam Pro, OFL-BeVietnam.txt for Be Vietnam. */
 
 @font-face {
   font-family: "Roboto";
@@ -50,4 +55,44 @@
   font-weight: 700;
   font-display: swap;
   src: url("../fonts/be-vietnam-pro-700.woff2") format("woff2");
+}
+
+/* Be Vietnam — the predecessor of Be Vietnam Pro, and the family the browser-side userscripts
+   on voz.vn style with. Built by tools/build-be-vietnam.py from the upstream beVietnam
+   project sources (7 weights + italics).
+
+   Google's CDN only publishes ONE weight (400) of this family, split into three
+   unicode-range files. Shipping just those is why bold text used to be synthetic-stretched
+   (username at font-weight: 600 rendered identically to 700, both a 4% horizontal smear of
+   the 400 cut) and italic was a fake oblique. These are the real cuts.
+
+   No `unicode-range`: each file carries latin + vietnamese together, matching the Roboto and
+   Be Vietnam Pro faces above, so a page never pulls two different coverage sets. */
+@font-face {
+  font-family: "Be Vietnam";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Be Vietnam";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Be Vietnam";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Be Vietnam";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-italic-400.woff2") format("woff2");
 }

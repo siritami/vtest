@@ -21,7 +21,6 @@
   #thread-title { user-select: none; -webkit-touch-callout: none; }
   #thread-title:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
   .p-header-inner { flex-wrap: wrap; }
-  .p-header-search { order: 3; flex-basis: 100%; max-width: none; }
   .message-inner { flex-direction: column; }
   .message-cell--user {
     flex: 0 0 auto;
