@@ -420,34 +420,6 @@ export default async function handler(request) {
     return json({ ok: true, me }, { headers });
   }
 
-  if (path === '/api/oauth/token' && request.method === 'POST') {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: 'invalid_body' }, { status: 400 });
-    }
-    const raw = body.tokens ?? body;
-    const tokens = normaliseTokenResponse(
-      {
-        access_token: raw.accessToken || raw.access_token,
-        refresh_token: raw.refreshToken || raw.refresh_token,
-        expires_in: raw.expiresIn || raw.expires_in,
-        scope: raw.scope,
-        token_type: raw.tokenType || raw.token_type,
-      },
-      null
-    );
-    if (!tokens) return json({ error: 'missing_access_token' }, { status: 400 });
-    const me = await fetchMe(tokens);
-    if (!me || !me.user_id) {
-      return json({ error: 'token_rejected' }, { status: 401 });
-    }
-    const headers = new Headers();
-    headers.append('Set-Cookie', sessionCookie(tokens));
-    return json({ ok: true, me }, { headers });
-  }
-
   if (path === '/api/oauth/logout' && request.method === 'POST') {
     const tokens = readSession(request);
     if (tokens && tokens.refreshToken) {

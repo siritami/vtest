@@ -1,37 +1,15 @@
 // ==UserScript==
 // @name         VOZ OAuth helper
-// @namespace    https://voz-forum.vercel.app/
+// @namespace    VOZ OAuth helper
 // @version      1.0.0
-// @description  Bắt mã uỷ quyền OAuth2 của voz.vn (redirect vozma26://oauth) và gửi về web client
-// @author       voz-forum
+// @description  Bắt mã uỷ quyền OAuth2 của voz.vn
 // @match        https://voz.vn/oauth2/*
-// @match        https://voz.vn/*
 // @grant        GM_setClipboard
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @run-at       document-start
 // @noframes
 // ==/UserScript==
-
-/*
- * Vì sao cần userscript này
- * -------------------------
- * Ứng dụng OAuth "VOZ chính chủ" (client_id 2424906941304717) chỉ đăng ký duy nhất
- * redirect_uri = vozma26://oauth. Trình duyệt không mở được scheme đó và trang web
- * cũng không đọc được URL sau khi redirect, nên mã uỷ quyền bị mất.
- *
- * Userscript chạy trong trang voz.vn nên:
- *   1. đọc được `redirect` trong phản hồi JSON của form Authorize
- *      (thêm `&_xfResponseType=json` để XenForo trả JSON thay vì 303),
- *   2. hiện mã cho người dùng copy, hoặc tự gửi sang tab web client qua postMessage.
- *
- * Cách dùng
- * ---------
- * 1. Mở web client, vào #/login, bấm "Mở trang uỷ quyền" (popup voz.vn).
- * 2. Bấm Authorize trong popup.
- * 3. Userscript bắt mã → hiện panel + tự gửi về tab opener.
- *    Nếu không tự gửi được, bấm "Copy code" rồi dán vào ô trên web client.
- */
 
 (function () {
   'use strict';
@@ -160,23 +138,7 @@
       }, 1800);
     });
 
-    const sendBtn = document.createElement('button');
-    sendBtn.type = 'button';
-    sendBtn.textContent = 'Gửi về web client';
-    sendBtn.setAttribute(
-      'style',
-      'padding:6px 12px;border:1px solid #d5d8db;border-radius:4px;background:#fff;color:#23497b;font:inherit;cursor:pointer'
-    );
-    sendBtn.addEventListener('click', () => {
-      const sent = postToOpener(code, state);
-      sendBtn.textContent = sent ? 'Đã gửi ✓' : 'Không có tab nhận';
-      setTimeout(() => {
-        sendBtn.textContent = 'Gửi về web client';
-      }, 1800);
-    });
-
     row.appendChild(copyBtn);
-    row.appendChild(sendBtn);
 
     const hint = document.createElement('div');
     hint.setAttribute('style', 'font-size:12px;color:#8a8e93;margin-top:10px');
@@ -191,28 +153,6 @@
     panel.appendChild(body);
 
     (document.body || document.documentElement).appendChild(panel);
-  }
-
-  function postToOpener(code, state) {
-    let sent = false;
-    const payload = { type: 'voz-oauth-code', code, state };
-    try {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage(payload, '*');
-        sent = true;
-      }
-    } catch (err) {
-      log('postMessage tới opener thất bại', err);
-    }
-    try {
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage(payload, '*');
-        sent = true;
-      }
-    } catch {
-      /* ignore */
-    }
-    return sent;
   }
 
   /* ------------------------------------------------------- code extraction */
@@ -233,7 +173,6 @@
     if (!code) return;
     log('bắt được code từ', source, code);
     rememberCode(code);
-    postToOpener(code, state);
     const show = () => buildPanel(code, state);
     if (document.body) show();
     else document.addEventListener('DOMContentLoaded', show, { once: true });
@@ -241,7 +180,6 @@
 
   /* --------------------------------------------------------- interception */
 
-  // 1. Chặn ngay navigation sang vozma26://oauth (khi redirect không phải JSON).
   const originalAssign = window.location.assign.bind(window.location);
   const originalReplace = window.location.replace.bind(window.location);
 
@@ -266,7 +204,6 @@
     log('không patch được location', err);
   }
 
-  // 2. Bắt phản hồi JSON của form Authorize (thêm _xfResponseType=json).
   const originalFetch = window.fetch;
   if (typeof originalFetch === 'function') {
     window.fetch = async function (...args) {
@@ -286,7 +223,6 @@
     };
   }
 
-  // 3. Bắt XMLHttpRequest (XenForo dùng XHR cho form submit).
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
@@ -307,7 +243,6 @@
     return originalSend.apply(this, args);
   };
 
-  // 4. Trang authorize: thêm _xfResponseType=json vào action của form để nhận JSON.
   function patchAuthorizeForm() {
     if (!location.pathname.startsWith('/oauth2/authorize')) return;
     const form = document.querySelector('form[action*="/oauth2/authorize"]');
@@ -321,8 +256,6 @@
     }
   }
 
-  // 5. Nếu trang hiện tại chính là URL redirect (một số trình duyệt vẫn render),
-  //    hoặc người dùng quay lại tab này, hiện lại code đã lưu.
   function checkCurrentUrl() {
     const href = location.href;
     if (href.startsWith('vozma26://')) {
@@ -337,8 +270,6 @@
     }
   }
 
-  // 5b. Form Authorize submit là navigation thật (không qua fetch/XHR), nên sau khi
-  //     thêm `_xfResponseType=json` XenForo render thẳng JSON vào <body>. Đọc body đó.
   function checkJsonBody() {
     if (!location.pathname.startsWith('/oauth2/authorize')) return;
     const text = (document.body && document.body.innerText) || '';
@@ -366,7 +297,6 @@
     checkJsonBody();
   }
 
-  // 6. Trang /oauth2/deny hoặc lỗi: không làm gì, chỉ log.
   if (location.pathname.startsWith('/oauth2/deny')) {
     log('người dùng đã từ chối uỷ quyền');
   }

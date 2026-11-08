@@ -1,15 +1,4 @@
-// pik.vn image hosting, ported from the "Voz Emoji" userscript's 5.pik.vn bridge.
-//
-// The userscript loaded https://5.pik.vn/ in an iframe and posted the image to it with
-// postMessage, because it needed that origin to reach /api/upload and wait for a
-// Cloudflare Turnstile token. pik.vn has since moved to https://pik.vn and its uploader
-// is now an open `POST /api/upload` (multipart: file + hash + format) with no token, but
-// it still sends no CORS headers, so the browser cannot call it directly. We relay the
-// request through our own edge proxy instead (`POST /api/pik/upload`).
-//
-// Server-side rules verified against pik.vn: the payload must be WebP (GIF is rejected),
-// the `hash` field must be the SHA-256 of the exact bytes sent, long edges are capped at
-// 1920px, and the same bytes are deduplicated by hash (`exists: true` reuses the URL).
+// pik.vn image hosting
 
 export const PIK_PROXY = '/api/pik/upload';
 // Mirrors pik.vn's own client constants.

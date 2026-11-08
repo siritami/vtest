@@ -105,15 +105,6 @@ export const auth = {
     });
     return { ok: res.ok, data: await res.json() };
   },
-  useToken: async (tokens) => {
-    const res = await fetch('/api/oauth/token', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tokens),
-    });
-    return { ok: res.ok, data: await res.json() };
-  },
   logout: async () => {
     await fetch('/api/oauth/logout', { method: 'POST', credentials: 'same-origin' });
   },

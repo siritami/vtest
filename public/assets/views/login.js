@@ -1,4 +1,4 @@
-// OAuth login: PKCE code exchange, or pasting an access token directly.
+// OAuth login: exchange the authorization code (PKCE) captured by the userscript.
 
 import { app, state } from '../core/dom.js';
 import { navigate } from '../core/nav.js';
@@ -21,18 +21,6 @@ async function makePkce() {
   return { verifier, challenge, state: stateValue };
 }
 
-// The userscript posts the captured code back to this tab. Registered once at
-// module load so repeated visits to /login do not stack listeners.
-window.addEventListener('message', (event) => {
-  if (event.origin !== location.origin && !/voz\.vn$/.test(new URL(event.origin).hostname)) return;
-  const data = event.data || {};
-  if (data.type !== 'voz-oauth-code' || !data.code) return;
-  const field = document.getElementById('auth-code');
-  if (!field) return;
-  field.value = data.code;
-  toast('Đã nhận code từ userscript');
-});
-
 export async function viewLogin() {
   setActiveNav('');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Đăng nhập' }]);
@@ -44,26 +32,15 @@ export async function viewLogin() {
       <div class="block">
         <div class="block-header">Đăng nhập bằng voz.vn</div>
         <div class="block-body block-body--pad">
-          <p class="u-smaller u-dimmed">
-            Ứng dụng OAuth <b>VOZ chính chủ</b> chỉ cho phép redirect về <code>vozma26://oauth</code>,
-            nên trình duyệt không tự bắt được mã uỷ quyền. Dùng userscript bên dưới để lấy mã,
-            hoặc dán thẳng access token.
-          </p>
-
-          <div class="tabs" id="login-tabs">
-            <button type="button" data-tab="code" class="is-active">Lấy mã uỷ quyền</button>
-            <button type="button" data-tab="token">Dán access token</button>
-          </div>
-
-          <div id="tab-code" style="padding-top:14px">
+          <div id="tab-code">
             <ol class="login-steps">
               <li>Cài userscript <a href="/userscript/voz-oauth-helper.user.js" target="_blank" rel="noopener">voz-oauth-helper.user.js</a> (Tampermonkey / Violentmonkey).</li>
-              <li>Bấm <b>Mở trang uỷ quyền</b> — cửa sổ voz.vn mở ra, bấm <b>Authorize</b>.</li>
-              <li>Userscript bắt mã và hiện nút <b>Copy code</b> (hoặc tự gửi về tab này).</li>
+              <li>Bấm <b>Lấy mã uỷ quyền</b> — cửa sổ voz.vn mở ra, bấm <b>Authorize</b>.</li>
+              <li>Userscript bắt mã và hiện nút <b>Copy code</b>.<br><b>Lưu ý:</b> Trình duyệt Firefox có thể sẽ không hiển thị được nút Copy code phải tự copy đường link <code>vozma26://oauth...</code></li>
               <li>Dán mã vào ô dưới rồi bấm <b>Đăng nhập</b>.</li>
             </ol>
             <div class="formRow">
-              <button class="button button--primary" type="button" id="open-authorize">Mở trang uỷ quyền</button>
+              <button class="button button--primary" type="button" id="open-authorize">Lấy mã uỷ quyền</button>
             </div>
             <div class="formRow">
               <label for="auth-code">Mã uỷ quyền (code)</label>
@@ -72,27 +49,9 @@ export async function viewLogin() {
             </div>
             <button class="button button--primary" type="button" id="exchange-btn">Đăng nhập</button>
           </div>
-
-          <div id="tab-token" class="u-hidden" style="padding-top:14px">
-            <div class="formRow">
-              <label for="raw-token">Access token</label>
-              <textarea class="code-box" id="raw-token" placeholder='{"accessToken":"...","refreshToken":"...","expiresAt":123}'></textarea>
-              <div class="formHint">Dán chuỗi token, hoặc JSON đầy đủ từ <code>tokens.json</code>.</div>
-            </div>
-            <button class="button button--primary" type="button" id="token-btn">Đăng nhập</button>
-          </div>
         </div>
       </div>
     </div>`;
-
-  const tabs = document.getElementById('login-tabs');
-  tabs.addEventListener('click', (event) => {
-    const btn = event.target.closest('button[data-tab]');
-    if (!btn) return;
-    for (const b of tabs.querySelectorAll('button')) b.classList.toggle('is-active', b === btn);
-    document.getElementById('tab-code').classList.toggle('u-hidden', btn.dataset.tab !== 'code');
-    document.getElementById('tab-token').classList.toggle('u-hidden', btn.dataset.tab !== 'token');
-  });
 
   let pkce = null;
   const hint = document.getElementById('pkce-hint');
@@ -145,33 +104,6 @@ export async function viewLogin() {
       const { ok, data } = await auth.exchange(code, p.verifier);
       if (!ok) throw new Error(data.detail || data.error || 'Đổi token thất bại');
       sessionStorage.removeItem('voz_pkce');
-      state.loggedIn = true;
-      state.me = data.me;
-      renderAccount();
-      toast(`Xin chào ${data.me.username}`);
-      navigate('/');
-    } catch (err) {
-      toast(err.message, true);
-      btn.disabled = false;
-      btn.textContent = 'Đăng nhập';
-    }
-  });
-
-  document.getElementById('token-btn').addEventListener('click', async () => {
-    const raw = document.getElementById('raw-token').value.trim();
-    if (!raw) return toast('Chưa có token', true);
-    let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      payload = { accessToken: raw };
-    }
-    const btn = document.getElementById('token-btn');
-    btn.disabled = true;
-    btn.textContent = 'Đang kiểm tra…';
-    try {
-      const { ok, data } = await auth.useToken(payload);
-      if (!ok) throw new Error(data.error === 'token_rejected' ? 'Token không hợp lệ' : data.error || 'Thất bại');
       state.loggedIn = true;
       state.me = data.me;
       renderAccount();

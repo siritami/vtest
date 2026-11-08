@@ -291,8 +291,9 @@ Khi đó response là:
 Userscript đọc `redirect`, tách `code`, rồi:
 
 1. hiện panel góc phải với nút **Copy code**,
-2. `postMessage({ type: 'voz-oauth-code', code, state })` về tab web client,
-3. lưu vào `sessionStorage` để hiện lại khi cần.
+2. lưu vào `sessionStorage` để hiện lại khi cần.
+
+Mã **không** được gửi sang web client — người dùng tự copy rồi dán vào ô "Mã uỷ quyền".
 
 Nó cũng hook `fetch` / `XMLHttpRequest` / `location.assign` để bắt trường hợp trang tự
 redirect bằng JS.
@@ -310,12 +311,13 @@ sequenceDiagram
 
     U->>W: bấm "Đăng nhập"
     W->>W: sinh PKCE (verifier, challenge, state)<br/>lưu sessionStorage
-    U->>W: bấm "Mở trang uỷ quyền"
+    U->>W: bấm "Lấy mã uỷ quyền"
     W->>P: window.open(/oauth2/authorize?code_challenge=…)
     U->>P: bấm Authorize
     P->>S: form action + _xfResponseType=json
     S->>S: đọc JSON, tách code
-    S-->>W: postMessage(code)
+    S-->>U: panel + nút "Copy code"
+    U->>W: dán code vào ô "Mã uỷ quyền"
     W->>E: POST /api/oauth/exchange {code, verifier}
     E->>V: POST /api/oauth2/token (grant_type=authorization_code)
     V-->>E: access_token, refresh_token, expires_in
@@ -338,7 +340,6 @@ token **bắt buộc** chạy ở edge function.
 | GET | `/api/config` | – | `clientId`, `redirectUri`, `scopes`, `authorizeUrl` |
 | GET | `/api/oauth/status` | – | `{ loggedIn, me }`; tự refresh nếu còn < 60 s |
 | POST | `/api/oauth/exchange` | `{ code, verifier }` | set cookie, trả `{ ok, me }` |
-| POST | `/api/oauth/token` | `{ accessToken, refreshToken?, expiresIn?, scope?, tokenType? }` hoặc `{ tokens: {…} }` | nhận token dán tay, xác thực bằng `/me/`, set cookie |
 | POST | `/api/oauth/logout` | – | revoke refresh token + xoá cookie |
 
 Cookie:
@@ -353,13 +354,10 @@ Nội dung: `{ accessToken, refreshToken, expiresAt, scope, tokenType, obtainedA
 không ký: `b64uEncode(JSON.stringify(tokens))` rồi `b64uDecode` khi đọc, lỗi parse thì coi
 như chưa đăng nhập. `sessionCookie(null, 0)` tạo cookie rỗng `Max-Age=0` để đăng xuất.
 
-### 3.6 Đăng nhập bằng token dán tay
+### 3.6 Trang `/login`
 
-Tab thứ hai của trang `/login` cho phép dán thẳng access token (hoặc cả file
-`tokens.json`). Server gọi `/api/me/` để xác thực trước khi set cookie — token sai
-trả `401 token_rejected`.
-
-Dùng khi không muốn cài userscript, hoặc để test nhanh.
+Chỉ có một luồng: lấy mã uỷ quyền rồi đổi lấy token (PKCE). Đã gỡ tab dán access token
+thủ công cùng endpoint `/api/oauth/token`.
 
 ### 3.7 Refresh token
 
@@ -424,7 +422,6 @@ Nếu upstream trả `401` và request có session, edge gọi `refreshTokens()`
 | `GET` | `/api/config` | `{ siteUrl, clientId, redirectUri, scopes, authorizeUrl }` |
 | `GET` | `/api/oauth/status` | đọc cookie, refresh nếu còn < 60 s, `fetchMe()`, trả `{ loggedIn, me }` |
 | `POST` | `/api/oauth/exchange` | `{ code, verifier }` → `tokenRequest(grant_type=authorization_code)` → set cookie → `{ ok, me }` |
-| `POST` | `/api/oauth/token` | nhận `{ accessToken, refreshToken?, expiresIn?, scope?, tokenType? }` hoặc `{ tokens: … }`, xác thực bằng `/me/` rồi set cookie |
 | `POST` | `/api/oauth/logout` | revoke refresh token (best-effort) + `Set-Cookie` rỗng `Max-Age=0` |
 | `POST` | `/api/pik/upload` | chuyển tiếp multipart sang `https://pik.vn/api/upload`, trả nguyên `{ url, deleteUrl, exists }`; cần `Content-Type: multipart/form-data` |
 | `GET` | `/api/xf/oembed?site=…&key=…` | phân giải oEmbed (hiện chỉ `flickr`) qua `OEMBED_TARGETS`, chỉ trả các trường an toàn (`url`, `title`, `width`, `height`, `web_page`); provider không gửi CORS nên phải đi qua proxy |
@@ -547,7 +544,7 @@ gọi `fetch('/api/xf/posts/')` trực tiếp.
 | Nháp editor | key `voz-editor:v1:{user_id|guest}:{pathname đã bỏ /page-N/}:{draftContext|textarea.id}`; TTL 30 ngày; `clearEditorDraft()` phát event `editor:clear-draft` |
 | `reply-silent` | **Đã gỡ.** Không còn checkbox "Không đẩy chủ đề (silent)" trong form trả lời; `silent` không được gửi nữa. API vẫn hỗ trợ cờ này (`POST /posts/`) nếu muốn thêm lại |
 | `dm` alias | router nhận cả `/dm/…` và `/direct-messages/…`; link trong UI luôn dùng `/direct-messages/` |
-| `login.js` message listener | đăng ký ở module scope (một lần), chỉ nhận `type === 'voz-oauth-code'`; kiểm tra origin bằng `location.origin` hoặc hostname kết thúc `voz.vn` |
+| `login.js` | không còn `message` listener; mã uỷ quyền do người dùng tự dán vào `#auth-code` |
 | `PKCE` | verifier 48 byte ngẫu nhiên → base64url; challenge = SHA-256 → base64url; `state` 16 byte; lưu `sessionStorage['voz_pkce']` để reload không mất |
 | `auth.exchange()` | trả `{ ok, data }` chứ không throw; view tự kiểm tra `ok` |
 | `openReportModal()` | gọi thẳng `/api/xf/posts/{id}/report` bằng `fetch` + `URLSearchParams`, không qua `xf()` |
@@ -1080,10 +1077,9 @@ Cơ chế:
 | 3 | Hook `XMLHttpRequest` — XenForo submit form bằng XHR |
 | 4 | Thêm `&_xfResponseType=json` vào `action` của form Authorize |
 | 5 | Đọc `<body>` nếu nó là JSON (trường hợp form submit điều hướng thật) |
-| 6 | Hiện panel + `postMessage` về tab opener |
+| 6 | Hiện panel với mã và nút **Copy code** |
 
-Panel hiện `code`, nút **Copy code**, nút **Gửi về web client**, và nhắc rằng code chỉ
-dùng được một lần.
+Panel hiện `code`, nút **Copy code**, và nhắc rằng code chỉ dùng được một lần.
 
 Chi tiết triển khai:
 
@@ -1093,13 +1089,13 @@ Chi tiết triển khai:
 | Storage key | `voz_oauth_last_code` — ghi cả `GM_setValue` và `sessionStorage` |
 | Trích code | `/[?&]code=([A-Za-z0-9._~-]+)/` trên chuỗi bất kỳ (URL, JSON, body) |
 | Trích state | `/[?&]state=([A-Za-z0-9._~-]+)/` |
-| `postMessage` | gửi `{ type: 'voz-oauth-code', code, state }` tới `window.opener` và `window.parent` với target `'*'` |
+| `postMessage` | **Đã gỡ** — userscript không gửi mã sang web client nữa |
 | Copy | `GM_setClipboard` → `navigator.clipboard.writeText` → `textarea` + `execCommand('copy')` |
 | Hiện lại | Vào lại `/oauth2/*` mà chưa có panel thì dựng panel từ code đã lưu |
 | `@noframes` | Không chạy trong iframe, tránh panel nhân bản |
 
-`views/login.js` nhận message này và điền vào `#auth-code`; nếu tab đích đã đóng thì
-người dùng vẫn copy tay được từ panel.
+Mã **không** đi qua `postMessage`; người dùng copy từ panel rồi dán vào `#auth-code`
+trên `/login`. Nếu tab web client đã đóng thì vẫn copy tay được từ panel.
 
 ---
 
