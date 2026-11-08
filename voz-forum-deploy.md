@@ -13,7 +13,7 @@ qua API, phiên đăng nhập lưu trong cookie mã hoá base64url.
 > vì cần cho việc deploy và không phải thông tin cá nhân.
 
 ```
-tuivoz/
+vtest/
 ├── api/
 │   ├── [...path].js      # Edge Function: proxy /api/xf/* + OAuth endpoints
 │   └── index.js          # re-export cho route /api
@@ -183,7 +183,7 @@ Vì sao phải có lớp edge:
 ### 2.1 Chuẩn bị
 
 ```powershell
-cd "D:\Data 2\Github-Clone\siritami\tuivoz"
+cd "D:\Data 2\Github-Clone\siritami\vtest"
 npm i -g vercel      # hoặc dùng npx vercel
 vercel login
 ```
@@ -231,7 +231,7 @@ Header `x-vercel-id` trong response cho biết region thực tế, ví dụ
 ### 2.4 Chạy local
 
 ```powershell
-cd "D:\Data 2\Github-Clone\siritami\tuivoz"
+cd "D:\Data 2\Github-Clone\siritami\vtest"
 node dev-server.mjs 3111
 # → http://localhost:3111
 ```
@@ -1749,7 +1749,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 ```powershell
 cd "D:\Data 2\Github-Clone\siritami"
 node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs
-cd tuivoz
+cd vtest
 node dev-server.mjs 3111
 # mở http://localhost:3111 — kiểm tra trang chủ, 1 thread, 1 DM, /login
 ```
