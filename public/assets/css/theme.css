@@ -1,0 +1,43 @@
+/* Appearance rules that are not simple token substitutions.
+   The palettes themselves live in base.css (--* custom properties, re-pointed by
+   :root[data-theme="dark"]); everything here reacts to the resolved theme or to the
+   data-font attribute set by ui/theme.js and the pre-paint inline script in index.html. */
+
+/* Native widgets: form controls, scrollbars, and the canvas the browser paints before the
+   page background is composited. `color-scheme` is also set from JS so it survives a
+   settings change without a reload; this is the no-JS fallback. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Images, iframes and video keep their own colours, so a bright photo on a dark page is
+   glare. Easing brightness slightly — never inverting, which would ruin photos — matches
+   what most dark themes do. Kept very mild so details and colour accuracy survive. */
+:root[data-theme="dark"] img,
+:root[data-theme="dark"] video,
+:root[data-theme="dark"] iframe {
+  filter: brightness(.92);
+}
+/* Do not dim anything that is already a UI affordance rather than content, and nothing on the
+   chrome — the header/nav keep the same dark styling in both themes, so dimming the header
+   logo there would make it darker than in light mode for no reason. */
+:root[data-theme="dark"] .p-header img,
+:root[data-theme="dark"] .p-nav img,
+:root[data-theme="dark"] .p-footer img,
+:root[data-theme="dark"] .avatar img,
+:root[data-theme="dark"] .avatar-img,
+:root[data-theme="dark"] .smilie,
+:root[data-theme="dark"] .editor-smilies img,
+:root[data-theme="dark"] .sticker-images-cell img,
+:root[data-theme="dark"] .reaction-image,
+:root[data-theme="dark"] .sticker-recent-item img {
+  filter: none;
+}
+
+/* The vendored fonts are downloaded lazily (assets/css/fonts.css is only linked once a
+   family is chosen), so switching family must not reflow the page after text has painted.
+   The fallback stack mirrors each family's metrics closely enough that the swap is quiet. */
+:root[data-font="roboto"] { font-family: var(--font); }
+:root[data-font="be-vietnam-pro"] { font-family: var(--font); }
+
+/* Selection colour follows the accent in both themes. */
+:root[data-theme="dark"] ::selection { background: #3f4e6c; color: var(--text); }

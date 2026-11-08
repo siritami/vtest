@@ -7,6 +7,33 @@
 <meta name="description" content="Diễn đàn VOZ — bản web dựng trên REST API của voz.vn">
 <link rel="preconnect" href="https://data.voz.vn">
 <link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/theme.css">
+<script>
+  // Runs while the head is still parsing, before the layout stylesheets below and before
+  // anything paints, so a dark-mode reader never sees a white flash. Kept inline and tiny:
+  // only the attributes the CSS keys off, read straight from localStorage. base.css has
+  // already declared the light values at this point, so setting data-theme here re-points
+  // them in the same style recalculation as the first paint. Everything else lives in
+  // ui/theme.js.
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('voz-settings:v1') || '{}');
+      var mode = ['auto', 'light', 'dark'].indexOf(s.theme) >= 0 ? s.theme : 'auto';
+      var dark = mode === 'dark' ||
+        (mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var r = document.documentElement;
+      r.dataset.themeMode = mode;
+      r.dataset.theme = dark ? 'dark' : 'light';
+      // Family stacks mirror FONT_STACKS in lib/settings.js; only base.css's --font default
+      // is overridden, and fonts.css is left to be linked lazily by ui/theme.js.
+      if (s.font) {
+        r.dataset.font = s.font;
+        if (s.font === 'roboto') r.style.setProperty('--font', 'Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif');
+        else if (s.font === 'be-vietnam-pro') r.style.setProperty('--font', '"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif');
+      }
+    } catch (e) { /* storage disabled: fall through to the light default */ }
+  })();
+</script>
 <link rel="stylesheet" href="/assets/css/layout.css">
 <link rel="stylesheet" href="/assets/css/forum.css">
 <link rel="stylesheet" href="/assets/css/avatar.css">
@@ -26,7 +53,9 @@
 <body>
 <header class="p-header">
   <div class="p-header-inner">
-    <a class="p-header-logo" href="/">VOZ</a>
+    <a class="p-header-logo" href="/" aria-label="VOZ — về trang chủ">
+      <img src="/assets/img/voz-lockup.svg" alt="VOZ" width="348" height="177" decoding="async">
+    </a>
     <div class="p-header-account" id="header-account"></div>
   </div>
 </header>
@@ -48,8 +77,7 @@
 
 <footer class="p-footer">
   <div class="p-footer-inner">
-    <p>VOZ web client — dữ liệu lấy từ <a href="https://voz.vn" target="_blank" rel="noopener">voz.vn</a> qua REST API chính thức.</p>
-    <p class="u-dimmed">Không liên kết chính thức với voz.vn. Nội dung do người dùng voz.vn tạo.</p>
+    <p>Voz của tui, xài voz theo cách của tui</p>
   </div>
 </footer>
 

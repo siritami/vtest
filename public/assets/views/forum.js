@@ -6,9 +6,10 @@ import { forumPath, searchForumPath, withPage } from '../core/paths.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
 import { loading, errorBox } from '../ui/feedback.js';
-import { pagination, wirePageJump } from '../ui/pagination.js';
+import { pagination, wirePageJump, wireScrollArm } from '../ui/pagination.js';
 import { threadRow } from '../ui/threadRow.js';
 import { nodeTree } from '../ui/forumNodes.js';
+import { mountInfiniteScroll } from '../ui/infiniteScroll.js';
 
 export async function viewHome() {
   setActiveNav('home');
@@ -43,16 +44,36 @@ export async function viewForum(nodeId, page) {
           ${esc(forum.title)}
           <span class="block-header-extra">${num(threadsRes.pagination && threadsRes.pagination.total)} chủ đề</span>
         </div>
-        <div class="structItemContainer">
+        <div class="structItemContainer" id="thread-rows">
           ${sticky.length ? `<div class="structItemContainer-group structItemContainer-group--sticky">${sticky.map((t) => threadRow(t, { sticky: true })).join('')}</div>` : ''}
           <div class="structItemContainer-group">${threads.map((t) => threadRow(t)).join('')}</div>
         </div>
       </div>
-      <div class="block-outer">${pagination(threadsRes.pagination, (p) => withPage(forumPath(forum), p))}</div>`;
-    wirePageJump((p) => withPage(forumPath(forum), p));
+      <div class="block-outer" id="pager-slot">${pagination(threadsRes.pagination, (p) => withPage(forumPath(forum), p))}</div>`;
+    const href = (p) => withPage(forumPath(forum), p);
+    wirePageJump(href);
+    wireScrollArm();
+    mountInfiniteScroll({
+      makeHref: href,
+      currentPage: threadsRes.pagination?.current_page || 1,
+      lastPage: threadsRes.pagination?.last_page || 1,
+      after: document.getElementById('pager-slot'),
+      fetchPage: (p) => api.forumThreads(nodeId, p),
+      insert: (p, res) => appendThreadRows('thread-rows', res.threads || []),
+    });
   } catch (err) {
     app.innerHTML = errorBox(err);
   }
+}
+
+// Appends one more page of rows into the list; sticky rows only appear on page 1.
+function appendThreadRows(containerId, threads) {
+  const container = document.getElementById(containerId);
+  if (!container || !threads.length) return 0;
+  const group = container.querySelector('.structItemContainer-group:not(.structItemContainer-group--sticky)');
+  if (!group) return 0;
+  group.insertAdjacentHTML('beforeend', threads.map((t) => threadRow(t)).join(''));
+  return threads.length;
 }
 
 // Aggregated node: threads pulled from many forums, so the forum name belongs in
@@ -78,13 +99,30 @@ export async function viewSearchForum(nodeId, page) {
           ${esc(node.title)}
           <span class="block-header-extra">${num(threadsRes.pagination && threadsRes.pagination.total)} chủ đề</span>
         </div>
-        <div class="structItemContainer">
+        <div class="structItemContainer" id="thread-rows">
           ${sticky.length ? `<div class="structItemContainer-group structItemContainer-group--sticky">${sticky.map((t) => threadRow(t, { sticky: true, showForum: true })).join('')}</div>` : ''}
           <div class="structItemContainer-group">${normal.map((t) => threadRow(t, { showForum: true })).join('')}</div>
         </div>
       </div>
-      <div class="block-outer">${pagination(threadsRes.pagination, (p) => withPage(searchForumPath(node), p))}</div>`;
-    wirePageJump((p) => withPage(searchForumPath(node), p));
+      <div class="block-outer" id="pager-slot">${pagination(threadsRes.pagination, (p) => withPage(searchForumPath(node), p))}</div>`;
+    const href = (p) => withPage(searchForumPath(node), p);
+    wirePageJump(href);
+    wireScrollArm();
+    mountInfiniteScroll({
+      makeHref: href,
+      currentPage: threadsRes.pagination?.current_page || 1,
+      lastPage: threadsRes.pagination?.last_page || 1,
+      after: document.getElementById('pager-slot'),
+      fetchPage: (p) => api.searchForumThreads(nodeId, p),
+      insert: (p, res) => {
+        const container = document.getElementById('thread-rows');
+        const group = container?.querySelector('.structItemContainer-group:not(.structItemContainer-group--sticky)');
+        const rows = (res.threads || []).filter((t) => !t.sticky);
+        if (!group || !rows.length) return 0;
+        group.insertAdjacentHTML('beforeend', rows.map((t) => threadRow(t, { showForum: true })).join(''));
+        return rows.length;
+      },
+    });
   } catch (err) {
     app.innerHTML = errorBox(err);
   }

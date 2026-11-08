@@ -3,9 +3,9 @@
 .loading { padding: 26px 12px; text-align: center; color: var(--dimmed); }
 .empty { padding: 26px 12px; text-align: center; color: var(--dimmed); }
 .error-box {
-  background: #fdeaea;
-  border: 1px solid #e0b4b4;
-  color: #a12626;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
   padding: 12px;
   border-radius: var(--radius);
   margin-bottom: 12px;
@@ -15,7 +15,7 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(0, 0, 0, .15);
+  border: 2px solid var(--border);
   border-top-color: var(--link);
   border-radius: 50%;
   animation: spin .7s linear infinite;
@@ -28,8 +28,8 @@
   left: 50%;
   bottom: 24px;
   transform: translateX(-50%) translateY(20px);
-  background: #2b3138;
-  color: #fff;
+  background: var(--chip-bg);
+  color: var(--on-dark);
   padding: 10px 18px;
   border-radius: 20px;
   font-size: 14px;
@@ -40,12 +40,12 @@
   max-width: 90vw;
 }
 .toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.is-error { background: #a12626; }
+.toast.is-error { background: var(--danger-text); }
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .5);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;

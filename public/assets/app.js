@@ -7,6 +7,12 @@ import { route } from './core/router.js';
 import { loadSession } from './ui/session.js';
 import { wireHeaderMenus } from './ui/headerMenus.js';
 import { wireNavShortcuts } from './ui/chrome.js';
+import { wireTheme } from './ui/theme.js';
+import { wireChromeAutoHide } from './ui/chromeAutoHide.js';
+
+// Applied before the first paint of app content so the page never flashes the wrong scheme:
+// the reader's saved preference is in localStorage, so it is available synchronously.
+wireTheme();
 
 // Intercept same-origin link clicks so navigation never reloads the page.
 document.addEventListener('click', (event) => {
@@ -35,6 +41,7 @@ document.addEventListener('click', (event) => {
 
 wireHeaderMenus();
 wireNavShortcuts();
+wireChromeAutoHide();
 
 window.addEventListener('popstate', () => {
   window.scrollTo({ top: 0 });

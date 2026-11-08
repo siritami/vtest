@@ -15,7 +15,7 @@
   height: 36px;
   border-radius: 50%;
   background: var(--block-header-bg);
-  color: #fff;
+  color: var(--on-dark);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,7 +127,7 @@
 
 .structItem-snippet {
   font-size: 13px;
-  color: #55595d;
+  color: var(--dimmed-2);
   margin: 4px 0 0;
   overflow: hidden;
   display: -webkit-box;
@@ -174,7 +174,7 @@
   text-align: center;
   border: 0;
   border-radius: 2px;
-  background: #dfe7f6;
+  background: var(--surface-accent);
   color: var(--link);
   font: inherit;
   font-size: 14px;
@@ -183,12 +183,12 @@
 }
 .pageNav span.current {
   background: var(--block-header-bg);
-  color: #fff;
+  color: var(--on-dark);
   font-weight: 700;
   cursor: default;
 }
 .pageNav a:hover,
-.pageNav-jumpBtn:hover { background: #cfdcf2; color: var(--link-hover); }
+.pageNav-jumpBtn:hover { background: var(--surface-accent-hover); color: var(--link-hover); }
 .pageNav-jump { font-weight: 600; }
 .pageNav-skip { display: block; }
 .pageNav-jumpBtn { min-width: 30px; }
@@ -201,9 +201,125 @@
   font-size: 14px;
   text-align: center;
   color: var(--text);
-  background: #fff;
+  background: var(--surface);
 }
 .pageNav-extra { margin-left: auto; display: inline-flex; align-items: center; }
+
+/* "Cuộn liên tục" opt-in button, only rendered in the manual mode.
+   Icon-only, and wears the same colours as the pager links beside it. */
+.pageNav-scrollBtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--surface-accent);
+  color: var(--link);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.pageNav-scrollIcon { display: inline-block; line-height: 1; }
+.pageNav-scrollBtn:hover:not(:disabled) { background: var(--surface-accent-hover); color: var(--link-hover); }
+.pageNav-scrollBtn.is-active { background: var(--block-header-bg); color: var(--on-dark); cursor: default; }
+.pageNav-scrollBtn.is-active .pageNav-scrollIcon { animation: infinite-scroll-nudge 1s ease-in-out infinite; }
+@keyframes infinite-scroll-nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pageNav-scrollBtn.is-active .pageNav-scrollIcon { animation: none; }
+}
+
+/* Sentinel for continuous scrolling: renders the next-page status and is the
+   element the IntersectionObserver watches. Zero extra chrome when idle. */
+.infinite-sentinel { display: flex; justify-content: center; padding: 10px 12px; font-size: 12px; color: var(--chrome-dimmed); }
+.infinite-sentinel[data-state="busy"] .infinite-status::before {
+  content: "";
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid var(--border);
+  border-top-color: var(--link);
+  border-radius: 50%;
+  animation: infinite-spin .7s linear infinite;
+}
+.infinite-sentinel[data-state="error"] { color: var(--danger-text); }
+@keyframes infinite-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .infinite-sentinel[data-state="busy"] .infinite-status::before { animation: none; }
+}
+
+/* Floating "stop continuous scroll" control: a round icon-only button pinned to the right
+   edge, lifted off the bottom so it clears mobile browser chrome and the pager. Only
+   rendered while scrolling is armed. */
+.infinite-stop {
+  position: fixed;
+  right: 16px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--block-header-bg);
+  color: var(--on-dark);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-fab);
+  transition: background-color .15s ease, transform .15s ease, opacity .2s ease;
+}
+/* Hidden while scrolling down: still focusable/clickable for keyboard and assistive tech,
+   just not painted, so a scroll never yanks the control out from under a screen reader. */
+.infinite-stop.is-hidden {
+  opacity: 0;
+  transform: translateY(8px) scale(.9);
+  pointer-events: none;
+}
+.infinite-stop:hover { background: var(--block-header-hover); }
+.infinite-stop:active { transform: scale(.94); }
+.infinite-stop:focus-visible { outline: 2px solid var(--link-hover); outline-offset: 2px; }
+.infinite-stop.is-hidden:focus-visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .infinite-stop { transition: none; }
+  .infinite-stop:active { transform: none; }
+  .infinite-stop.is-hidden { transform: none; }
+}
+/* Narrow screens: keep it clear of the pager and thumb reach. */
+@media (max-width: 620px) {
+  .infinite-stop { right: 12px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 38px; height: 38px; }
+}
+/* Narrow screens: the pager already wraps, but with the optional scroll button it can
+   get crowded. Tighten the cells and drop the numbers farthest from the current page so
+   ‹ Trước / numbers / Sau › / button still fit on one line. */
+@media (max-width: 620px) {
+  .pageNav { padding: 8px 6px; gap: 3px; }
+  .pageNav a,
+  .pageNav span.current,
+  .pageNav-jumpBtn { min-width: 26px; padding: 4px 6px; font-size: 13px; }
+  .pageNav-jump { padding: 4px 6px; font-size: 13px; }
+  .pageNav-scrollBtn { min-width: 26px; min-height: 26px; padding: 4px 6px; font-size: 13px; }
+  .pageNav-main { gap: 1px; }
+}
+/* Very narrow: keep only the current page and its neighbours. */
+@media (max-width: 400px) {
+  .pageNav-page:not(.is-current):not(:nth-child(2)):not(:nth-last-child(2)) { display: none; }
+  .pageNav-skip { display: none; }
+}
+
 .pageNav a.pageNav-author {
   display: inline-flex;
   align-items: center;
@@ -214,5 +330,5 @@
   font-size: 13px;
   color: var(--nav-fg);
 }
-.pageNav a.pageNav-author:hover { background: none; color: #fff; }
+.pageNav a.pageNav-author:hover { background: none; color: var(--on-dark); }
 .pageNav-author svg { flex: 0 0 auto; opacity: .8; }

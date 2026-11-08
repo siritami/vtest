@@ -2,31 +2,31 @@
 .header-icon[data-header-menu] { position: relative; }
 .header-unread { position: absolute; top: 0; right: 0; min-width: 16px; padding: 1px 4px; border-radius: 3px; background: #e02e2e; color: #fff; font-size: 11px; font-weight: 700; line-height: 14px; text-align: center; pointer-events: none; }
 .header-unread[hidden] { display: none; }
-.header-icon { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 4px; padding: 9px; background: transparent; color: #ebeced; cursor: pointer; font: inherit; min-width: 38px; min-height: 38px; }
-.header-icon:hover, .header-icon[aria-expanded="true"] { background: rgba(255,255,255,.12); color: white; }
-.header-icon:focus-visible { outline: 2px solid #ffba8c; outline-offset: 2px; }
-.header-menu { position: absolute; right: 0; top: calc(100% + 9px); z-index: 100; width: 340px; max-width: calc(100vw - 24px); color: var(--text); background: var(--content-bg); border: 1px solid var(--border); border-top: 3px solid #ff944c; border-radius: 4px; box-shadow: 0 6px 20px #0005; }
+.header-icon { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 4px; padding: 9px; background: transparent; color: var(--on-chrome-muted); cursor: pointer; font: inherit; min-width: 38px; min-height: 38px; }
+.header-icon:hover, .header-icon[aria-expanded="true"] { background: var(--overlay-header); color: var(--on-dark); }
+.header-icon:focus-visible { outline: 2px solid var(--focus-ring-warm); outline-offset: 2px; }
+.header-menu { position: absolute; right: 0; top: calc(100% + 9px); z-index: 100; width: 340px; max-width: calc(100vw - 24px); color: var(--text); background: var(--content-bg); border: 1px solid var(--border); border-top: 3px solid var(--quote-border); border-radius: 4px; box-shadow: var(--shadow-menu); }
 .header-menu[hidden] { display: none; }
-.header-menu h2 { font-size: 16px; font-weight: 400; margin: 0; padding: 10px 12px; color: #5c7099; background: #f4f5f5; border-bottom: 1px solid var(--border); }
+.header-menu h2 { font-size: 16px; font-weight: 400; margin: 0; padding: 10px 12px; color: var(--link); background: var(--content-bg-alt); border-bottom: 1px solid var(--border); }
 .header-menu-body { max-height: 380px; overflow-y: auto; }
 .quick-search { padding: 12px; display: grid; gap: 12px; }
-.menu-footer { display: block; padding: 10px 12px; text-align: center; background: #f4f5f5; border-top: 1px solid var(--border); }
+.menu-footer { display: block; padding: 10px 12px; text-align: center; background: var(--content-bg-alt); border-top: 1px solid var(--border); }
 .menu-empty { padding: 16px; }
 .menu-preview { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
 .menu-preview > div { min-width: 0; overflow-wrap: anywhere; }
-.menu-preview.is-unread { background: #fff2e5; }
+.menu-preview.is-unread { background: var(--unread-bg-strong); }
 .p-header-account .menu-preview .avatar { width: 36px; height: 36px; flex: 0 0 36px; }
 .account-menu { width: 220px; }
 .account-menu > a { display: block; padding: 10px 12px; }
-.account-menu > a:hover, .account-logout:hover { background: #f4f5f5; }
+.account-menu > a:hover, .account-logout:hover { background: var(--surface-hover); }
 .account-logout { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--link); font: inherit; text-align: left; cursor: pointer; }
 .account-logout svg { width: 16px; height: 16px; }
 .p-header-account { gap: 2px; }
 .p-breadcrumbs:has(.breadcrumb-trail) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .breadcrumb-trail { min-width: 0; }
 .p-breadcrumbs .button--cta { flex-shrink: 0; color: #fff; }
-.button--cta { background: #ff944c; color: #fff; border-color: #ee873e; display: inline-flex; align-items: center; gap: 7px; }
-.button--cta:hover { background: #f18437; color: #fff; }
+.button--cta { background: #c24d15; color: #fff; border-color: #a84312; display: inline-flex; align-items: center; gap: 7px; }
+.button--cta:hover { background: #a84312; color: #fff; }
 @media (max-width: 620px) {
   .p-header-inner { gap: 4px; flex-wrap: nowrap; }
   .account-toggle .username { display: none; }

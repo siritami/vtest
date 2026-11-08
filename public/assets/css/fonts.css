@@ -1,0 +1,53 @@
+/* Vendored webfonts.
+   Built by tools/build-fonts.py from the upstream OFL files (see fonts/OFL.txt): each family
+   is subset to the latin + vietnamese ranges at 400/500/700 and stored as woff2. Nothing is
+   requested from a font CDN — the CSS feature is `swap` so text paints immediately in the
+   fallback stack and re-renders when the file arrives.
+
+   Only referenced when the user picks a font in Cài đặt → Giao diện: the `@font-face` blocks
+   are inert on their own, and ui/theme.js adds the link for the chosen family, so a visitor
+   who keeps the default never downloads any of these files. */
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/roboto-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/roboto-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/roboto-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-pro-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-pro-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/be-vietnam-pro-700.woff2") format("woff2");
+}

@@ -1,0 +1,226 @@
+// Continuous scrolling for thread lists and threads.
+//
+// Three behaviours, from /cai-dat-tuivoz → "Cuộn trang liên tục":
+//   on     — append the next page automatically when the bottom is reached
+//   manual — the pager grows an extra button; the next page only appends after a click.
+//            The click arms one append only: navigating away or reloading asks again.
+//   off    — nothing is added and nothing loads on its own; the pager is the only way.
+//
+// Appending, not re-rendering: the next page is fetched, its rows/posts are appended to
+// the existing containers, and the URL is updated with replaceState so the pager and the
+// address bar both describe the page now at the bottom of the list.
+
+import { app } from '../core/dom.js';
+import { getInfiniteScroll } from '../lib/settings.js';
+
+let current = null;
+let stopButton = null;
+// Scroll-direction reveal state for the floating stop button.
+let lastY = 0;
+const REVEAL_THRESHOLD = 8;
+
+// `render` receives a page number and the node(s) to append into. It must return
+// `{ count }` so the loader knows whether the page actually produced anything.
+export function mountInfiniteScroll(options) {
+  teardownInfiniteScroll();
+  const mode = getInfiniteScroll();
+  if (mode === 'off') return teardownInfiniteScroll;
+
+  const { makeHref, lastPage, currentPage, insert, fetchPage, onPageAppended } = options;
+  if (!lastPage || lastPage <= 1 || currentPage >= lastPage) return teardownInfiniteScroll;
+
+  const sentinel = document.createElement('div');
+  sentinel.className = 'infinite-sentinel';
+  sentinel.setAttribute('role', 'status');
+  sentinel.setAttribute('aria-live', 'polite');
+  sentinel.innerHTML = '<span class="infinite-status"></span>';
+
+  const state = {
+    mode,
+    armed: mode === 'on', // "manual" stays unarmed until the user clicks the pager button
+    page: currentPage,
+    lastPage,
+    busy: false,
+    failed: null,
+    sentinel,
+    makeHref,
+    fetchPage,
+    insert,
+    onPageAppended,
+  };
+  current = state;
+
+  const label = () => {
+    if (state.failed) return `Không tải được trang ${state.page + 1}. `;
+    if (state.busy) return `Đang tải trang ${state.page + 1}…`;
+    return `Trang ${state.page + 1} / ${state.lastPage}`;
+  };
+  state.refreshLabel = () => {
+    const status = sentinel.querySelector('.infinite-status');
+    if (status) status.textContent = label();
+    sentinel.dataset.state = state.failed ? 'error' : state.busy ? 'busy' : 'idle';
+  };
+
+  const loadNext = async () => {
+    if (state.busy || state.failed || !state.armed || state.page >= state.lastPage) return;
+    state.busy = true;
+    state.refreshLabel();
+    const target = state.page + 1;
+    try {
+      const res = await state.fetchPage(target);
+      if (current !== state) return;
+      const count = await state.insert(target, res);
+      if (current !== state) return;
+      if (!count) {
+        // A page with nothing to show: stop instead of looping on the same page.
+        state.page = state.lastPage;
+        state.refreshLabel();
+        return;
+      }
+      state.page = target;
+      try {
+        history.replaceState(null, '', `${state.makeHref(target)}${location.hash}`);
+      } catch {
+        /* replaceState can fail on a stale entry; the URL is cosmetic here. */
+      }
+      state.onPageAppended?.(target, res);
+      state.refreshLabel();
+      if (state.page >= state.lastPage) teardownInfiniteScroll();
+    } catch (error) {
+      if (current !== state) return;
+      state.failed = error;
+      state.refreshLabel();
+    } finally {
+      if (current === state) {
+        state.busy = false;
+        state.refreshLabel();
+      }
+    }
+  };
+
+  // A user gesture is required before the observer may load: the initial layout is
+  // ignored so a tall window does not chain-load pages the moment it opens.
+  let allow = false;
+  const firstGesture = () => {
+    allow = true;
+    window.removeEventListener('scroll', firstGesture);
+    window.removeEventListener('touchmove', firstGesture);
+    window.removeEventListener('wheel', firstGesture);
+  };
+  window.addEventListener('scroll', firstGesture, { passive: true, once: true });
+  window.addEventListener('touchmove', firstGesture, { passive: true, once: true });
+  window.addEventListener('wheel', firstGesture, { passive: true, once: true });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!allow || !state.armed || state.busy || state.failed) return;
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      loadNext();
+    },
+    { rootMargin: '400px 0px' }
+  );
+
+  // Sits after the pager, not inside it, so the status reads as "more below" instead of
+  // wedging itself between the last row and the page numbers.
+  if (options.after?.parentNode) options.after.insertAdjacentElement('afterend', sentinel);
+  else app.append(sentinel);
+  state.observer = observer;
+  state.allow = () => { allow = true; };
+  state.loadNow = () => loadNext();
+  observer.observe(sentinel);
+  state.refreshLabel();
+  // "on" starts armed, so the stop control has to appear with it.
+  if (state.armed) showStopButton();
+
+  return state;
+}
+
+// Arms the current page: used by the pager button in the "manual" mode.
+export function armInfiniteScroll() {
+  if (!current) return false;
+  current.armed = true;
+  current.allow?.();
+  showStopButton();
+  // The observer only fires on a change; if the sentinel is already on screen, load now.
+  current.sentinel.scrollIntoView({ block: 'nearest' });
+  if (current.sentinel.getBoundingClientRect().top < innerHeight) current.loadNow?.();
+  return true;
+}
+
+// Turning continuous scrolling off without leaving the page: the observer stops firing and
+// the already-appended pages stay put, so the reader keeps their place and can carry on with
+// the pager. Mirrors un-checking the mode rather than navigating.
+export function disarmInfiniteScroll() {
+  if (!current) return false;
+  current.armed = false;
+  hideStopButton();
+  return true;
+}
+
+// Floating "stop continuous scroll" control. Lives outside the pager so it stays reachable
+// while the list grows, and is only ever present while scrolling is armed — including in
+// "on" mode, where there is no pager button to click.
+//
+// While scrolling down it slides out of the way and comes back on the first upward scroll:
+// reading forward is exactly when the list grows under the thumb, so the button would
+// otherwise sit on top of the new content.
+function showStopButton() {
+  if (!current || !current.armed) return;
+  if (stopButton) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'infinite-stop';
+  btn.innerHTML = '<span aria-hidden="true">✕</span>';
+  btn.title = 'Dừng cuộn liên tục';
+  btn.setAttribute('aria-label', 'Dừng cuộn liên tục');
+  btn.addEventListener('click', () => {
+    disarmInfiniteScroll();
+    // The pager's arm button mirrors this state, so hand it back to idle.
+    for (const armBtn of app.querySelectorAll('[data-scroll-arm]')) {
+      armBtn.disabled = false;
+      armBtn.classList.remove('is-active');
+      armBtn.title = 'Bật cuộn liên tục cho trang này';
+      armBtn.setAttribute('aria-label', 'Bật cuộn liên tục cho trang này');
+      armBtn.innerHTML = '<span class="pageNav-scrollIcon" aria-hidden="true">⇣</span>';
+    }
+  });
+  app.append(btn);
+  stopButton = btn;
+  lastY = window.scrollY;
+  window.addEventListener('scroll', onScrollDirection, { passive: true });
+}
+
+// Scroll-direction reveal. The threshold keeps a jittery trackpad or a rubber-banding
+// momentum scroll from flickering the button.
+function onScrollDirection() {
+  if (!stopButton) return;
+  const y = window.scrollY;
+  const delta = y - lastY;
+  if (Math.abs(delta) < REVEAL_THRESHOLD) return;
+  // Hide only when going down and there is something above to scroll back to, so the
+  // button is not hidden at the very top of the page.
+  stopButton.classList.toggle('is-hidden', delta > 0 && y > REVEAL_THRESHOLD);
+  lastY = y;
+}
+
+function hideStopButton() {
+  window.removeEventListener('scroll', onScrollDirection);
+  stopButton?.remove();
+  stopButton = null;
+}
+
+export function teardownInfiniteScroll() {
+  hideStopButton();
+  if (!current) return;
+  current.observer?.disconnect();
+  current.sentinel?.remove();
+  current = null;
+}
+
+export function infiniteScrollActive() {
+  return Boolean(current);
+}
+
+export function infiniteScrollMode() {
+  return getInfiniteScroll();
+}

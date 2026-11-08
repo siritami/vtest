@@ -1,9 +1,23 @@
 /* Page chrome: header, nav, body wrapper, blocks, footer. */
 
 /* ---------- header ---------- */
+/* The header and nav form one sticky block that auto-hides while scrolling down
+   (ui/chromeAutoHide.js toggles .chrome-hidden on <html>). Both are sticky so the pair
+   stays on screen while reading; the hide is a transform, not display:none, so the page
+   content never reflows. z-index 100 keeps them under the modal (1000) and toast (900)
+   but above page content and the floating stop button (40). */
 .p-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   background: var(--header-bg);
   color: var(--header-fg);
+  transition: transform .2s ease;
+}
+/* Lifted by its own height so it leaves the viewport entirely; the nav below shifts by the
+   combined height (it starts at --header-h and must clear the top edge). */
+:root.chrome-hidden .p-header {
+  transform: translateY(calc(-1 * var(--header-h, 100%)));
 }
 .p-header-inner {
   max-width: var(--max-width);
@@ -13,14 +27,22 @@
   gap: 16px;
   padding: 10px 12px;
 }
+/* voz.vn sizes the same file by width (98px, height auto). Our header is shorter, so scale by
+   height instead and let the aspect ratio set the width — 32px keeps the wordmark legible
+   without stretching the 10px-padded bar. */
 .p-header-logo {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
   flex: 0 0 auto;
 }
-.p-header-logo:hover { color: var(--nav-active); }
+.p-header-logo img {
+  display: block;
+  height: 32px;
+  width: auto;
+  /* The source artwork is white (#f2f4f7), which is what the dark header needs, so no filter
+     or colour override is applied. */
+}
+.p-header-logo:hover { opacity: .85; }
 .p-header-search {
   display: flex;
   flex: 1 1 auto;
@@ -32,8 +54,8 @@
   padding: 7px 10px;
   border: 0;
   border-radius: var(--radius) 0 0 var(--radius);
-  background: #eff0f0;
-  color: var(--text);
+  background: var(--chrome-field-bg);
+  color: var(--chrome-field-fg);
   font: inherit;
   font-size: 15px;
 }
@@ -47,7 +69,7 @@
   font-size: 14px;
   cursor: pointer;
 }
-.p-header-search button:hover { background: #6b80ab; }
+.p-header-search button:hover { background: var(--chrome-field-hover); }
 .p-header-account {
   margin-left: auto;
   display: flex;
@@ -59,12 +81,12 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #4a525b;
+  background: var(--chrome-avatar-bg);
 }
-.p-header-account .username { color: #fff; font-weight: 600; }
+.p-header-account .username { color: var(--on-dark); font-weight: 600; }
 .p-header-account .badge {
   background: var(--nav-active);
-  color: #fff;
+  color: var(--on-dark);
   border-radius: 10px;
   padding: 0 6px;
   font-size: 12px;
@@ -73,8 +95,20 @@
 
 /* ---------- nav ---------- */
 .p-nav {
+  position: sticky;
+  /* Parks the nav directly under the header; --header-h is set by ui/chromeAutoHide.js. */
+  top: var(--header-h, 0px);
+  z-index: 100;
   background: var(--nav-bg);
-  border-top: 1px solid rgba(255, 255, 255, .06);
+  border-top: 1px solid var(--overlay-hairline);
+  transition: transform .2s ease;
+}
+:root.chrome-hidden .p-nav {
+  /* Starts at --header-h, so it needs the full pair height to clear the viewport. */
+  transform: translateY(calc(-1 * var(--chrome-h, 100%)));
+}
+@media (prefers-reduced-motion: reduce) {
+  .p-header, .p-nav { transition: none; }
 }
 .p-nav-inner {
   max-width: var(--max-width);
@@ -106,9 +140,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.p-nav-list a:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.p-nav-list a:hover { color: var(--on-dark); background: var(--overlay-hairline); }
 .p-nav-list a.is-active {
-  color: #fff;
+  color: var(--on-dark);
   border-bottom-color: var(--nav-active);
 }
 
@@ -125,8 +159,8 @@
   min-height: 1px;
 }
 .p-breadcrumbs a { color: var(--nav-fg); }
-.p-breadcrumbs a:hover { color: #fff; }
-.p-breadcrumbs .sep { margin: 0 6px; color: var(--dimmed); }
+.p-breadcrumbs a:hover { color: var(--on-dark); }
+.p-breadcrumbs .sep { margin: 0 6px; color: var(--chrome-dimmed); }
 
 /* ---------- blocks ---------- */
 .block {
@@ -173,5 +207,8 @@
   margin: 0 auto;
   padding: 18px 12px;
 }
-.p-footer a { color: #9fc0ea; }
-.p-footer p { margin: 0 0 6px; }
+.p-footer a { color: var(--on-chrome-link); }
+.p-footer .u-dimmed, .p-footer .u-muted { color: var(--chrome-dimmed); }
+/* Single line by default; the bottom margin only matters once a second paragraph is added. */
+.p-footer p { margin: 0; }
+.p-footer p + p { margin-top: 6px; }

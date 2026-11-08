@@ -58,6 +58,7 @@ export const api = {
   searchForumThreads: (id, page = 1) => xf(`/search-forums/${id}/threads`, { query: { page } }),
   threads: (page = 1, order = 'post_date') => xf('/threads/', { query: { page, order } }),
   thread: (id, page = 1) => xf(`/threads/${id}/`, { query: { with_posts: 'true', page } }),
+  threadPosts: (id, page = 1) => xf(`/threads/${id}/posts`, { query: { page } }),
   post: (id) => xf(`/posts/${id}/`),
   createPost: (threadId, message) => xf('/posts/', { method: 'POST', body: { thread_id: threadId, message } }),
   editPost: (id, message, extra) => xf(`/posts/${id}/`, { method: 'POST', body: { message, ...extra } }),

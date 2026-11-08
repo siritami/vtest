@@ -48,11 +48,11 @@
   text-decoration: none;
   vertical-align: middle;
 }
-.label--primary { color: #23497b; background: #dfe7f6; border-color: #c9d6ec; }
-.label--accent { color: hsl(24, 100%, 50%); background: hsl(24, 100%, 90%); border-color: hsl(24, 100%, 80%); }
+.label--primary { color: var(--link); background: var(--surface-accent); border-color: var(--border-code); }
+.label--accent { color: #8a3d00; background: hsl(24, 100%, 90%); border-color: hsl(24, 100%, 80%); }
 .label--red { color: #fff; background: hsl(0, 100%, 44%); border-color: hsl(0, 100%, 34%); }
 .label--green { color: #fff; background: hsl(120, 100%, 25%); border-color: hsl(120, 100%, 15%); }
-.label--olive { color: #fff; background: hsl(60, 100%, 25%); border-color: hsl(60, 100%, 15%); }
+.label--olive { color: #fff; background: hsl(60, 100%, 20%); border-color: hsl(60, 100%, 12%); }
 .label--royalBlue { color: #fff; background: hsl(225, 73%, 57%); border-color: hsl(225, 73%, 47%); }
 .label--orange { color: #000; background: hsl(48, 100%, 50%); border-color: hsl(48, 100%, 40%); }
 .label--gray { color: #fff; background: hsl(0, 0%, 50%); border-color: hsl(0, 0%, 40%); }

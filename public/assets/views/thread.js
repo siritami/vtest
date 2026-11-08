@@ -8,7 +8,7 @@ import { ICON_EYE_ON, ICON_EYE_OFF, ICON_USER } from '../core/icons.js';
 import { api, ApiError } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
 import { loading, errorBox, toast } from '../ui/feedback.js';
-import { pagination, wirePageJump } from '../ui/pagination.js';
+import { pagination, wirePageJump, wireScrollArm } from '../ui/pagination.js';
 import { postHtml } from '../ui/post.js';
 import { hydrateReactionLists, reactionBar, reactionSummary, invalidateReactionUsers } from '../ui/reactions.js';
 import { editorHtml, wireEditor, clearEditorDraft } from '../ui/editor.js';
@@ -20,6 +20,11 @@ import { quoteBlock } from '../lib/bbcode.js';
 import { loadSmilies } from '../lib/smilies.js';
 import { wireMemberTooltips } from '../ui/memberTooltip.js';
 import { wireTitleHold } from '../ui/titleHold.js';
+import { mountInfiniteScroll } from '../ui/infiniteScroll.js';
+
+// Posts currently on screen. Filled per page and extended as infinite scroll appends,
+// so the delegated click handler can resolve a post from any appended page.
+const postIndex = new Map();
 
 export async function viewThread(threadId, page, focusPost) {
   setActiveNav('home');
@@ -69,13 +74,13 @@ export async function viewThread(threadId, page, focusPost) {
         </div>
         <div class="block-outer">
           <div class="block-outer-main">
-            ${pagination(res.pagination, (p) => withPage(threadPath(thread), p), authorHtml)}
+                ${pagination(res.pagination, (p) => withPage(threadPath(thread), p), authorHtml, { scrollArm: false })}
           </div>
         </div>
-        <div class="block-body">
+        <div class="block-body" id="post-list">
           ${posts.map((p) => postHtml(p, thread, res.pagination ? res.pagination.current_page : 1)).join('')}
         </div>
-        <div class="block-outer block-outer--bottom">
+        <div class="block-outer block-outer--bottom" id="pager-slot">
           <div class="block-outer-main">
             ${pagination(res.pagination, (p) => withPage(threadPath(thread), p))}
           </div>
@@ -99,7 +104,28 @@ export async function viewThread(threadId, page, focusPost) {
     wireMemberTooltips(app, posts.map((post) => post.User));
     wireThreadActions(threadId, posts, thread, res.pagination ? res.pagination.current_page : 1);
     wirePageJump((p) => withPage(threadPath(thread), p));
+    wireScrollArm();
     hydrateReactionLists(app);
+    // Continuous scrolling: append the next page under the current one. Attachments and
+    // member tooltips are registered per page, so each append repeats that wiring.
+    mountInfiniteScroll({
+      makeHref: (p) => withPage(threadPath(thread), p),
+      currentPage: res.pagination?.current_page || 1,
+      lastPage: res.pagination?.last_page || 1,
+      after: document.getElementById('pager-slot'),
+      fetchPage: (p) => api.thread(threadId, p),
+      insert: (p, next) => {
+        const list = document.getElementById('post-list');
+        const more = next.posts || [];
+        if (!list || !more.length) return 0;
+        registerAttachments(more);
+        list.insertAdjacentHTML('beforeend', more.map((post) => postHtml(post, thread, p)).join(''));
+        hydrateReactionLists(list);
+        wireMemberTooltips(list, more.map((post) => post.User));
+        for (const post of more) postIndex.set(post.post_id, post);
+        return more.length;
+      },
+    });
     // Opening a thread marks it read, which is what clears the bold title in the
     // forum listing (thread.is_unread). Only the last page counts as "read".
     if (state.loggedIn && thread.is_unread && res.pagination && res.pagination.current_page >= res.pagination.last_page) {
@@ -119,7 +145,9 @@ export async function viewThread(threadId, page, focusPost) {
 }
 
 function wireThreadActions(threadId, posts, thread, page = 1) {
-  const byId = new Map(posts.map((p) => [p.post_id, p]));
+  postIndex.clear();
+  for (const post of posts) postIndex.set(post.post_id, post);
+  const byId = { get: (id) => postIndex.get(id) };
   const reload = (target, focus) => viewThread(threadId, target, focus);
 
   if (app._threadHandler) app.removeEventListener('click', app._threadHandler);

@@ -7,7 +7,7 @@
   padding: 7px 13px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--surface);
   color: var(--link);
   font: inherit;
   font-size: 14px;
@@ -18,11 +18,11 @@
 .button--primary {
   background: var(--block-header-bg);
   border-color: var(--block-header-bg);
-  color: var(--block-header-fg);
+  color: var(--on-dark);
 }
-.button--primary:hover { background: #6b80ab; border-color: #6b80ab; color: #fff; }
-.button--danger { color: #c62828; border-color: #e0b4b4; }
-.button--danger:hover { background: #fdeaea; border-color: #c62828; color: #c62828; }
+.button--primary:hover { background: var(--block-header-hover); border-color: var(--block-header-hover); color: var(--on-dark); }
+.button--danger { color: var(--danger-text-strong); border-color: var(--danger-border); }
+.button--danger:hover { background: var(--danger-bg); border-color: var(--danger-text-strong); color: var(--danger-text-strong); }
 .button--small { padding: 4px 9px; font-size: 13px; }
 .button[disabled] { opacity: .55; cursor: not-allowed; }
 
@@ -33,27 +33,27 @@
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 15px;
 }
-.input:focus, .textarea:focus { outline: 2px solid #b9c6dd; outline-offset: -1px; }
+.input:focus, .textarea:focus { outline: 2px solid var(--focus-ring); outline-offset: -1px; }
 .textarea { min-height: 130px; resize: vertical; font-family: inherit; }
 .formHint { font-size: 12px; color: var(--dimmed); margin-top: 4px; }
 .formError {
-  background: #fdeaea;
-  border: 1px solid #e0b4b4;
-  color: #a12626;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
   padding: 8px 10px;
   border-radius: var(--radius);
   font-size: 14px;
   margin-bottom: 10px;
 }
 .formSuccess {
-  background: #eaf6ea;
-  border: 1px solid #b4dcb4;
-  color: #256b25;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
   padding: 8px 10px;
   border-radius: var(--radius);
   font-size: 14px;
@@ -71,7 +71,7 @@
   padding: 4px 9px;
   border: 1px solid var(--border);
   border-radius: 3px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 13px;

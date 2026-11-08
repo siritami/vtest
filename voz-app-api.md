@@ -878,8 +878,17 @@ Every thread in `/forums/{id}/threads`, `/search-forums/{id}/threads`, `/threads
 | `is_watching` | the account is watching the thread |
 
 With a guest key (`XF-Api-Key` only) the flag still parses but reflects no account, so it
-should be treated as "read". Reading a thread (`GET /threads/{id}/`) or marking it read
-(`POST /threads/{id}/mark-read` with `date`) flips `is_unread` back to `false`.| GET | `/nodes/` | full node tree: `{ tree_map, nodes }`, 61 nodes |
+should be treated as "read". Reading a thread (`GET /threads/{id}/`) does **not** change
+`is_unread`; only `POST /threads/{id}/mark-read` with `date` flips it back to `false`.
+
+`GET /threads/{id}/` returns the same `is_unread` / `visitor_read_date` fields for the
+thread itself, alongside `pagination` and `post_date`-ordered `posts`, so the first unread
+post can be resolved from one call plus a walk back over `/threads/{id}/posts` — the API
+exposes no direct "first unread post id" and `/threads/{id}/posts?unread=1` is ignored.
+`visitor_read_date: null` means the account never opened the thread, so everything is
+unread and page 1 is the answer.
+
+| GET | `/nodes/` | full node tree: `{ tree_map, nodes }`, 61 nodes |
 | GET | `/nodes/{id}/` | single node |
 
 > `order=post_date` is the only ordering that actually works; `view_count`,

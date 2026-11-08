@@ -10,15 +10,17 @@ export function avatarUrlById(userId, size = 's') {
   return `https://data.voz.vn/avatars/${size}/${Math.floor(id / 1000)}/${id}.jpg`;
 }
 
-// XenForo's generated avatars cycle through a fixed palette.
+// XenForo's generated avatars cycle through a fixed palette. Each pair is a background and a
+// foreground chosen to clear WCAG AA against each other, so the initial stays readable
+// whatever theme is active — the avatar is content, not a themed surface.
 const DYNAMIC_AVATAR = [
-  ['#66cc66', '#206020'],
-  ['#669966', '#1f2e1f'],
-  ['#33cc99', '#0f3d2e'],
+  ['#66cc66', '#0d2b0d'],
+  ['#669966', '#0a140a'],
+  ['#33cc99', '#0a2a1f'],
   ['#339966', '#06130d'],
-  ['#66cc33', '#1f3d0f'],
-  ['#66cccc', '#206060'],
-  ['#99cc66', '#406020'],
+  ['#66cc33', '#12260a'],
+  ['#66cccc', '#0d2b2b'],
+  ['#99cc66', '#203010'],
 ];
 
 // Avatar with a coloured initial underneath, so a missing image degrades to the

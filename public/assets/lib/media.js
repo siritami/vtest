@@ -37,6 +37,28 @@ const frameRules = [
   ['embed.reddit.com', /^\/r\/[\w]+\/comments\/[a-z0-9]+(?:\/[\w-]*)?\/?$/i],
 ];
 
+// Providers the forum embeds via XenForo oEmbed but that have no direct iframe URL.
+// voz.vn resolves them server-side with data-xf-init="oembed" and replaces the fallback
+// with the returned markup; a still image is what actually ends up in the page.
+const OEMBED_SITES = {
+  flickr: (key) => `https://www.flickr.com/services/oembed/?url=${encodeURIComponent(`https://flic.kr/p/${key}`)}&format=json`,
+};
+
+// Flickr serves pictures from these hosts; anything else from an oEmbed payload is dropped.
+const OEMBED_IMAGE_HOSTS = ['live.staticflickr.com', 'staticflickr.com', 'farm1.staticflickr.com', 'farm2.staticflickr.com', 'farm3.staticflickr.com', 'farm4.staticflickr.com', 'farm5.staticflickr.com', 'farm6.staticflickr.com', 'farm8.staticflickr.com', 'farm9.staticflickr.com'];
+
+const oembedCache = new Map();
+
+function safeOembedImage(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    return OEMBED_IMAGE_HOSTS.includes(url.hostname) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function safeMediaUrl(value) {
   try {
     const url = new URL(value, 'https://voz.vn');
@@ -57,6 +79,81 @@ function configureFrame(frame, src) {
   frame.setAttribute('allowfullscreen', '');
 }
 
+// Fetches the provider's oEmbed payload and swaps the fallback for the picture it
+// describes. Runs through our proxy because neither provider sends CORS headers.
+//
+// sanitizeHtml() builds its markup in a detached document and returns innerHTML, so the
+// parsed node is not the one that ends up on the page. This waits for the placeholder to
+// arrive in the live document, then fills every copy of it (the same media key can appear
+// in more than one post).
+const OEMBED_SELECTOR = (site, key) => `[data-media-site-id="${CSS.escape(site)}"][data-id="${CSS.escape(key)}"]`;
+
+function findOembedPlaceholders(site, key, attempts = 40) {
+  const selector = OEMBED_SELECTOR(site, key);
+  return new Promise((resolve) => {
+    const poll = (left) => {
+      const found = [...document.querySelectorAll(selector)].filter((el) => el.classList.contains('media-embed--oembed'));
+      if (found.length || left <= 0) resolve(found);
+      else setTimeout(() => poll(left - 1), 100);
+    };
+    poll(attempts);
+  });
+}
+
+async function hydrateOembed(site, key, href) {
+  const cacheKey = `${site}:${key}`;
+  if (!oembedCache.has(cacheKey)) {
+    oembedCache.set(
+      cacheKey,
+      fetch(`/api/xf/oembed?${new URLSearchParams({ site, key })}`, { headers: { Accept: 'application/json' } })
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null)
+    );
+  }
+  const data = await oembedCache.get(cacheKey);
+  const targets = await findOembedPlaceholders(site, key);
+  if (!targets.length) return;
+  const src = safeOembedImage(data?.url || data?.thumbnail_url);
+  if (!src) {
+    oembedCache.delete(cacheKey);
+    for (const embed of targets) {
+      embed.classList.remove('media-embed--oembed');
+      embed.classList.add('media-embed--fallback');
+    }
+    return;
+  }
+  for (const embed of targets) {
+    // A second hydration pass (e.g. re-render) must not stack pictures.
+    if (embed.querySelector('img')) {
+      embed.classList.remove('media-embed--oembed');
+      continue;
+    }
+    const doc = embed.ownerDocument;
+    const link = doc.createElement('a');
+    link.href = data.web_page && /^https:\/\/www\.flickr\.com\//.test(data.web_page) ? data.web_page : href;
+    link.target = '_blank';
+    link.rel = 'noopener nofollow ugc';
+    const img = doc.createElement('img');
+    img.src = src;
+    img.alt = String(data.title || '').slice(0, 200);
+    img.loading = 'lazy';
+    img.className = 'bbImage';
+    if (Number(data.width) > 0) img.width = Number(data.width);
+    if (Number(data.height) > 0) img.height = Number(data.height);
+    link.append(img);
+    embed.replaceChildren(link);
+    const source = doc.createElement('a');
+    source.href = link.href;
+    source.target = '_blank';
+    source.rel = 'noopener nofollow ugc';
+    source.className = 'media-source';
+    source.textContent = 'Xem trên Flickr';
+    embed.append(source);
+    embed.classList.remove('media-embed--oembed');
+    embed.classList.remove('media-embed--fallback');
+  }
+}
+
 export function restoreMedia(root) {
   for (const frame of root.querySelectorAll('iframe')) {
     const src = safeMediaUrl(frame.getAttribute('src'));
@@ -69,6 +166,7 @@ export function restoreMedia(root) {
     const key = embed.dataset.mediaKey || embed.dataset.id || '';
     let src;
     let href;
+    let pendingOembed = false;
     if (['twitter', 'x'].includes(site) && /^\d+$/.test(key)) {
       src = `https://platform.twitter.com/embed/Tweet.html?id=${key}&dnt=true`;
       href = `https://x.com/i/status/${key}`;
@@ -84,6 +182,10 @@ export function restoreMedia(root) {
     } else if (site === 'imgur' && /^[\w-]{5,12}$/.test(key)) {
       src = `https://imgur.com/${key}/embed`;
       href = `https://imgur.com/${key}`;
+    } else if (OEMBED_SITES[site] && /^[\w-]{3,32}$/.test(key)) {
+      // Resolved asynchronously: the payload is a picture, not a frame.
+      href = site === 'flickr' ? `https://flic.kr/p/${key}` : '';
+      pendingOembed = true;
     }
     let frame = embed.querySelector('iframe');
     if (src) {
@@ -105,7 +207,11 @@ export function restoreMedia(root) {
     if (site === 'reddit') embed.classList.add('media-embed--reddit');
     if (site === 'imgur') embed.classList.add('media-embed--imgur');
     if (['twitter', 'x', 'reddit'].includes(site)) embed.classList.add('media-embed--social');
-    if (!frame) embed.classList.add('media-embed--fallback');
+    // A pending oEmbed keeps the provider fallback until the picture replaces it.
+    if (pendingOembed) {
+      embed.classList.add('media-embed--oembed');
+      hydrateOembed(site, key, href);
+    } else if (!frame) embed.classList.add('media-embed--fallback');
   }
   for (const frame of root.querySelectorAll('iframe.media-frame')) {
     if (!frame.closest('.media-embed')) {

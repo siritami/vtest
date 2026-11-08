@@ -1,21 +1,20 @@
 // One row of a XenForo thread list: icon | main | meta | latest | iconEnd.
 
 import { esc, num, timeAgo } from '../core/utils.js';
-import { threadPath, forumPath, userPath, withPage } from '../core/paths.js';
+import { threadPath, threadUnreadPath, forumPath, userPath, withPage } from '../core/paths.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { prefixLabel } from '../lib/prefix.js';
 import { bbcodeToPlain } from '../lib/bbcode.js';
-
-const POSTS_PER_PAGE = 20;
-
-function threadLastPage(thread) {
-  return Math.max(1, Math.ceil(((Number(thread.reply_count) || 0) + 1) / POSTS_PER_PAGE));
-}
+import { threadLastPage } from '../lib/unread.js';
 
 export function threadRow(thread, { sticky = false, showForum = false } = {}) {
   const starter = thread.User || { user_id: thread.user_id, username: thread.username };
   const lastUser = { user_id: thread.last_post_user_id, username: thread.last_post_username };
   const lastPage = threadLastPage(thread);
+  const unread = !!thread.is_unread;
+  // An unread thread links to /unread, which resolves to the first unread post — the same
+  // jump voz.vn's thread list performs instead of always landing on page 1.
+  const titleHref = unread ? threadUnreadPath(thread) : threadPath(thread);
   const statuses = [
     thread.discussion_open === false
       ? '<li><i class="structItem-status structItem-status--locked" title="Đã khóa"></i><span class="u-srOnly">Đã khóa</span></li>'
@@ -41,7 +40,7 @@ export function threadRow(thread, { sticky = false, showForum = false } = {}) {
       </div>
       <div class="structItem-cell structItem-cell--main">
         ${statuses ? `<ul class="structItem-statuses">${statuses}</ul>` : ''}
-        <div class="structItem-title">${prefixLabel(thread)}<a href="${threadPath(thread)}">${esc(thread.title)}</a></div>
+        <div class="structItem-title">${prefixLabel(thread)}<a href="${titleHref}">${esc(thread.title)}</a></div>
         <div class="structItem-minor">
           <ul class="structItem-parts">
             <li><a href="${userPath(starter)}">${esc(thread.username)}</a></li>

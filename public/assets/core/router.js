@@ -7,6 +7,7 @@ import { api } from '../api.js';
 import { navigate } from './nav.js';
 import { setRouteHandler } from './nav.js';
 import { errorBox } from '../ui/feedback.js';
+import { resolveUnread, threadLastPage } from '../lib/unread.js';
 import { viewHome, viewForum, viewSearchForum, viewNewThreads } from '../views/forum.js';
 import { viewThread } from '../views/thread.js';
 import { viewSearch } from '../views/search.js';
@@ -17,6 +18,7 @@ import { viewLogin } from '../views/login.js';
 import { viewCompose } from '../views/compose.js';
 import { viewSettings } from '../views/settings.js';
 import { refreshUnreadCounts } from '../ui/unreadCounts.js';
+import { teardownInfiniteScroll } from '../ui/infiniteScroll.js';
 
 export function parsePath() {
   const segments = location.pathname.split('/').filter(Boolean);
@@ -32,9 +34,31 @@ export function parsePath() {
   return { segments, params, page };
 }
 
+// Resolve a thread's first unread post. `GET /threads/{id}/` reports visitor_read_date,
+// is_unread and pagination without marking the thread read, so one call plus a short walk
+// back over /threads/{id}/posts is enough. Mirrors voz.vn's /t/<id>/unread resolution.
+//
+// Never throws for the "nothing unread" case: a read thread resolves to page 1 with no
+// post, which is exactly what voz.vn does when /unread has nothing newer to show. The
+// thread object is returned so the caller can keep the canonical slug in the URL.
+async function unreadTarget(threadId) {
+  const head = await api.thread(threadId, 1);
+  const thread = head.thread || { thread_id: threadId, title: '' };
+  const fallback = { thread, page: 1, postId: null };
+  if (!thread.is_unread) return fallback;
+
+  const target = await resolveUnread(
+    { visitorReadDate: thread.visitor_read_date, lastPage: threadLastPage(thread) },
+    (p) => api.threadPosts(threadId, p)
+  );
+  if (!target) return fallback;
+  return { thread, page: target.page, postId: target.postId };
+}
+
 export async function route() {
   const { segments, params, page } = parsePath();
   const head = segments[0] || '';
+  teardownInfiniteScroll();
 
   try {
     if (!head) return await viewHome();
@@ -51,7 +75,16 @@ export async function route() {
     if (head === 'f') return await viewForum(idFromSegment(segments[1]), page);
     if (head === 's') return await viewSearchForum(idFromSegment(segments[1]), page);
     if (head === 't') {
-      return await viewThread(idFromSegment(segments[1]), page, Number(params.get('post')) || null);
+      const threadId = idFromSegment(segments[1]);
+      // /t/<slug>.<id>/unread — voz.vn's jump-to-first-unread. The thread detail response
+      // carries visitor_read_date, so the page is derived here and the URL is replaced by
+      // the real one, exactly like voz.vn's server-side redirect.
+      if (segments[2] === 'unread') {
+        const target = await unreadTarget(threadId);
+        const href = `${withPage(threadPath(target.thread), target.page)}${target.postId ? `#post-${target.postId}` : ''}`;
+        return navigate(href, { replace: true });
+      }
+      return await viewThread(threadId, page, Number(params.get('post')) || null);
     }
     if (head === 'new') return await viewNewThreads(page);
     if (head === 'search') return await viewSearch(params.get('q') || '', params.get('id'), page);

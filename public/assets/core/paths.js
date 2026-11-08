@@ -24,6 +24,13 @@ export function threadPath(thread) {
   return slug ? `/t/${slug}.${thread.thread_id}/` : `/t/${thread.thread_id}/`;
 }
 
+// voz.vn's unread jump: same path plus an `unread` segment, which its server resolves into
+// /page-N#post-<id>. Reproduced so a thread-list link can carry the jump without needing
+// the read state at render time.
+export function threadUnreadPath(thread) {
+  return `${threadPath(thread)}unread`;
+}
+
 export function forumPath(forum) {
   const slug = slugify(forum.title);
   return slug ? `/f/${slug}.${forum.node_id}/` : `/f/${forum.node_id}/`;

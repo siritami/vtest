@@ -3,8 +3,10 @@
 import { app } from '../core/dom.js';
 import { esc } from '../core/utils.js';
 import { navigate } from '../core/nav.js';
+import { getInfiniteScroll } from '../lib/settings.js';
+import { armInfiniteScroll } from './infiniteScroll.js';
 
-export function pagination(p, makeHref, extraHtml = '') {
+export function pagination(p, makeHref, extraHtml = '', { scrollArm = true } = {}) {
   if (!p || !p.last_page || p.last_page <= 1) return '';
   const current = p.current_page || 1;
   const last = p.last_page;
@@ -24,12 +26,37 @@ export function pagination(p, makeHref, extraHtml = '') {
     prev = n;
   }
 
+  // "Kích hoạt theo người dùng yêu cầu": the pager offers a one-click opt-in for this page.
+  // A thread renders two pagers, so only the bottom one carries the control.
+  const scrollBtn =
+    scrollArm && current < last && getInfiniteScroll() === 'manual'
+      ? `<button type="button" class="pageNav-scrollBtn" data-scroll-arm title="Bật cuộn liên tục cho trang này" aria-label="Bật cuộn liên tục cho trang này"><span class="pageNav-scrollIcon" aria-hidden="true">⇣</span></button>`
+      : '';
+
   return `<div class="pageNav">
     ${current > 1 ? `<a href="${esc(makeHref(current - 1))}" class="pageNav-jump">‹ Trước</a>` : ''}
     <ul class="pageNav-main">${items}</ul>
     ${current < last ? `<a href="${esc(makeHref(current + 1))}" class="pageNav-jump">Sau ›</a>` : ''}
+    ${scrollBtn}
     ${extraHtml ? `<span class="pageNav-extra">${extraHtml}</span>` : ''}
   </div>`;
+}
+
+// Arms infinite scrolling for the current page from the pager button.
+export function wireScrollArm() {
+  for (const btn of app.querySelectorAll('[data-scroll-arm]')) {
+    if (btn.dataset.wired) continue;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (!armInfiniteScroll()) return;
+      btn.disabled = true;
+      btn.classList.add('is-active');
+      btn.innerHTML = '<span class="pageNav-scrollIcon" aria-hidden="true">⇣</span>';
+      btn.title = 'Đang cuộn liên tục';
+      btn.setAttribute('aria-label', 'Đang cuộn liên tục');
+    });
+  }
 }
 
 // Clicking "…" swaps it for a number input so any page can be jumped to.

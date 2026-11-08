@@ -9,6 +9,7 @@ import { sanitizeHtml } from '../lib/bbcode.js';
 import { registerAttachments } from '../lib/attachments.js';
 import { editorHtml, wireEditor, clearEditorDraft } from './editor.js';
 import { toast } from './feedback.js';
+import { suppressChromeAutoHide } from './chromeAutoHide.js';
 
 let active = null;
 
@@ -63,6 +64,9 @@ export function openInlineEdit(post, thread, page) {
     }
   });
   textarea.focus();
+  // Revealing the editor scrolls with block:'nearest', which can tuck the form under the
+  // sticky bars; tell the auto-hide watcher this scroll is ours, not the reader's.
+  suppressChromeAutoHide();
   form.scrollIntoView({ block: 'nearest' });
 
   form.addEventListener('submit', async (event) => {

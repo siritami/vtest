@@ -31,6 +31,11 @@ const SCOPES = [
 const SESSION_COOKIE = 'voz_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
+// oEmbed providers XenForo resolves server-side for [MEDIA=<site>]<key>[/MEDIA].
+const OEMBED_TARGETS = {
+  flickr: (key) => `https://www.flickr.com/services/oembed/?url=${encodeURIComponent(`https://flic.kr/p/${key}`)}&format=json`,
+};
+
 const encoder = new TextEncoder();
 
 function b64uEncode(str) {
@@ -281,6 +286,47 @@ export default async function handler(request) {
       scopes: SCOPES,
       authorizeUrl: `${SITE}/oauth2/authorize`,
     });
+  }
+
+  // XenForo resolves some embeds (flickr, …) through oEmbed instead of an iframe. voz.vn
+  // does that server-side with data-xf-init="oembed"; neither provider sends CORS headers,
+  // so the page must relay through us.
+  if (path === '/api/xf/oembed') {
+    const site = (url.searchParams.get('site') || '').toLowerCase();
+    const key = url.searchParams.get('key') || '';
+    const target = OEMBED_TARGETS[site];
+    if (!target || !/^[\w-]{3,32}$/.test(key)) {
+      return json({ error: 'unsupported_oembed' }, { status: 400, headers: corsHeaders(request) });
+    }
+    let upstream;
+    try {
+      upstream = await fetch(target(key), { headers: { Accept: 'application/json', 'User-Agent': UA } });
+    } catch {
+      return json({ error: 'oembed_unreachable' }, { status: 502, headers: corsHeaders(request) });
+    }
+    const text = await upstream.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      return json({ error: 'oembed_bad_response' }, { status: 502, headers: corsHeaders(request) });
+    }
+    const headers = new Headers(corsHeaders(request));
+    headers.set('Cache-Control', 'private, max-age=3600');
+    // Only the fields the page needs; the raw payload can carry arbitrary URLs.
+    return json(
+      {
+        provider: String(payload.provider_name || site),
+        type: String(payload.type || ''),
+        title: String(payload.title || '').slice(0, 300),
+        url: String(payload.url || ''),
+        thumbnail_url: String(payload.thumbnail_url || ''),
+        width: Number(payload.width) || 0,
+        height: Number(payload.height) || 0,
+        web_page: String(payload.web_page || ''),
+      },
+      { status: upstream.ok ? 200 : upstream.status, headers }
+    );
   }
 
   // Sticker albums are imported straight from imgur. The userscript used

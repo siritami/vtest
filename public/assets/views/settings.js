@@ -6,7 +6,9 @@ import { setBreadcrumbs } from '../ui/chrome.js';
 import { toast } from '../ui/feedback.js';
 import {
   loadSettings, addShortcut, updateShortcut, removeShortcut, moveShortcut,
-  exportSettingsJson, importSettingsJson,
+  exportSettingsJson, importSettingsJson, setInfiniteScroll,
+  SCROLL_MODES, SCROLL_LABELS,
+  setTheme, setFont, THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
 } from '../lib/settings.js';
 import {
   getAlbums, addAlbum, renameAlbum, removeAlbums, moveAlbum, setAlbumImages,
@@ -17,6 +19,40 @@ import { importImgurAlbum } from '../lib/imgurImport.js';
 import { ICON_DELETE, ICON_EDIT } from '../core/icons.js';
 
 const dragIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+
+const SCROLL_HELP = {
+  on: 'Tự nối trang kế tiếp khi cuộn tới cuối danh sách hoặc cuối chủ đề.',
+  manual: 'Hiện nút trong thanh số trang. Chỉ tự nối sau khi bạn bấm nút đó; tải lại trang phải bấm lại.',
+  off: 'Chỉ dùng thanh số trang, không tự nối trang.',
+};
+
+const THEME_HELP = {
+  auto: 'Theo thiết lập sáng/tối của hệ điều hành và đổi theo khi bạn đổi cài đặt hệ thống.',
+  light: 'Luôn dùng bảng màu sáng.',
+  dark: 'Luôn dùng bảng màu tối cho vùng nội dung. Thanh trên cùng và thanh điều hướng giữ nguyên.',
+};
+
+const FONT_HELP = {
+  system: 'Dùng phông có sẵn của máy, không tải thêm gì.',
+  roboto: 'Tải phông Roboto (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
+  'be-vietnam-pro': 'Tải phông Be Vietnam Pro (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
+};
+
+// Radio-card group shared by the appearance settings. `name` keys the input group and the
+// data attribute the change handler reads back.
+function optionCards(name, values, labels, help, active) {
+  return `<ul class="option-cards" role="radiogroup" aria-label="${esc(name)}">
+    ${values.map(
+      (value) => `<li>
+        <label class="option-card${active === value ? ' is-active' : ''}">
+          <input type="radio" name="${esc(name)}" value="${esc(value)}"${active === value ? ' checked' : ''}>
+          <span class="option-card-name">${esc(labels[value])}</span>
+          ${help && help[value] ? `<span class="option-card-desc">${esc(help[value])}</span>` : ''}
+        </label>
+      </li>`
+    ).join('')}
+  </ul>`;
+}
 
 function shortcutRows() {
   const { navShortcuts } = loadSettings();
@@ -68,38 +104,90 @@ function recentPreviewHtml() {
     .join('');
 }
 
-function settingsHtml() {
-  const { navShortcuts } = loadSettings();
+// The settings page is split into tabs so the reader sees one group at a time instead of one
+// long scroll. Every panel stays in the DOM (hidden with [hidden]) because the wiring below
+// resolves its elements once at mount — dropping a panel would leave those handlers bound to
+// detached nodes.
+const TABS = [
+  { id: 'appearance', label: 'Giao diện' },
+  { id: 'scroll', label: 'Cuộn trang liên tục' },
+  { id: 'shortcuts', label: 'Phím tắt' },
+  { id: 'stickers', label: 'Sticker' },
+  { id: 'backup', label: 'Sao lưu / phục hồi' },
+];
+
+const TAB_IDS = new Set(TABS.map((tab) => tab.id));
+
+// The active tab lives in the fragment so the choice survives a reload, and so the sticker
+// picker's "Quản lý sticker" link (/cai-dat-tuivoz#stickers) opens the right panel.
+export function settingsTabFromHash(hash = location.hash) {
+  const id = String(hash || '').replace(/^#/, '');
+  return TAB_IDS.has(id) ? id : TABS[0].id;
+}
+
+function tabsHtml(active) {
+  return `<div class="tabs settings-tabs" role="tablist" aria-label="Mục cài đặt">
+    ${TABS.map(
+      (tab) => `<button type="button" role="tab" id="tab-${tab.id}" data-tab="${tab.id}"
+        aria-selected="${tab.id === active}" aria-controls="panel-${tab.id}"
+            tabindex="${tab.id === active ? '0' : '-1'}"
+            class="${tab.id === active ? 'is-active' : ''}">${esc(tab.label)}</button>`
+        ).join('')}
+  </div>`;
+}
+
+function settingsHtml(active = settingsTabFromHash()) {
+  const { navShortcuts, infiniteScroll, theme, font } = loadSettings();
   const albums = getAlbums();
   return `<div class="block settings-block">
       <h1 class="block-header">Cài đặt</h1>
       <p class="settings-note">Các thiết lập dưới đây chỉ lưu trên trình duyệt này (localStorage), không gửi lên voz.vn.</p>
     </div>
-    <section class="block">
-      <h2 class="block-header">Phím tắt trên thanh điều hướng<span class="block-header-extra">${navShortcuts.length}</span></h2>
-      <div class="block-body--pad">
-        <p class="formHint">Phím tắt hiện cạnh <strong>Bài mới</strong> trên thanh trên cùng, theo thứ tự từ trên xuống dưới, trái sang phải. Kéo thả để đổi thứ tự.</p>
-        <ul class="shortcut-list" id="shortcut-list">${shortcutRows()}</ul>
-        <form id="shortcut-form" class="shortcut-form" autocomplete="off">
-          <div class="formRow">
-            <label for="shortcut-name">Tên phím tắt</label>
-            <input class="input" id="shortcut-name" name="name" maxlength="40" placeholder="Ví dụ: Overclock" required>
-          </div>
-          <div class="formRow">
-            <label for="shortcut-url">Liên kết</label>
-            <input class="input" id="shortcut-url" name="url" maxlength="500" placeholder="Ví dụ: http://localhost:3111/f/overclocking-cooling-modding.6/" required>
-          </div>
-          <p class="formError" id="shortcut-error" hidden></p>
-          <div class="shortcut-form-actions">
-            <button class="button button--primary" type="submit" id="shortcut-submit">Thêm phím tắt</button>
-            <button class="button" type="button" id="shortcut-cancel" hidden>Huỷ sửa</button>
-          </div>
-        </form>
-      </div>
-    </section>
-    <section class="block" id="stickers">
-      <h2 class="block-header">Sticker<span class="block-header-extra" id="sticker-count">${albums.length}</span></h2>
-      <div class="block-body--pad">
+    <div class="block settings-tabbed">
+      ${tabsHtml(active)}
+      <section class="settings-panel" id="panel-appearance" role="tabpanel" aria-labelledby="tab-appearance"${active === 'appearance' ? '' : ' hidden'}>
+        <h2 class="block-header">Giao diện</h2>
+        <div class="block-body--pad">
+          <h3 class="settings-subhead">Chọn giao diện</h3>
+          <p class="formHint">Sáng/tối chỉ áp dụng cho vùng nội dung. Thanh trên cùng và thanh điều hướng giữ nguyên kiểu voz.vn.</p>
+          ${optionCards('theme-mode', THEME_MODES, THEME_LABELS, THEME_HELP, theme)}
+          <h3 class="settings-subhead">Phông chữ</h3>
+          <p class="formHint">Phông nằm trong máy chủ của trang này và chỉ được tải khi bạn chọn, nên mặc định không tốn thêm dữ liệu.</p>
+          ${optionCards('font-family', FONTS, FONT_LABELS, FONT_HELP, font)}
+        </div>
+      </section>
+      <section class="settings-panel" id="panel-scroll" role="tabpanel" aria-labelledby="tab-scroll"${active === 'scroll' ? '' : ' hidden'}>
+        <h2 class="block-header">Cuộn trang liên tục</h2>
+        <div class="block-body--pad">
+          <p class="formHint">Áp dụng cho danh sách chủ đề và trong chủ đề: khi cuộn tới cuối trang, trang kế tiếp được nối thêm vào bên dưới thay vì phải bấm số trang.</p>
+          ${optionCards('infinite-scroll', SCROLL_MODES, SCROLL_LABELS, SCROLL_HELP, infiniteScroll)}
+        </div>
+      </section>
+      <section class="settings-panel" id="panel-shortcuts" role="tabpanel" aria-labelledby="tab-shortcuts"${active === 'shortcuts' ? '' : ' hidden'}>
+        <h2 class="block-header">Phím tắt trên thanh điều hướng<span class="block-header-extra">${navShortcuts.length}</span></h2>
+        <div class="block-body--pad">
+          <p class="formHint">Phím tắt hiện cạnh <strong>Bài mới</strong> trên thanh trên cùng, theo thứ tự từ trên xuống dưới, trái sang phải. Kéo thả để đổi thứ tự.</p>
+          <ul class="shortcut-list" id="shortcut-list">${shortcutRows()}</ul>
+          <form id="shortcut-form" class="shortcut-form" autocomplete="off">
+            <div class="formRow">
+              <label for="shortcut-name">Tên phím tắt</label>
+              <input class="input" id="shortcut-name" name="name" maxlength="40" placeholder="Ví dụ: Overclock" required>
+            </div>
+            <div class="formRow">
+              <label for="shortcut-url">Liên kết</label>
+              <input class="input" id="shortcut-url" name="url" maxlength="500" placeholder="Ví dụ: http://localhost:3111/f/overclocking-cooling-modding.6/" required>
+            </div>
+            <p class="formError" id="shortcut-error" hidden></p>
+            <div class="shortcut-form-actions">
+              <button class="button button--primary" type="submit" id="shortcut-submit">Thêm phím tắt</button>
+              <button class="button" type="button" id="shortcut-cancel" hidden>Huỷ sửa</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section class="settings-panel" id="panel-stickers" role="tabpanel" aria-labelledby="tab-stickers"${active === 'stickers' ? '' : ' hidden'}>
+        <h2 class="block-header">Sticker<span class="block-header-extra" id="sticker-count">${albums.length}</span></h2>
+        <div class="block-body--pad">
         <p class="formHint">Album sticker dùng trong nút <strong>Sticker</strong> ở thanh công cụ soạn thảo. Thêm album từ imgur (tải ảnh về máy dưới dạng base64) hoặc tạo album từ ảnh tự chọn.</p>
         <ul class="sticker-album-list" id="sticker-album-list">${stickerAlbumRows()}</ul>
         <div class="sticker-actions">
@@ -175,23 +263,24 @@ function settingsHtml() {
             <button class="button button--danger" type="button" id="sticker-recent-clear">Xoá hết gần đây</button>
           </div>
         </div>
-      </div>
-    </section>
-    <section class="block">
-      <h2 class="block-header">Sao lưu / phục hồi</h2>
-      <div class="block-body--pad settings-backup">
-        <p class="formHint">JSON chứa thiết lập của trang này <strong>và</strong> toàn bộ album sticker (kèm ảnh base64). Dán JSON vào ô dưới rồi bấm Phục hồi để ghi đè.</p>
-        <label class="u-srOnly" for="settings-json">JSON thiết lập</label>
-        <textarea class="textarea code-box" id="settings-json" spellcheck="false" rows="10"></textarea>
-        <p class="formError" id="settings-json-error" hidden></p>
-        <div class="shortcut-form-actions">
-          <button class="button" type="button" id="settings-export">Xuất JSON</button>
-          <button class="button" type="button" id="settings-download">Tải tệp .json</button>
-          <button class="button button--primary" type="button" id="settings-import">Phục hồi từ JSON</button>
-          <button class="button button--danger" type="button" id="settings-reset">Xoá toàn bộ thiết lập</button>
+                  </div>
+                </section>
+                <section class="settings-panel" id="panel-backup" role="tabpanel" aria-labelledby="tab-backup"${active === 'backup' ? '' : ' hidden'}>
+        <h2 class="block-header">Sao lưu / phục hồi</h2>
+        <div class="block-body--pad settings-backup">
+          <p class="formHint">JSON chứa thiết lập của trang này <strong>và</strong> toàn bộ album sticker (kèm ảnh base64). Dán JSON vào ô dưới rồi bấm Phục hồi để ghi đè.</p>
+          <label class="u-srOnly" for="settings-json">JSON thiết lập</label>
+          <textarea class="textarea code-box" id="settings-json" spellcheck="false" rows="10"></textarea>
+          <p class="formError" id="settings-json-error" hidden></p>
+          <div class="shortcut-form-actions">
+            <button class="button" type="button" id="settings-export">Xuất JSON</button>
+            <button class="button" type="button" id="settings-download">Tải tệp .json</button>
+            <button class="button button--primary" type="button" id="settings-import">Phục hồi từ JSON</button>
+            <button class="button button--danger" type="button" id="settings-reset">Xoá toàn bộ thiết lập</button>
+          </div>
         </div>
-      </div>
-    </section>`;
+      </section>
+    </div>`;
 }
 
 // Writes an imported JSON payload into storage and reports what changed.
@@ -624,6 +713,7 @@ function openAlbumImages(albumId, onChange) {
 export function viewSettings() {
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Cài đặt' }]);
   app.innerHTML = settingsHtml();
+  wireSettingsTabs();
 
   const list = document.getElementById('shortcut-list');
   const form = document.getElementById('shortcut-form');
@@ -635,6 +725,21 @@ export function viewSettings() {
   const rerenderExtras = wireStickerSettings();
   let editingId = null;
   let draggedId = null;
+
+  // Appearance: theme and font both re-apply immediately. ui/theme.js owns the DOM side and
+  // listens for voz:settings, which saveSettings fires — so no reload is needed.
+  wireOptionGroup('theme-mode', (value) => {
+    setTheme(value);
+    toast(`Giao diện: ${THEME_LABELS[value]}`);
+  });
+  wireOptionGroup('font-family', (value) => {
+    setFont(value);
+    toast(`Phông chữ: ${FONT_LABELS[value]}`);
+  });
+  wireOptionGroup('infinite-scroll', (value) => {
+    setInfiniteScroll(value);
+    toast(`Cuộn trang liên tục: ${SCROLL_LABELS[value]}`);
+  });
 
   const showError = (message) => {
     errorEl.textContent = message;
@@ -785,4 +890,66 @@ export function viewSettings() {
   });
 
   jsonBox.value = buildBackup();
+}
+
+// Tab switcher for the settings panels. Panels are toggled with [hidden] and the selection is
+// mirrored into the fragment with replaceState, so a reload reopens the same tab without
+// pushing a history entry for every click.
+function wireSettingsTabs() {
+  const list = app.querySelector('.settings-tabs');
+  if (!list) return;
+
+  const activate = (id, { focus = false } = {}) => {
+    if (!TAB_IDS.has(id)) return;
+    for (const btn of list.querySelectorAll('[data-tab]')) {
+      const on = btn.dataset.tab === id;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', String(on));
+      btn.tabIndex = on ? 0 : -1;
+      if (on && focus) btn.focus();
+    }
+    for (const panel of app.querySelectorAll('.settings-panel')) {
+      panel.hidden = panel.id !== `panel-${id}`;
+    }
+    try {
+      history.replaceState(null, '', `${location.pathname}${location.search}#${id}`);
+    } catch {
+      /* replaceState can fail on a stale entry; the tab still switched, only the URL lags. */
+    }
+  };
+
+  list.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-tab]');
+    if (btn && !btn.classList.contains('is-active')) activate(btn.dataset.tab);
+  });
+
+  // Full keyboard support for the tablist: arrows wrap, Home/End jump to the ends.
+  list.addEventListener('keydown', (event) => {
+    const index = TAB_IDS.size ? [...list.querySelectorAll('[data-tab]')].indexOf(event.target.closest('[data-tab]')) : -1;
+    if (index < 0) return;
+    const ids = [...list.querySelectorAll('[data-tab]')].map((b) => b.dataset.tab);
+    let next = null;
+    if (event.key === 'ArrowRight') next = ids[(index + 1) % ids.length];
+    else if (event.key === 'ArrowLeft') next = ids[(index - 1 + ids.length) % ids.length];
+    else if (event.key === 'Home') next = ids[0];
+    else if (event.key === 'End') next = ids[ids.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    activate(next, { focus: true });
+  });
+}
+
+// Wires one radio-card group: writes the value, moves is-active, and toasts. Kept generic so
+// the appearance groups and the pager mode all behave identically.
+function wireOptionGroup(name, onPick) {
+  const group = document.querySelector(`.option-cards input[name="${name}"]`)?.closest('.option-cards');
+  if (!group) return;
+  group.addEventListener('change', (event) => {
+    const input = event.target.closest(`input[name="${name}"]`);
+    if (!input) return;
+    onPick(input.value);
+    for (const label of group.querySelectorAll('.option-card')) {
+      label.classList.toggle('is-active', label.querySelector('input').value === input.value);
+    }
+  });
 }

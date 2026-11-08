@@ -33,7 +33,55 @@ export function normalizeShortcut(raw) {
   return { id, name, url };
 }
 
-export const emptySettings = () => ({ version: 1, navShortcuts: [] });
+export const emptySettings = () => ({
+  version: 1,
+  navShortcuts: [],
+  infiniteScroll: SCROLL_DEFAULT,
+  theme: THEME_DEFAULT,
+  font: FONT_DEFAULT,
+});
+
+// Colour scheme for the content area. The page chrome (header, nav) keeps its dark
+// VOZ styling in both modes — only the reading surface flips.
+//   auto  — follow the OS via prefers-color-scheme, and re-follow it if the OS changes
+//   light — always the original palette
+//   dark  — always the dark palette
+export const THEME_MODES = ['auto', 'light', 'dark'];
+export const THEME_DEFAULT = 'auto';
+export const THEME_LABELS = {
+  auto: 'Tự động theo hệ thống',
+  light: 'Sáng',
+  dark: 'Tối',
+};
+
+// Typography. `system` keeps the original stack and downloads nothing; the other two load a
+// vendored woff2 set (assets/css/fonts.css) only once they are selected.
+export const FONTS = ['system', 'roboto', 'be-vietnam-pro'];
+export const FONT_DEFAULT = 'system';
+export const FONT_LABELS = {
+  system: 'Mặc định hệ thống',
+  roboto: 'Roboto',
+  'be-vietnam-pro': 'Be Vietnam Pro',
+};
+// Family name + the stylesheet to load for each downloadable option. `null` means "use the
+// --font stack as-is" and inject nothing.
+export const FONT_STACKS = {
+  system: null,
+  roboto: 'Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  'be-vietnam-pro': '"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+};
+
+// Infinite scroll for thread lists and threads:
+//   on     — load the next page automatically when the bottom is reached
+//   manual — show a button in the pager; auto-load only after the user clicks it
+//   off    — pager only
+export const SCROLL_MODES = ['on', 'manual', 'off'];
+export const SCROLL_DEFAULT = 'manual';
+export const SCROLL_LABELS = {
+  on: 'Bật',
+  manual: 'Kích hoạt theo người dùng yêu cầu',
+  off: 'Tắt',
+};
 
 // Shown until the user edits the list; saved on first change so removals stick.
 export const DEFAULT_SHORTCUTS = [
@@ -43,6 +91,9 @@ export const DEFAULT_SHORTCUTS = [
 
 export function normalizeSettings(raw) {
   const out = emptySettings();
+  out.infiniteScroll = SCROLL_MODES.includes(raw?.infiniteScroll) ? raw.infiniteScroll : SCROLL_DEFAULT;
+  out.theme = THEME_MODES.includes(raw?.theme) ? raw.theme : THEME_DEFAULT;
+  out.font = FONTS.includes(raw?.font) ? raw.font : FONT_DEFAULT;
   const list = Array.isArray(raw?.navShortcuts) ? raw.navShortcuts : [];
   const seen = new Set();
   for (const item of list.slice(0, MAX_SHORTCUTS)) {
@@ -115,6 +166,39 @@ export function moveShortcut(id, toIndex) {
   return saveSettings(settings);
 }
 
+export function setInfiniteScroll(mode) {
+  const settings = loadSettings();
+  settings.infiniteScroll = SCROLL_MODES.includes(mode) ? mode : SCROLL_DEFAULT;
+  return saveSettings(settings);
+}
+
+export function getInfiniteScroll() {
+  const mode = loadSettings().infiniteScroll;
+  return SCROLL_MODES.includes(mode) ? mode : SCROLL_DEFAULT;
+}
+
+export function setTheme(mode) {
+  const settings = loadSettings();
+  settings.theme = THEME_MODES.includes(mode) ? mode : THEME_DEFAULT;
+  return saveSettings(settings);
+}
+
+export function getTheme() {
+  const mode = loadSettings().theme;
+  return THEME_MODES.includes(mode) ? mode : THEME_DEFAULT;
+}
+
+export function setFont(font) {
+  const settings = loadSettings();
+  settings.font = FONTS.includes(font) ? font : FONT_DEFAULT;
+  return saveSettings(settings);
+}
+
+export function getFont() {
+  const font = loadSettings().font;
+  return FONTS.includes(font) ? font : FONT_DEFAULT;
+}
+
 export function exportSettingsJson({ albums = [], recent = [], clientId } = {}) {
   const settings = loadSettings();
   const payload = {
@@ -122,6 +206,9 @@ export function exportSettingsJson({ albums = [], recent = [], clientId } = {}) 
     version: 1,
     exportedAt: new Date().toISOString(),
     navShortcuts: settings.navShortcuts,
+    infiniteScroll: settings.infiniteScroll,
+    theme: settings.theme,
+    font: settings.font,
   };
   // Sticker payload mirrors the userscript backup so either file can be restored.
   if (albums.length || recent.length || clientId) {
