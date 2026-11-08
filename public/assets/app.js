@@ -60,6 +60,19 @@ window.addEventListener('popstate', () => {
   route();
 });
 
+// Cài đặt → Giao diện → "Hiện thị số liệu không rút gọn" changes how every number and date is
+// formatted, and those strings are baked into the markup at render time. Re-running the current
+// route rebuilds the view in place so the switch is visible immediately. The settings page is
+// skipped: it shows no statistics, and re-rendering it would drop the reader's tab and focus.
+// The scroll offset is restored afterwards so a change made in another tab does not throw the
+// reader back to the top of a long thread.
+window.addEventListener('voz:format-change', async () => {
+  if (location.pathname.startsWith('/cai-dat-tuivoz')) return;
+  const top = window.scrollY;
+  await route();
+  window.scrollTo({ top });
+});
+
 (async function boot() {
   // Legacy hash URLs (#/t/123) are rewritten to the path form.
   if (location.hash.startsWith('#/')) {

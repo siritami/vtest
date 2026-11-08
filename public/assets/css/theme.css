@@ -40,5 +40,19 @@
 :root[data-font="be-vietnam-pro"] { font-family: var(--font); }
 :root[data-font="be-vietnam"] { font-family: var(--font); }
 
+/* Bold grade per family. The stylesheets ask for `font-weight: 600` in ~39 places and 700 in
+   ~11, and fonts.css declares each vendored family's heaviest real cut in the 600 slot — so
+   those requests land on a full Bold and read heavier than voz.vn. The four families that
+   ship a real Medium (Roboto, Be Vietnam Pro, SF Pro Display) or a Bold that is too heavy at
+   this size (Cantarell) are pulled down to 500 here; `system`, `segoe-ui` and the default
+   `be-vietnam` keep the stock 600. `--fw-bold` is the single knob: every 600/700 in the
+   stylesheets resolves to it, so a family only has to re-point this one property. */
+:root[data-font="roboto"],
+:root[data-font="be-vietnam-pro"],
+:root[data-font="sf-pro-display"],
+:root[data-font="cantarell"] {
+  --fw-bold: 500;
+}
+
 /* Selection colour follows the accent in both themes. */
 :root[data-theme="dark"] ::selection { background: #3f4e6c; color: var(--text); }

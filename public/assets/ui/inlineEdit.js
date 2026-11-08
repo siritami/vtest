@@ -14,8 +14,8 @@ import { suppressChromeAutoHide } from './chromeAutoHide.js';
 let active = null;
 
 function attributionHtml(post, thread, page) {
-  const edited = post.last_edit_date ? `<span class="u-dimmed">· Đã sửa ${timeAgo(post.last_edit_date)}</span>` : '';
-  return `<li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}"><time data-post-time title="${esc(fullDate(post.post_date))}">${postDate(post.post_date)}</time></a></li>${edited ? `<li>${edited}</li>` : ''}`;
+  const edited = post.last_edit_date ? `<span class="u-dimmed">· Đã sửa ${timeAgo(post.last_edit_date, 'thread')}</span>` : '';
+  return `<li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}"><time data-post-time title="${esc(fullDate(post.post_date))}">${postDate(post.post_date, 'thread')}</time></a></li>${edited ? `<li>${edited}</li>` : ''}`;
 }
 
 export function cancelInlineEdit() {

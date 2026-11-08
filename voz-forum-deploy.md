@@ -135,7 +135,7 @@ ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống
 - Tìm kiếm hỗ trợ từ khoá **hoặc** bài viết của một thành viên. API không áp dụng `title_only`/`users` trên tìm từ khoá; tìm nâng cao đầy đủ mở voz.vn, không giả lập bộ lọc bị bỏ qua.
 - `views/compose.js` xử lý `/f/<slug>.<id>/post-thread`, kiểm tra quyền và lấy tiền tố từ API. Nút đăng gửi dữ liệu thật lên voz.vn; không dùng nút này để kiểm tra trên dữ liệu thật. Diễn đàn yêu cầu trường đặc biệt mở composer trên voz.vn.
 - Nút Tạo chủ đề mới nằm cùng hàng breadcrumb của diễn đàn, kể cả trên mobile; breadcrumb dài tự xuống dòng trong phần bên trái.
-- Trên mobile ≤620px, thống kê Bài viết / Điểm / Tham gia hiển thị bên phải tên và badge tác giả; số lượng rút gọn K/M, ngày tham gia hiển thị năm.
+- Trên mobile ≤620px, thống kê Bài viết / Điểm / Tham gia hiển thị bên phải tên và badge tác giả; số lượng rút gọn K/M (hoặc đầy đủ khi bật "Hiện thị số liệu không rút gọn"), ngày tham gia hiển thị năm (hoặc ngày đầy đủ khi bật).
 - Phân trang cuối danh sách chủ đề dùng `.block-outer` trong suốt giống trang chủ đề.
 - Chủ đề có bài mới chưa đọc in đậm tiêu đề (`font-weight: 600`), đọc rồi trở về 400 — giống voz.vn. API `/forums/{id}/threads` trả sẵn `is_unread` (kèm `first_unread_snippet`, `visitor_read_date`) theo tài khoản đang đăng nhập, nên không cần gọi thêm endpoint: `ui/threadRow.js` thêm class `is-unread` và `css/forum.css` lo phần in đậm, nhãn tiền tố vẫn giữ 400. Cơ chế `is-unread` này dùng chung với trang chủ (`node-row`) và hộp thư (`dm-row`).
 - **Nhảy tới bài chưa đọc.** Tiêu đề của chủ đề `is_unread` trỏ `/t/<slug>.<id>/unread` — đúng dạng link voz.vn đặt trong `structItem-title` — rồi `router.js` phân giải thành `/t/…/page-N/#post-<id>` và `replaceState`, y như redirect phía server của voz.vn. API **không** có "id bài chưa đọc đầu tiên": `/threads/{id}/posts` không lọc theo trạng thái đọc và `/threads/{id}/?unread=1` bị bỏ qua. Bù lại `GET /threads/{id}/` trả `visitor_read_date` + `pagination` **mà không** đánh dấu đã đọc, nên `lib/unread.js` (`resolveUnread`) đi ngược từ trang cuối, gặp trang đầu tiên có bài mới hơn `visitor_read_date` là dừng — chủ đề dài thường chỉ tốn 1–2 request. `visitor_read_date: null` (chưa từng mở) ⇒ về trang 1, không gắn fragment. Chặn trần `MAX_PAGE_WALKS` 12 lần để chủ đề bất thường không nối request vô hạn; lỗi mạng giữ kết quả trang đã phân giải được. Thread đã đọc hết ⇒ về trang 1, không fragment (không sinh `#post-null`).
@@ -483,7 +483,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | File | Export | Việc làm |
 |---|---|---|
 | `dom.js` | `app`, `breadcrumbsEl`, `accountEl`, `navEl`, `toastEl`, `modalRoot`, `state` | giữ handle DOM lấy một lần lúc load + state toàn cục `{ me, loggedIn, reactions, nodes, config }` |
-| `utils.js` | `esc`, `num`, `unix`, `timeAgo`, `postDate`, `fullDate` | escape HTML; rút gọn số kiểu voz (`12K`, `444K`, `1M`); đổi giây → ms; thời gian tương đối |
+| `utils.js` | `esc`, `num`, `unix`, `timeAgo`, `postDate`, `fullDate`, `joinDate`, `setFullNumbersMode` | escape HTML; rút gọn số kiểu voz (`12K`, `444K`, `1M`) hoặc số đầy đủ khi bật "không rút gọn"; đổi giây → ms; thời gian tương đối hoặc tuyệt đối; năm hoặc ngày tham gia đầy đủ |
 | `paths.js` | `slugify`, `idFromSegment`, `threadPath`, `threadUnreadPath`, `forumPath`, `searchForumPath`, `userPath`, `dmPath`, `withPage` | dựng URL có slug giống voz.vn; `threadUnreadPath` = `threadPath` + `unread` |
 | `nav.js` | `setRouteHandler`, `navigate`, `currentPage` | `pushState`/`replaceState` + gọi router; đọc `?page=` (hỗ trợ `last`) |
 | `router.js` | `parsePath`, `route` | tách `/page-{n}` khỏi segment cuối, phân nhánh theo segment đầu, gọi view, bắt lỗi bằng `errorBox()`, cuối cùng `refreshUnreadCounts()` |
@@ -1197,7 +1197,8 @@ Nếu `avatar_urls` tồn tại nhưng toàn `null` thì user thật sự không
 chữ cái, không đoán (tránh 404).
 
 **Số liệu** làm tròn giống voz.vn: `12301 → 12K`, `443764 → 444K`, `1274095 → 1M`
-(`Math.round`, không có phần thập phân).
+(`Math.round`, không có phần thập phân). Cài đặt → Giao diện → **Hiện thị số liệu không rút
+gọn** tắt cách rút gọn này (xem §7.1).
 
 ---
 
@@ -1258,7 +1259,8 @@ lưu trong `localStorage['voz-settings:v1']` của trình duyệt.
 ### Tab
 
 Trang chia thành **5 tab** thay vì một chuỗi dài phải cuộn: `Giao diện` (sáng/tối, phông,
-cỡ chữ), `Cuộn trang liên tục`, `Phím tắt`, `Sticker`, `Sao lưu / phục hồi`.
+cỡ chữ, số liệu không rút gọn), `Cuộn trang liên tục`, `Phím tắt`, `Sticker`,
+`Sao lưu / phục hồi`.
 
 - Tab đang chọn nằm ở **fragment**: `/cai-dat-tuivoz#stickers`. Nhờ vậy F5 mở lại đúng tab,
   và link **Quản lý sticker** trong popup sticker (`ui/stickerPicker.js` →
@@ -1667,6 +1669,38 @@ Hai thanh trượt độc lập, đúng như tên gọi:
   `--font: var(--font-control)` — `ui/theme.js` chỉ ghi `--font`, nội dung bài giữ nguyên
   `--font-post`. Phông chữ dùng chung cho cả site (một thiết lập), nhưng tách token để việc
   ghi đè không vô hiệu hoá nhánh bài viết.
+
+**Hiện thị số liệu không rút gọn** (`fullNumbers`: `off` | `thread` | `all`, mặc định `off`).
+
+voz.vn rút gọn số liệu (`13K`, `1M`) và in thời gian tương đối (`3 giờ trước`). Ba lựa chọn
+trong Cài đặt → Giao diện:
+
+| # | Key | Nhãn | Phạm vi |
+|---|---|---|---|
+| 1 | `off` | Tắt — rút gọn như voz.vn | giữ nguyên kiểu voz.vn *(mặc định)* |
+| 2 | `thread` | Áp dụng cho bên trong thread | chỉ bài viết, tiêu đề chủ đề, thẻ thành viên |
+| 3 | `all` | Áp dụng cho toàn bộ web | mọi view, kể cả danh sách chủ đề, hồ sơ, trang chủ |
+
+- **Cơ chế.** `core/utils.js` giữ biến module `fullNumbersMode`; `num()`, `timeAgo()`,
+  `postDate()` và `joinDate()` nhận thêm tham số `scope`. Call site **bên trong chủ đề**
+  truyền `'thread'`; mọi call site khác bỏ trống. `isFull(scope)` trả true khi mode là
+  `all`, hoặc `thread` + `scope === 'thread'`. Nhờ vậy `thread` chỉ đổi đúng vùng trong
+  chủ đề mà không phải sửa từng view.
+- **Vì sao không import `lib/settings.js` từ `core/`.** Tầng import một chiều
+  (`views` → `ui` → `lib` → `core`). `ui/theme.js` đọc `getFullNumbers()` rồi gọi
+  `setFullNumbersMode()` — cùng chỗ với `applyTheme()`/`applyFontScale()`.
+- **Số đầy đủ.** Dùng `toLocaleString('en-US')` → `12,685` / `10,259`, khớp định dạng
+  `postNumber()` của voz.vn (`#13,661`), không phải dấu chấm kiểu vi-VN.
+- **Thời gian.** `timeAgo()` trả `fullDate()` (`18:23 08/11/2026`) thay vì `4 giờ trước`;
+  `postDate()` trả thẳng `fullDate()`; `joinDate()` trả `20/03/2026` thay vì `2026`.
+- **Áp ngay, không cần tải lại.** `applyAppearance()` so mode vừa đọc với lần trước; nếu
+  khác thì bắn `voz:format-change`. `app.js` nghe event đó, chạy lại `route()` và khôi
+  phục `scrollY` — trừ trang `/cai-dat-tuivoz` (không có số liệu, và render lại sẽ mất tab
+  đang chọn). Lần gọi đầu lúc boot không bắn event (`lastFullNumbers === null`).
+- **`index.html` không cần script inline.** Khác `theme`/`font`/`cỡ chữ`, số liệu chỉ có
+  trong markup do JS dựng, nên không có gì để chống nhấp nháy trước lần vẽ đầu.
+- **Sao lưu.** `fullNumbers` nằm trong `exportSettingsJson()` / `importSettingsJson()`, nên
+  tệp JSON thiết lập chuyển được lựa chọn này sang máy khác.
 
 **Độ tương phản.** Toàn bộ vùng nội dung được đo bằng công cụ chạy trong trình duyệt (đọc
 `getComputedStyle`, tự tìm nền đục gần nhất ở tổ tiên, tính tỉ lệ WCAG, xét ngưỡng 4.5 cho
@@ -2137,7 +2171,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 | Đổi bố cục mobile | `css/responsive.css` (breakpoint 900/860/650/620) hoặc `@media` trong file khu vực |
 | Thêm BBCode mới | `lib/editorCodec.js` (`inline`/`block` map) + `lib/spoilers.js` nếu là block đặc biệt + `ui/editorTools.js` nếu cần nút |
 | Thêm provider media | `frameRules` + `restoreMedia()` trong `lib/media.js`, và nhánh tương ứng trong `editorTools.js`. Provider không có iframe (như Flickr) thì thêm vào `OEMBED_SITES`/`OEMBED_IMAGE_HOSTS` và `OEMBED_TARGETS` trong proxy. Provider cần SDK bên thứ ba (như Facebook) thì theo mục **Facebook** ở trên: nhánh riêng, giữ nguyên markup, và parse trên `document` chứ không phải `root`. Provider đến từ **liên kết trần** chứ không phải `[MEDIA=…]` (như Douyin) thì quét `a[href]` trong `restoreMedia()`, và nếu cần một bước mạng mà trình duyệt không tự làm được (redirect không CORS) thì thêm endpoint riêng trong `api/[...path].js` — xem mục **Douyin** ở trên |
-| Đổi cách hiển thị thời gian | `core/utils.js` (`timeAgo` / `postDate` / `fullDate`) |
+| Đổi cách hiển thị thời gian | `core/utils.js` (`timeAgo` / `postDate` / `fullDate` / `joinDate`) |
 | Đổi badge chưa đọc | `ui/unreadCounts.js` |
 | Đổi nháp editor | `ui/editor.js` (`draftKey`, `save()`, `editor:clear-draft`) |
 | Thêm thiết lập mới | `lib/settings.js` (thêm field vào `emptySettings`/`normalizeSettings` + getter/setter + hằng số nhãn) + form trong `views/settings.js`; JSON backup tự động gồm field mới. Có hai nguồn nhãn cần cập nhật nếu thiết lập là giao diện: script inline trong `index.html` và `ui/theme.js` |

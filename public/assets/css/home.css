@@ -4,7 +4,7 @@
 .node-row.is-unread .node-icon { color: #ffba8c; }
 .node-main { padding: 0 10px 0 0; }
 .node-title { font-size: calc(16px * var(--ui-scale)); font-weight: 400; }
-.node-row.is-unread .node-title { font-weight: 600; }
+.node-row.is-unread .node-title { font-weight: var(--fw-bold); }
 .node-desc, .node-subforums { font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); margin-top: 3px; }
 .node-stats { display: flex; flex: 0 0 140px; min-width: 0; text-align: center; }
 .node-stats > div { width: 70px; }

@@ -21,7 +21,7 @@
 .member-card-header { display: flex; gap: 12px; padding: 12px; background: var(--quote-bg); }
 .member-card-header > div { min-width: 0; overflow-wrap: anywhere; }
 .member-card-header .avatar { flex: 0 0 80px; width: 80px; height: 80px; }
-.member-card-name { font-size: calc(20px * var(--ui-scale)); font-weight: 600; }
+.member-card-name { font-size: calc(20px * var(--ui-scale)); font-weight: var(--fw-bold); }
 .member-card-stats { display: flex; justify-content: space-around; text-align: center; padding: 12px 6px; color: var(--dimmed); }
 .member-card-stats strong { display: block; font-size: calc(18px * var(--ui-scale)); font-weight: 400; color: var(--text); }
 .member-card-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-top: 1px solid var(--border); }
@@ -100,7 +100,7 @@
 .message-name {
   margin: 0;
   font-size: calc(16px * var(--ui-scale));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -122,7 +122,7 @@
   text-align: left;
 }
 .message-userStats li { display: flex; justify-content: space-between; gap: 6px; }
-.message-userStats b { color: var(--text); font-weight: 600; }
+.message-userStats b { color: var(--text); font-weight: var(--fw-bold); }
 
 .post-bookmark { display: inline-flex; align-items: center; justify-content: center; padding: 3px; border: 0; background: transparent; color: var(--dimmed); cursor: pointer; vertical-align: middle; }
 .post-bookmark svg { width: 16px; height: 16px; }
@@ -153,7 +153,7 @@
 .message-attribution a { color: var(--dimmed); }
 .message-attribution a:hover { color: var(--link-hover); }
 .message-postNumber {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: calc(13px * var(--ui-scale));
   color: var(--link) !important;
 }
@@ -274,7 +274,7 @@
   padding-bottom: 8px;
   border-bottom: 2px solid var(--border);
   font-size: calc(20px * var(--ui-scale));
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: 1.35;
   color: var(--text);
 }
@@ -373,13 +373,13 @@
   content: attr(data-name);
   display: block;
   font-size: calc(12px * var(--ui-scale));
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--dimmed);
   margin-bottom: 4px;
 }
 .bbWrapper blockquote[data-name=""]::before,
 .bbWrapper blockquote.has-quote-source::before { content: none; }
-.bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui-scale)); font-weight: 700; }
+.bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui-scale)); font-weight: var(--fw-bold); }
 
 /* Long quotes are clipped to 800px with a fade, matching voz.vn's `.bbCodeBlock--expandable`.
    Only quotes that actually overflow get the wrapper, so short ones are untouched. */
@@ -438,11 +438,11 @@
   background: var(--content-bg-alt);
   padding: 5px 10px;
   font-size: calc(13px * var(--ui-scale));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   color: var(--dimmed);
 }
 .bbWrapper .bbCodeBlock-content { padding: 8px 10px; }
 .bbWrapper .bbImage { max-width: 100%; height: auto; }
 .bbWrapper img:not(.smilie) { max-width: 100%; height: auto; }
 .bbWrapper .smilie { vertical-align: middle; }
-.bbWrapper .username { color: var(--link); font-weight: 600; }
+.bbWrapper .username { color: var(--link); font-weight: var(--fw-bold); }

@@ -59,14 +59,14 @@
   border-radius: 50%;
   background: var(--chrome-avatar-bg);
 }
-.p-header-account .username { color: var(--on-dark); font-weight: 600; }
+.p-header-account .username { color: var(--on-dark); font-weight: var(--fw-bold); }
 .p-header-account .badge {
   background: var(--nav-active);
   color: var(--on-dark);
   border-radius: 10px;
   padding: 0 6px;
   font-size: calc(12px * var(--ui-scale));
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* ---------- nav ---------- */
@@ -110,7 +110,7 @@
   padding: 6px 12px;
   color: var(--nav-fg);
   font-size: calc(14px * var(--ui-scale));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   border-bottom: 3px solid transparent;
   max-width: 240px;
   overflow: hidden;

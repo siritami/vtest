@@ -22,7 +22,7 @@
   color: var(--dimmed);
   font: inherit;
   font-size: calc(14px * var(--ui-scale));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -56,7 +56,7 @@
 .shortcut-handle:active { cursor: grabbing; }
 .shortcut-index { flex: 0 0 22px; text-align: right; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); font-variant-numeric: tabular-nums; }
 .shortcut-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.shortcut-name { font-weight: 600; color: var(--link); overflow-wrap: anywhere; }
+.shortcut-name { font-weight: var(--fw-bold); color: var(--link); overflow-wrap: anywhere; }
 .shortcut-url { font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); overflow-wrap: anywhere; }
 .shortcut-row .button--small { padding: 4px; flex: 0 0 auto; }
 .shortcut-row .button--small svg { display: block; }
@@ -66,7 +66,7 @@
 .shortcut-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Radio-card groups (Giao diện theme/font, Cuộn trang liên tục). */
-.settings-subhead { margin: 16px 0 4px; font-size: calc(15px * var(--ui-scale)); font-weight: 600; color: var(--text); }
+.settings-subhead { margin: 16px 0 4px; font-size: calc(15px * var(--ui-scale)); font-weight: var(--fw-bold); color: var(--text); }
 .settings-subhead:first-child { margin-top: 0; }
 .option-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .option-card {
@@ -94,7 +94,7 @@
    `align-self: center` centres it against that line box rather than the whole card. This
    stays correct at any --ui-scale, since the row height follows the line box. */
 .option-card input { grid-area: radio; grid-row: 1 / 2; align-self: center; margin: 0; flex: 0 0 auto; }
-.option-card-name { grid-area: name; font-weight: 600; color: var(--text); }
+.option-card-name { grid-area: name; font-weight: var(--fw-bold); color: var(--text); }
 .option-card-desc { grid-area: desc; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); line-height: 1.5; }
 
 /* Cỡ chữ sliders. One row per axis; the value sits in an <output> on the label line so it
@@ -102,8 +102,8 @@
 .size-row { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .size-row:last-child { margin-bottom: 0; }
 .size-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.size-row-head label { font-weight: 600; color: var(--text); }
-.size-value { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--link); }
+.size-row-head label { font-weight: var(--fw-bold); color: var(--text); }
+.size-value { font-variant-numeric: tabular-nums; font-weight: var(--fw-bold); color: var(--link); }
 .size-slider { display: block; width: 100%; margin: 0 0 4px; accent-color: var(--link); }
 .settings-toggle {
   display: flex;
@@ -118,7 +118,7 @@
 }
 .settings-toggle:hover { border-color: var(--link); }
 .settings-toggle-copy { display: flex; flex-direction: column; min-width: 0; }
-.settings-toggle-name { font-weight: 600; color: var(--text); }
+.settings-toggle-name { font-weight: var(--fw-bold); color: var(--text); }
 .settings-toggle input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--link); }
 .settings-backup .code-box { min-height: 190px; font-family: Consolas, "Courier New", monospace; font-size: calc(12px * var(--ui-scale)); white-space: pre; }
 .settings-backup .shortcut-form-actions { margin-top: 10px; }

@@ -1,6 +1,6 @@
 // A single post (.message) — XenForo markup with the voz.vn metrics.
 
-import { esc, num, postNumber, unix, timeAgo, fullDate, postDate } from '../core/utils.js';
+import { esc, num, postNumber, timeAgo, fullDate, postDate, joinDate } from '../core/utils.js';
 import { threadPath, userPath, withPage } from '../core/paths.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { sanitizeHtml } from '../lib/bbcode.js';
@@ -11,7 +11,7 @@ import { reactionBar, reactionSummary } from './reactions.js';
 
 export function postHtml(post, thread, page) {
   const user = post.User || {};
-  const edited = post.last_edit_date ? `<span class="u-dimmed">· Đã sửa ${timeAgo(post.last_edit_date)}</span>` : '';
+  const edited = post.last_edit_date ? `<span class="u-dimmed">· Đã sửa ${timeAgo(post.last_edit_date, 'thread')}</span>` : '';
   const ownerActions = [];
   if (post.can_edit) {
     ownerActions.push(`<a href="#" class="actionBar-action actionBar-action--icon" data-edit="${post.post_id}"
@@ -35,9 +35,9 @@ export function postHtml(post, thread, page) {
               <div class="message-userMeta">${user.user_title ? `<span class="userTitle">${esc(user.user_title)}</span>` : ''}${userBadges(user)}</div>
             </div>
             <ul class="message-userStats">
-              <li><span>Bài viết</span><b>${num(user.message_count)}</b></li>
-              <li><span>Điểm</span><b>${num(user.reaction_score)}</b></li>
-              <li><span>Tham gia</span><b>${user.register_date ? new Date(unix(user.register_date)).getFullYear() : '—'}</b></li>
+              <li><span>Bài viết</span><b>${num(user.message_count, 'thread')}</b></li>
+              <li><span>Điểm</span><b>${num(user.reaction_score, 'thread')}</b></li>
+              <li><span>Tham gia</span><b>${joinDate(user.register_date, 'thread')}</b></li>
             </ul>
           </section>
         </div>
@@ -45,7 +45,7 @@ export function postHtml(post, thread, page) {
           <div class="message-main">
             <header class="message-attribution">
               <ul class="message-attribution-main">
-                <li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}"><time data-post-time title="${esc(fullDate(post.post_date))}">${postDate(post.post_date)}</time></a></li>
+                <li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}"><time data-post-time title="${esc(fullDate(post.post_date))}">${postDate(post.post_date, 'thread')}</time></a></li>
                 ${edited ? `<li>${edited}</li>` : ''}
               </ul>
               <ul class="message-attribution-opposite">

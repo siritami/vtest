@@ -14,11 +14,16 @@
 //         data-font="system|roboto|be-vietnam-pro|be-vietnam"
 //         data-post-size="100" data-ui-size="100">
 
-import { getTheme, getFont, getFontScale, FONT_STACKS, FONT_DEFAULT as DEFAULT_FONT_KEY } from '../lib/settings.js';
+import { getTheme, getFont, getFontScale, getFullNumbers, FONT_STACKS, FONT_DEFAULT as DEFAULT_FONT_KEY } from '../lib/settings.js';
+import { setFullNumbersMode } from '../core/utils.js';
 
 const FONT_HREF = '/assets/css/fonts.css';
 
 const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+// Last applied full-numbers mode. `null` until the first applyAppearance() at boot, so the boot
+// call never fires a re-render — only a real change made in Cài đặt does.
+let lastFullNumbers = null;
 
 function resolvedTheme(mode) {
   if (mode === 'dark' || mode === 'light') return mode;
@@ -82,6 +87,14 @@ export function applyAppearance() {
   applyTheme(getTheme());
   applyFont(getFont());
   applyFontScale(getFontScale());
+  // Number/date formatting is read by core/utils.js at render time, so the mode only has to be
+  // pushed in before the next view renders. When it actually changes, the current view is asked
+  // to re-render (app.js listens) so the switch is visible without a manual reload.
+  const mode = getFullNumbers();
+  const changed = lastFullNumbers !== null && mode !== lastFullNumbers;
+  lastFullNumbers = mode;
+  setFullNumbersMode(mode);
+  if (changed) window.dispatchEvent(new CustomEvent('voz:format-change'));
 }
 
 // Called once at boot. The media listener is permanent: it only ever reads the current

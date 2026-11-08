@@ -11,6 +11,7 @@ import {
   exportSettingsJson, importSettingsJson, setInfiniteScroll,
   SCROLL_MODES, SCROLL_LABELS,
   setTheme, setFont, setFontScale, getFontScale, setImageDownload, setPostScreenshot, setStaticAvatars,
+  setFullNumbers, FULL_NUMBERS_MODES, FULL_NUMBERS_LABELS,
   THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
   FONT_SCALE_MIN, FONT_SCALE_MAX, FONT_SCALE_STEP,
 } from '../lib/settings.js';
@@ -49,6 +50,12 @@ const FONT_HELP = {
 const SIZE_HELP = {
   post: 'Cỡ chữ của phần nội dung bài viết, tính theo % so với mặc định. Không ảnh hưởng tới phần tên, ngày tháng hay nút bên dưới bài.',
   ui: 'Cỡ chữ của mọi chỗ khác: danh sách chủ đề, thanh trên cùng, nút, biểu mẫu và trang cài đặt.',
+};
+
+const FULL_NUMBERS_HELP = {
+  off: 'Giữ nguyên kiểu voz.vn: 13K bài viết, 3 giờ trước, năm tham gia.',
+  thread: 'Chỉ trong chủ đề: số bài viết, điểm, số trả lời/lượt xem và thời gian hiện đầy đủ. Danh sách ngoài chủ đề vẫn rút gọn.',
+  all: 'Toàn bộ web: mọi số liệu và mốc thời gian đều hiện đầy đủ, kể cả danh sách chủ đề, hồ sơ và trang chủ.',
 };
 
 // Radio-card group shared by the appearance settings. `name` keys the input group and the
@@ -161,7 +168,7 @@ function tabsHtml(active) {
 }
 
 function settingsHtml(active = settingsTabFromHash()) {
-  const { navShortcuts, infiniteScroll, theme, font, postSize, uiSize, imageDownload, postScreenshot, staticAvatars } = loadSettings();
+  const { navShortcuts, infiniteScroll, theme, font, postSize, uiSize, imageDownload, postScreenshot, staticAvatars, fullNumbers } = loadSettings();
   const albums = getAlbums();
   return `<div class="block settings-block">
       <h1 class="block-header">Cài đặt</h1>
@@ -181,6 +188,9 @@ function settingsHtml(active = settingsTabFromHash()) {
           <p class="formHint">Tính theo % so với cỡ mặc định (100%). Hai mục dưới đây độc lập nhau nên có thể chỉnh riêng phần nội dung bài viết.</p>
           ${sizeRow('size-post', 'Cỡ chữ nội dung bài viết', SIZE_HELP.post, postSize)}
           ${sizeRow('size-ui', 'Cỡ chữ những chỗ khác', SIZE_HELP.ui, uiSize)}
+          <h3 class="settings-subhead">Hiện thị số liệu không rút gọn</h3>
+          <p class="formHint">voz.vn rút gọn số liệu (13K, 1M) và thời gian tương đối (3 giờ trước). Bật mục này để thấy số đầy đủ và mốc thời gian chính xác.</p>
+          ${optionCards('full-numbers', FULL_NUMBERS_MODES, FULL_NUMBERS_LABELS, FULL_NUMBERS_HELP, fullNumbers)}
           <h3 class="settings-subhead">Ảnh trong bài viết</h3>
           <label class="settings-toggle" for="image-download">
             <span class="settings-toggle-copy">
@@ -799,6 +809,10 @@ export function viewSettings() {
   wireOptionGroup('infinite-scroll', (value) => {
     setInfiniteScroll(value);
     toast(`Cuộn trang liên tục: ${SCROLL_LABELS[value]}`);
+  });
+  wireOptionGroup('full-numbers', (value) => {
+    setFullNumbers(value);
+    toast(`Số liệu không rút gọn: ${FULL_NUMBERS_LABELS[value]}`);
   });
 
   const showError = (message) => {

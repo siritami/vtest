@@ -13,7 +13,7 @@
 .dm-row.is-unread { background: var(--unread-bg); }
 .dm-row .avatar { flex: 0 0 36px; width: 36px; height: 36px; }
 .dm-main { flex: 1 1 auto; min-width: 0; }
-.dm-title { font-weight: 600; color: var(--link); }
+.dm-title { font-weight: var(--fw-bold); color: var(--link); }
 .dm-meta { font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); }
 .dm-message {
   background: var(--content-bg);
@@ -23,7 +23,7 @@
 }
 .dm-message.is-mine { background: var(--info-bg); }
 .dm-message-head { display: flex; gap: 8px; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); margin-bottom: 4px; }
-.dm-message-head .username { color: var(--link); font-weight: 600; }
+.dm-message-head .username { color: var(--link); font-weight: var(--fw-bold); }
 
 /* ---------- alerts ---------- */
 .alert-row {
@@ -53,7 +53,7 @@
   border-radius: 50%;
   background: var(--surface-raised);
 }
-.profile-name { font-size: calc(24px * var(--ui-scale)); font-weight: 600; color: var(--link); margin: 0; }
+.profile-name { font-size: calc(24px * var(--ui-scale)); font-weight: var(--fw-bold); color: var(--link); margin: 0; }
 .profile-title { font-size: calc(14px * var(--ui-scale)); color: var(--dimmed); }
 .profile-stats {
   display: flex;

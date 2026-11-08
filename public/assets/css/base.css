@@ -117,6 +117,10 @@
        nested component (a quoted card, a code block) keeps scaling with the post, not the page. */
     --ui-scale: 1;
     --post-scale: 1;
+    /* The bold grade every `font-weight: 600` / `700` in the stylesheets resolves to. 600 is
+       the stock value; theme.css re-points it to 500 for the families whose 600 slot holds a
+       full Bold (see the note there). */
+    --fw-bold: 600;
   }
 
 /* Dark reading surface: same token names, re-pointed. Values keep body text and links at or

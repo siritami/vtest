@@ -103,7 +103,7 @@ export async function viewThread(threadId, page, focusPost) {
           <span class="block-header-title" id="thread-title" tabindex="0" aria-label="${esc(thread.title)} — Trên mobile: giữ 1,5 giây hoặc nhấn Enter để bật/tắt theo dõi">
             ${prefixLabel(thread)}${esc(thread.title)}
           </span>
-          <span class="block-header-extra">${num(thread.reply_count)} trả lời · ${num(thread.view_count)} xem</span>
+          <span class="block-header-extra">${num(thread.reply_count, 'thread')} trả lời · ${num(thread.view_count, 'thread')} xem</span>
           <button type="button" class="block-header-icon${watching ? ' is-on' : ''}" id="watch-btn"
                   data-thread="${threadId}" data-watching="${watching ? '1' : '0'}"
                   title="${watching ? 'Bỏ theo dõi chủ đề' : 'Theo dõi chủ đề'}"

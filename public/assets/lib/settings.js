@@ -44,6 +44,7 @@ export const emptySettings = () => ({
   imageDownload: IMAGE_DOWNLOAD_DEFAULT,
   postScreenshot: POST_SCREENSHOT_DEFAULT,
   staticAvatars: STATIC_AVATARS_DEFAULT,
+  fullNumbers: FULL_NUMBERS_DEFAULT,
 });
 
 // Colour scheme for the content area. The page chrome (header, nav) keeps its dark
@@ -116,6 +117,19 @@ export const IMAGE_DOWNLOAD_DEFAULT = false;
 export const POST_SCREENSHOT_DEFAULT = false;
 export const STATIC_AVATARS_DEFAULT = false;
 
+// Full (unrounded) statistics and absolute dates. voz.vn prints `13K` / `3 giờ trước`; a reader
+// who wants the real figures can switch that off either inside threads only or site-wide.
+//   off    — keep voz.vn's rounded numbers and relative times
+//   thread — full numbers/dates inside a thread (posts, thread header, member cards)
+//   all    — full numbers/dates everywhere, including lists, profiles and the forum index
+export const FULL_NUMBERS_MODES = ['off', 'thread', 'all'];
+export const FULL_NUMBERS_DEFAULT = 'off';
+export const FULL_NUMBERS_LABELS = {
+  off: 'Tắt — rút gọn như voz.vn',
+  thread: 'Áp dụng cho bên trong thread',
+  all: 'Áp dụng cho toàn bộ web',
+};
+
 export function normalizeFontScale(value) {
   // `Number(null)`, `Number('')` and `Number([])` are all 0, which would clamp to the 80%
   // floor instead of falling back — so only accept a number or a numeric string.
@@ -158,6 +172,7 @@ export function normalizeSettings(raw) {
   out.imageDownload = raw?.imageDownload === true;
   out.postScreenshot = raw?.postScreenshot === true;
   out.staticAvatars = raw?.staticAvatars === true;
+  out.fullNumbers = FULL_NUMBERS_MODES.includes(raw?.fullNumbers) ? raw.fullNumbers : FULL_NUMBERS_DEFAULT;
   const list = Array.isArray(raw?.navShortcuts) ? raw.navShortcuts : [];
   const seen = new Set();
   for (const item of list.slice(0, MAX_SHORTCUTS)) {
@@ -305,6 +320,17 @@ export function getStaticAvatars() {
   return loadSettings().staticAvatars === true;
 }
 
+export function setFullNumbers(mode) {
+  const settings = loadSettings();
+  settings.fullNumbers = FULL_NUMBERS_MODES.includes(mode) ? mode : FULL_NUMBERS_DEFAULT;
+  return saveSettings(settings);
+}
+
+export function getFullNumbers() {
+  const mode = loadSettings().fullNumbers;
+  return FULL_NUMBERS_MODES.includes(mode) ? mode : FULL_NUMBERS_DEFAULT;
+}
+
 export function exportSettingsJson({ albums = [], recent = [] } = {}) {
   const settings = loadSettings();
   const payload = {
@@ -320,6 +346,7 @@ export function exportSettingsJson({ albums = [], recent = [] } = {}) {
     imageDownload: settings.imageDownload,
     postScreenshot: settings.postScreenshot,
     staticAvatars: settings.staticAvatars,
+    fullNumbers: settings.fullNumbers,
   };
   // Sticker payload mirrors the userscript backup so either file can be restored.
   if (albums.length || recent.length) {

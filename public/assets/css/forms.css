@@ -27,7 +27,7 @@
 .button[disabled] { opacity: .55; cursor: not-allowed; }
 
 .formRow { margin-bottom: 12px; }
-.formRow label { display: block; font-size: calc(14px * var(--ui-scale)); font-weight: 600; margin-bottom: 4px; }
+.formRow label { display: block; font-size: calc(14px * var(--ui-scale)); font-weight: var(--fw-bold); margin-bottom: 4px; }
 .input, .textarea, select.input {
   width: 100%;
   padding: 8px 10px;
@@ -95,7 +95,7 @@
   color: var(--dimmed);
   font: inherit;
   font-size: calc(14px * var(--ui-scale));
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   cursor: pointer;
 }
 .tabs button.is-active { color: var(--link); border-bottom-color: var(--nav-active); }
