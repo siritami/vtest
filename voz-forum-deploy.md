@@ -768,6 +768,16 @@ lên, đúng kiểu nút dừng cuộn liên tục.
 - Header dịch lên đúng chiều cao của nó (`--header-h`); nav bắt đầu ở `--header-h` nên phải
   dịch lên bằng tổng hai thanh (`--chrome-h`). Cả hai biến do module đo và ghi vào `:root`,
   cập nhật qua `ResizeObserver` nên đúng cả khi phím tắt render xong muộn hoặc phông đổi.
+- **Đo bằng `getBoundingClientRect().height`, không phải `offsetHeight`.** `offsetHeight` làm
+  tròn thành số nguyên, nên header cao thật `44.5px` bị báo `45` và nav đứng thấp hơn **0.5px**;
+  khe hở đó lộ nền trang (`#373d43`) giữa hai thanh cùng màu `#363d45`. Nay giá trị lẻ được giữ
+  nguyên (làm tròn 3 chữ số thập phân để tránh `44.399999px`), `--header-h: 44.5px`.
+- **Không có `border-top` trên `.p-nav`.** Trước đây có `1px solid var(--overlay-hairline)`
+  (`rgba(255,255,255,.06)`) — đúng nghĩa một **đường trắng mảnh** cắt đôi hai thanh. Hai thanh
+  dùng chung `--nav-bg` nên không cần vạch phân cách; ranh giới đã do gạch chân tab đang chọn
+  đảm nhiệm. Kiểm chứng bằng cách lấy mẫu pixel: trước khi sửa có 2 hàng lệch màu
+  (`#373d43` = nền trang lọt qua khe, `#40474e` = đường hairline), sau khi sửa **0 hàng lệch**,
+  cột pixel liền một màu `#363d45` ở cả desktop lẫn mobile, cả hai chế độ sáng/tối.
 - Ngưỡng `REVEAL_THRESHOLD` 8px giống nút dừng cuộn, để trackpad/rubber-band không nhấp nháy.
   Không bao giờ ẩn khi đang ở sát đầu trang (`y <= 4`) — phía trên không còn gì để cuộn lên,
   và logo là đường về trang chủ.
@@ -1556,7 +1566,11 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Thanh tự ẩn, neo `#post-` | `scroll-padding-top: 82px` → bài nằm ở `top: 82` thay vì bị thanh che |
 | Thanh tự ẩn, deep link | mở `/t/...#post-...` → thanh vẫn hiện, chờ cử chỉ thật rồi mới theo dõi |
 | Thanh tự ẩn, FAB | `.infinite-stop` vẫn `position: fixed` ở góc phải dưới (`bottom: 64px` desktop / `72px` mobile, 34×34), ẩn khi cuộn xuống, hiện khi cuộn lên |
-| Thanh tự ẩn, mobile | 390px: `--header-h` 45px, `--chrome-h` 81px, không tràn ngang |
+| Thanh tự ẩn, mobile | 390px: `--header-h` **44.5px**, `--chrome-h` **80.167px**, không tràn ngang |
+| Khe giữa hai thanh, desktop | `header.bottom` 46 = `nav.top` 46, `gap: 0`, `border-top: 0px`; cột pixel cắt qua đường nối: **0 hàng lệch màu** `#363d45` |
+| Khe giữa hai thanh, mobile | `header.bottom` 44.5 = `nav.top` 44.5, `gap: 0` (trước đây `nav.top` 45 → hở 0.5px); pixel: 0 hàng lệch (trước đây 2 hàng: `#373d43` + `#40474e`) |
+| Khe giữa hai thanh, chế độ | sáng và tối đều `gap: 0`, cùng `background: rgb(54,61,69)` cho cả header và nav |
+| `--chrome-h` lẻ | `scroll-padding-top: 81.667px` theo đúng biến; `scrollIntoView({block:'start'})` hạ mục tiêu xuống `top: 82` = đúng đáy nav |
 | Menu header × nav | 14 phím tắt (nav 2 dòng desktop, 314px mobile): menu tài khoản/hộp thư/thông báo/tìm kiếm không bị nav che, `elementFromPoint` quét từng 4px trong menu đều trả về node của menu |
 | Bảng soạn thảo cũ | chưa có thanh nav nào bị cắt: panel overflow 373×45 ở `top 543`, bảng emoji 1009×222 ở `top 369` — đều nằm dưới vùng thanh sticky |
 | Sửa album sticker, overlay | `.modal-backdrop` `position: fixed`, `z-index: 1000`, nền `rgba(0,0,0,.5)`; `.modal` rộng **780px** (rộng hơn mặc định 560px), canh giữa (`top 269` trên khung 900px) |
@@ -1592,7 +1606,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 - Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
 - Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
 - Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
-- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện 82/82 pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `settings-appearance.test.mjs` (sáng/tối/phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **85/85** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
 
 ## 11. Ghi chú triển khai
 
