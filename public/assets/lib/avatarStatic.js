@@ -27,6 +27,9 @@ import { getStaticAvatars } from './settings.js';
 //   null     -> leave this avatar alone (it is static, or it cannot be read)
 const stills = new Map();
 
+// Avatars already handed to `freeze()`. A WeakSet so a re-rendered view does not leak.
+const seen = new WeakSet();
+
 // Bytes needed to decide a format before downloading the whole file: a GIF's block structure
 // and a WebP/PNG header all sit at the front, and the last frame's image data does not need to
 // be read to know how many frames there are. 64 KiB comfortably covers the header of a large
@@ -207,8 +210,6 @@ function restore(img) {
 // row for no visible benefit; an avatar that never scrolls into view is never animated on
 // screen either. `seen` remembers the ones already handed to `freeze()` so the observer does
 // not re-queue them on every tick.
-const seen = new WeakSet();
-
 function refresh() {
   const enabled = getStaticAvatars();
   for (const img of document.querySelectorAll('img.avatar-img')) {
