@@ -8,7 +8,7 @@ import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { pagination, wirePageJump, wireScrollArm } from '../ui/pagination.js';
 import { threadRow } from '../ui/threadRow.js';
-import { nodeTree } from '../ui/forumNodes.js';
+import { nodeTree, subForumBlock } from '../ui/forumNodes.js';
 import { mountInfiniteScroll } from '../ui/infiniteScroll.js';
 
 export async function viewHome() {
@@ -28,7 +28,14 @@ export async function viewForum(nodeId, page) {
   setActiveNav('home');
   loading();
   try {
-    const [forumRes, threadsRes] = await Promise.all([api.forum(nodeId), api.forumThreads(nodeId, page)]);
+    // /forums/{id} does not include child nodes, so the node tree supplies the sub-forum
+    // block. Both calls run in parallel; the node tree is cached after the first fetch.
+    const [forumRes, threadsRes, nodesRes] = await Promise.all([
+      api.forum(nodeId),
+      api.forumThreads(nodeId, page),
+      state.nodes ? Promise.resolve(state.nodes) : api.nodes(),
+    ]);
+    if (!state.nodes) state.nodes = nodesRes;
     const forum = forumRes.forum;
     const crumbs = (forum.breadcrumbs || []).map((b) => ({ label: b.title }));
     setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, ...crumbs, { label: forum.title }], {
@@ -37,8 +44,10 @@ export async function viewForum(nodeId, page) {
 
     const sticky = threadsRes.sticky || [];
     const threads = threadsRes.threads || [];
+    const subForums = subForumBlock(nodesRes.nodes || [], nodesRes.tree_map || {}, nodeId);
 
     app.innerHTML = `
+      ${subForums}
       <div class="block">
         <div class="block-header">
           ${esc(forum.title)}

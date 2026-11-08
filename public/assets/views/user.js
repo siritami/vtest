@@ -7,6 +7,7 @@ import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { sanitizeHtml } from '../lib/bbcode.js';
+import { signatureHtml } from '../lib/signature.js';
 
 export async function viewUser(userId) {
   setActiveNav('');
@@ -40,7 +41,7 @@ export async function viewUser(userId) {
         ${user.about ? `<div class="profile-section"><h3>Giới thiệu</h3><div class="bbWrapper">${sanitizeHtml(user.about)}</div></div>` : ''}
         ${user.location ? `<div class="profile-section"><h3>Nơi ở</h3><div>${esc(user.location)}</div></div>` : ''}
         ${user.website ? `<div class="profile-section"><h3>Website</h3><div><a href="${esc(user.website)}" target="_blank" rel="noopener nofollow">${esc(user.website)}</a></div></div>` : ''}
-        ${user.signature ? `<div class="profile-section"><h3>Chữ ký</h3><div class="bbWrapper">${sanitizeHtml(user.signature)}</div></div>` : ''}
+        ${user.signature ? `<div class="profile-section"><h3>Chữ ký</h3><div class="bbWrapper">${sanitizeHtml(signatureHtml(user.signature))}</div></div>` : ''}
       </div>`;
   } catch (err) {
     app.innerHTML = errorBox(err);

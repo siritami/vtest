@@ -4,6 +4,7 @@ import { esc, num, unix, timeAgo, fullDate, postDate } from '../core/utils.js';
 import { threadPath, userPath, withPage } from '../core/paths.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { sanitizeHtml } from '../lib/bbcode.js';
+import { signatureHtml } from '../lib/signature.js';
 import { userBadges } from '../lib/userBadges.js';
 import { ICON_EDIT, ICON_DELETE, ICON_QUOTE, ICON_REPLY, ICON_REPORT, ICON_BOOKMARK } from '../core/icons.js';
 import { reactionBar, reactionSummary } from './reactions.js';
@@ -56,7 +57,7 @@ export function postHtml(post, thread, page) {
               <div class="message-userContent">
                 <article class="message-body bbWrapper">${sanitizeHtml(post.message_parsed || esc(post.message), post.message)}</article>
               </div>
-              ${user.signature ? `<div class="message-signature bbWrapper">${sanitizeHtml(user.signature)}</div>` : ''}
+              ${user.signature ? `<div class="message-signature bbWrapper">${sanitizeHtml(signatureHtml(user.signature))}</div>` : ''}
               <footer class="message-footer">
                 <div class="message-actionBar actionBar">
                   <div class="actionBar-set actionBar-set--left">

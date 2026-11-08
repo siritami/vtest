@@ -32,6 +32,8 @@ vtest/
 │   │   ├── lib/          # logic thuần, không đụng DOM
 │   │   │   ├── avatar.js     # avatarMarkup + fallback chữ cái
 │   │   │   ├── bbcode.js     # sanitize + khôi phục size ảnh + quote
+│   │   │   ├── postLinks.js  # link voz.vn trong bài → route nội bộ
+│   │   │   ├── signature.js  # chữ ký (BBCode thô) → HTML
 │   │   │   ├── editorCodec.js # BBCode ⇄ HTML cho trình soạn
 │   │   │   ├── media.js      # khôi phục iframe/media + resize Reddit + Flickr oEmbed
 │   │   │   ├── prefix.js     # prefix_id → class màu
@@ -47,7 +49,7 @@ vtest/
 │   │   ├── ui/           # component render HTML
 │   │   │   ├── chrome.js     # header account / breadcrumbs / nav
 │   │   │   ├── headerMenus.js # dropdown tìm kiếm / hộp thư / thông báo
-│   │   │   ├── forumNodes.js # nhóm diễn đàn + bài mới nhất
+│   │   │   ├── forumNodes.js # nhóm diễn đàn, khối diễn đàn con + bài mới nhất
 │   │   │   ├── feedback.js   # toast / loading / errorBox
 │   │   │   ├── pagination.js # pageNav + ô nhảy trang
 │   │   │   ├── infiniteScroll.js # cuộn liên tục (Bật / Theo yêu cầu / Tắt)
@@ -117,7 +119,7 @@ ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống
 
 ### Giao diện trang chủ và header
 
-- `ui/forumNodes.js` dựng nhóm diễn đàn, icon hội thoại/tìm kiếm, số chủ đề/bài viết và chủ đề mới nhất cùng người bình luận cuối. SearchForum (Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức) trỏ về route nội bộ `/s/<slug>.<id>/` giống voz.vn, không mở sang voz.vn nữa.
+- `ui/forumNodes.js` dựng nhóm diễn đàn, icon hội thoại/tìm kiếm, số chủ đề/bài viết và chủ đề mới nhất cùng người bình luận cuối. SearchForum (Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức) trỏ về route nội bộ `/s/<slug>.<id>/` giống voz.vn, không mở sang voz.vn nữa. Trên trang một diễn đàn, `subForumBlock()` còn dựng **khối diễn đàn con** — voz.vn xếp các node con thành một `.block` **không có tiêu đề** ngay trên danh sách chủ đề, tái dùng đúng `nodeRow()` của trang chủ (icon, tiêu đề, số chủ đề/bài viết, avatar + chủ đề mới nhất). `/forums/{id}` không trả node con nên khối này lấy từ `/nodes/` (`tree_map`), tận dụng cache `state.nodes`. Diễn đàn không có node con thì không render gì.
 - `ui/headerMenus.js` quản lý menu tìm kiếm, hộp thư và thông báo; tải tối đa 6 mục khi mở, có liên kết xem tất cả. Escape/click bên ngoài đóng menu. Menu tài khoản chứa hồ sơ, đánh dấu, theo dõi và nút Đăng xuất kèm icon nguồn; không còn nút đăng xuất riêng trên thanh header.
 - `ui/unreadCounts.js` hiển thị badge đỏ trên icon hộp thư/thông báo, lấy tổng từ `GET /conversations/?unread=true` và `GET /alerts/?unviewed=true` (không đếm riêng trang đầu). Số 0 ẩn badge, trên 99 hiện `99+`; accessible label giữ số đầy đủ. Cập nhật khi render tài khoản, chuyển trang xong, tải menu xong, quay lại tab và mỗi 60 giây khi tab hiển thị. Mở menu thông báo gọi `POST /alerts/mark-all` với `viewed=true`; mở hộp thư đánh dấu các hội thoại chưa đọc đang hiển thị qua `POST /conversations/{id}/mark-read` tới `last_message_date` (không đánh dấu hội thoại ngoài preview). Mục mới có nền cam nhạt suốt lần mở đó, mở lại dùng trạng thái API mới. Sau thao tác đọc, bắt buộc tải lại count sau request count đang chạy để tránh số cũ; API lỗi không giả lập xóa badge.
 - Tìm kiếm hỗ trợ từ khoá **hoặc** bài viết của một thành viên. API không áp dụng `title_only`/`users` trên tìm từ khoá; tìm nâng cao đầy đủ mở voz.vn, không giả lập bộ lọc bị bỏ qua.
@@ -468,6 +470,8 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 |---|---|---|
 | `avatar.js` | `avatarUrlById`, `avatarMarkup` | đoán `data.voz.vn/avatars/{size}/{floor(id/1000)}/{id}.jpg`; chồng `<img>` lên chữ cái màu, `onerror="this.remove()"` để lộ fallback |
 | `bbcode.js` | `sanitizeHtml`, `bbcodeToPlain`, `stripQuotes`, `quoteBlock` | pipeline sanitize 6 bước (xem §6); `stripQuotes()` đếm độ sâu quote; `quoteBlock()` dựng `[QUOTE="…, post: …, member: …"]` |
+| `postLinks.js` | `localPathFor`, `rewriteVozLinks`, `isVozUrl`, `VOZ_ORIGIN` | đổi link `https://voz.vn/…` trong nội dung bài thành đường dẫn nội bộ (xem §6) |
+| `signature.js` | `signatureHtml` | chữ ký trả về dạng **BBCode thô** (xem §6.0b) nên phải render trước khi hiển thị; nhận `[URL=…]`, `[B]`, `[COLOR]`, `[SIZE]`, `[FONT]`, `[LIST]`, `[IMG]`…, tag lạ hiện nguyên văn |
 | `editorCodec.js` | `safeEditorUrl`, `parseEditorCode`, `editorCodePlain`, `editorCodeHtml`, `editorDomCode` | BBCode ⇄ HTML cho trình soạn; tag lạ giữ nguyên dạng `data-bb-raw` (atomic, `contenteditable=false`); `[IMG size=…]` và `[ATTACH]` đã đăng ký được vẽ thành `<img>` thật, thuộc tính giữ qua `data-bb-attrs` |
 | `attachments.js` | `registerAttachments`, `getAttachment`, `attachmentIdForUrl`, `clearAttachments`, `attachmentImage` | API trả `[ATTACH]id[/ATTACH]` trong `message` còn URL thật nằm ở `post.Attachments[].direct_url`; view đăng ký danh sách này để codec vẽ được ảnh. Không đăng ký thì giữ nguyên `data-bb-raw` (không mất dữ liệu) |
 | `media.js` | `safeMediaUrl`, `restoreMedia` | allowlist host/path cho iframe; dựng lại `[MEDIA=…]`; nghe `resize.embed` của Reddit; phân giải Flickr qua `/api/xf/oembed` thành ảnh (`OEMBED_SITES`, `OEMBED_IMAGE_HOSTS`) |
@@ -487,7 +491,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 |---|---|---|
 | `chrome.js` | `renderAccount`, `renderNavShortcuts`, `wireNavShortcuts`, `setBreadcrumbs`, `setActiveNav` | header account (menu hồ sơ/đánh dấu/theo dõi/**cài đặt**/đăng xuất + 3 menu tiện ích), vẽ lại phím tắt ở thanh nav khi `voz:settings` hoặc `storage` đổi, breadcrumb có nút CTA, tô nav active |
 | `headerMenus.js` | `closeHeaderMenus`, `wireHeaderMenus` | mở/đóng dropdown, tải 6 mục đầu, đánh dấu đã xem, Escape/click ngoài, submit form tìm kiếm nhanh |
-| `forumNodes.js` | `nodeTree` | dựng cây node từ `nodes` + `tree_map`, `SearchForum` trỏ `/s/…` nội bộ |
+| `forumNodes.js` | `nodeTree`, `nodeRow`, `nodeLink`, `childNodes`, `subForumBlock` | dựng cây node từ `nodes` + `tree_map`, `SearchForum` trỏ `/s/…` nội bộ; `subForumBlock` dựng khối diễn đàn con không tiêu đề cho trang `/f/…` |
 | `feedback.js` | `toast`, `loading`, `errorBox` | toast 3,2 s; spinner; hộp lỗi đọc `ApiError.message` + `code` |
 | `pagination.js` | `pagination`, `wirePageJump`, `wireScrollArm` | `ul.pageNav-main` XenForo; `…` đổi thành `<input type=number>` (Enter đi, Esc/blur huỷ); ở chế độ `manual` thêm nút icon `⇣` (`.pageNav-scrollBtn`, chỉ icon, `title`/`aria-label` giải thích). Nút `⇣` chỉ bật cuộn; nút dừng nổi `.infinite-stop` do `infiniteScroll.js` lo |
 | `threadRow.js` | `threadRow`, `postRow` | 5 ô `structItem`; `postRow` cho bookmark/search, link dạng `?post={id}`. `is_unread` của API thêm class `is-unread` để CSS in đậm tiêu đề (đọc rồi thì hết đậm), giống voz.vn; tiêu đề của chủ đề chưa đọc trỏ `/unread` để nhảy tới bài chưa đọc |
@@ -510,7 +514,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 
 | File | Export | Route |
 |---|---|---|
-| `forum.js` | `viewHome`, `viewForum`, `viewSearchForum`, `viewNewThreads` | `/`, `/f/…`, `/s/…`, `/new` |
+| `forum.js` | `viewHome`, `viewForum`, `viewSearchForum`, `viewNewThreads` | `/`, `/f/…`, `/s/…`, `/new`; `viewForum` gọi `/nodes/` song song để lấy khối diễn đàn con |
 | `thread.js` | `viewThread` | `/t/…` — render bài + toàn bộ handler (bookmark, react, quote, reply, edit, delete, report, watch, gửi trả lời) |
 | `compose.js` | `viewCompose` | `/f/…/post-thread` |
 | `search.js` | `viewSearch` | `/search` |
@@ -857,15 +861,62 @@ trong allowlist; iframe ngoài allowlist bị `remove()`.
 Thứ tự xử lý trong `sanitizeHtml(html, bbcode)`:
 
 1. `restoreSpoilers(root, bbcode)` — thay placeholder bằng `details/summary`.
-2. Xoá thẻ nguy hiểm + thuộc tính `on*` + `javascript:`.
-3. `restoreQuoteLinks(root, bbcode)` — thêm link `↑` về `/p/{post_id}/`.
-4. `restoreMedia(root)` — dựng lại iframe/media.
-5. `applyImageSizes(root, bbcode)` — gán lại `width`/`height` từ BBCode.
-6. `renderSmilies(root)` — đổi mã smiley thành `<img>`.
+2. Xoá thẻ nguy hiểm + thuộc tính `on*` + `javascript:`; mọi `<a>` nhận `target="_blank"`.
+3. `rewriteVozLinks(root)` — đổi link `https://voz.vn/…` trỏ về route nội bộ (xem §6.0).
+4. `restoreQuoteLinks(root, bbcode)` — thêm link `↑` về `/p/{post_id}/`.
+5. `restoreMedia(root)` — dựng lại iframe/media.
+6. `applyImageSizes(root, bbcode)` — gán lại `width`/`height` từ BBCode.
+7. `renderSmilies(root)` — đổi mã smiley thành `<img>`.
+
+Thứ tự bước 2 → 3 là bắt buộc: bước 2 gán `target="_blank"` cho **mọi** link, còn bước 3
+gỡ `target` khỏi những link đã thành nội bộ, nên link nội bộ không mở tab mới. Đổi thứ tự
+sẽ khiến mọi link trong bài mở tab mới.
 
 `sanitizeHtml` cũng được gọi cho `user.signature`, `user.about` và `message_parsed` của DM
 — các chỗ này truyền **không** có `bbcode`, nên spoiler/quote-link/kích thước ảnh không
-được khôi phục (chỉ sanitize + media + smiley).
+được khôi phục (chỉ sanitize + postLinks + media + smiley).
+
+### 6.0 Link trong bài — không đá người đọc sang voz.vn
+
+Bài viết trên voz.vn đầy link tuyệt đối về chính voz.vn
+(`https://voz.vn/t/<slug>.<id>/page-4#post-44143309`). Giữ nguyên thì mỗi cú bấm sẽ đưa
+người đọc ra khỏi app. `lib/postLinks.js` đổi phần origin thành đường dẫn nội bộ, giữ
+nguyên path/query/hash nên router xử lý y hệt voz.vn:
+
+| Tiền tố | Đích nội bộ |
+|---|---|
+| `/t/…`, `/f/…`, `/s/…`, `/u/…`, `/p/…`, `/search`, `/new` | giữ nguyên path, bỏ `https://voz.vn` |
+
+Link **không** đổi (vẫn trỏ voz.vn, mở tab mới) khi:
+
+- khác origin (`tuoitre.vn`, `data.voz.vn`, `youtube.com` — chú ý `data.voz.vn` khác origin),
+- path không có route nội bộ: `/login/`, `/attachments/…`, `/misc/…`,
+- là route **chỉ có trên web** của XenForo: `/u/<slug>.<id>/ignore`, `/unignore`, `/report`,
+  `/warn`, `/follow`, `/unfollow`. Ngoại lệ này là bắt buộc vì các route đó cần **cookie
+  session** + `_xfToken`, thứ app không có — xem §13.5 của `voz-app-api.md`. Nút Bỏ qua
+  trong bài vì vậy mở sang voz.vn ở tab mới; API không có endpoint ignore
+  (`/api/users/{id}/ignore`, `/api/voz/users/{id}/ignore`, `/api/me/ignored` đều `404`, và
+  gọi thẳng `https://voz.vn/u/…/ignore` trả `403` khi không có cookie).
+
+### 6.0b Chữ ký là BBCode thô, không phải HTML
+
+`post.message_parsed` là HTML do server render, nhưng `User.signature` trả về **BBCode
+chưa parse**. Chuyển thẳng vào `sanitizeHtml()` thì thẻ hiện nguyên văn — người đọc thấy
+`Nhắn cho mình ở [URL='https://t.me/zerotrustai']telegram[/URL]` trong khi voz.vn hiện link.
+`[B]…[/B]`, `[COLOR=…]`, `[SIZE=…]` cũng bị hỏng y như vậy.
+
+`lib/signature.js` render trước rồi mới giao cho `sanitizeHtml()`:
+
+- `[URL=<url>]nhãn[/URL]` và `[URL]<url>[/URL]` → `<a>`, URL qua `safeEditorUrl()` (chỉ
+  http/https, không credentials).
+- `[B] [I] [U] [S]`, `[LIST][*]`, `[COLOR]` (hex + tên màu voz.vn), `[SIZE]` (thang 1–7 hoặc
+  px 8–40), `[FONT]` (**chỉ** phông app có: Be Vietnam, Be Vietnam Pro, Roboto), `[IMG]`.
+- `[QUOTE]`/`[SPOILER]`: giữ chữ, bỏ khung.
+- Tag lạ: hiện **nguyên văn** (không đoán, không mất nội dung).
+- HTML thô trong chữ ký bị escape.
+
+Vì `sanitizeHtml()` chạy sau, chữ ký cũng được hưởng `rewriteVozLinks` (§6.0) và toàn bộ
+escape/target/rel — nên một link `https://voz.vn/t/…` trong chữ ký cũng thành link nội bộ.
 
 ### 6.1 Ảnh trong bài — API làm mất kích thước
 
@@ -1463,7 +1514,10 @@ không có mảng `navShortcuts` lẫn `albums`.
 | Dải cảm xúc phụ thuộc CORS | Tên người thả cảm xúc lấy từ HTML `/p/{id}/reactions`; nếu trình duyệt chặn đọc body thì dải tự biến mất, chỉ còn số lượng trên nút. |
 | `api.createPost()` / `api.stats()` | Có khai báo trong `api.js` nhưng không dùng; form trả lời gọi `fetch` trực tiếp để gửi `silent`. |
 | `fetchReactionUsers()` ở edge | Đã viết trong `api/[...path].js` (cache 60 s) nhưng chưa có route nào gọi — Cloudflare vẫn chặn fetch server-side. |
-| `sanitizeHtml` cho chữ ký / about / DM | Gọi không kèm `bbcode`, nên spoiler, link quote và kích thước ảnh không được khôi phục ở các chỗ đó. |
+| `sanitizeHtml` cho chữ ký / about / DM | Gọi không kèm `bbcode`, nên spoiler, link quote và kích thước ảnh không được khôi phục ở các chỗ đó. Chữ ký thì được render BBCode trước (`lib/signature.js`, §6.0b) nên thẻ hiện đúng. `about` của hồ sơ là văn bản thuần ở các hồ sơ đã kiểm tra (URL trần, không có thẻ) nên chưa cần đổi. |
+| Bỏ qua thành viên | Không làm được qua API — route `/u/<slug>.<id>/ignore` là web-only, cần cookie session + `_xfToken`. Link `…/ignore` trong bài được giữ nguyên và mở sang voz.vn ở tab mới. |
+| Cuộn khi bấm link nội bộ trong bài | `navigate()` gọi `window.scrollTo(0)` rồi view `scrollIntoView({block:'center'})` sau khi render. Bài cao hơn màn hình thì `block:'center'` đặt mép trên ở `-(cao-màn)/2`; đúng chuẩn nhưng trông như chưa cuộn nếu chỉ đo mép trên. |
+| `history.scrollRestoration` | Đặt `'manual'` trong `core/nav.js`: trình duyệt khôi phục vị trí cuộn **sau** các lệnh cuộn của app và sẽ đè lên vị trí bài được focus. |
 | `views/thread.js` render hai lần khi gửi bài | `navigate()` đã gọi `route()`, sau đó code gọi thêm `viewThread(threadId, 'last', post_id)` để chắc chắn ở trang cuối. |
 | `page === 'last'` | Không phải shortcut API: tải trang 1, đọc `last_page`, rồi gọi lại — tốn thêm một request. |
 | Cờ "đã đọc" của alert | `views/lists.js` kiểm tra `a.read_date`, còn `ui/headerMenus.js` kiểm tra `!item.view_date` — hai chỗ dùng hai tên trường khác nhau cho cùng một khái niệm. Cần đối chiếu response thật trước khi sửa. |
@@ -1602,7 +1656,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 - Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
 - Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
 - Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
-- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **85/85** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **125/125** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
 
 ## 11. Ghi chú triển khai
 

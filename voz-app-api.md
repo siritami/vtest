@@ -898,11 +898,25 @@ unread and page 1 is the answer.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/users/{id}/` | public profile: `message_count`, `reaction_score`, `trophy_points`, `register_date`, `signature`, `custom_fields`, `is_staff`, `can_follow`, `can_ignore`, `can_post_profile`, … |
+| GET | `/users/{id}/` | public profile: `message_count`, `reaction_score`, `trophy_points`, `register_date`, `signature`, `custom_fields`, `is_staff`, `can_follow`, `can_ignore`, `can_post_profile`, ... |
 | GET | `/users/{id}/?with_posts=1` | accepted, no extra fields observed |
-| GET | `/users/find-name?username=` | `{ exact, … }`; empty username returns `200` |
+| GET | `/users/find-name?username=` | `{ exact, ... }`; empty username returns `200` |
 | GET | `/users/` | **403** — listing users is disabled |
 | GET | `/users/find-email?email=` | **403** — disabled |
+
+**`signature` is raw BBCode, not HTML.** Every other body field (`message`,
+`profile_post.message`, conversation messages) is server-rendered HTML, and the API also
+returns a `message_parsed` HTML twin. Signatures have no such twin — the field holds the
+author's BBCode verbatim:
+
+```
+"signature": "Nhắn cho mình ở [URL='https://t.me/zerotrustai']telegram[/URL]"
+"signature": "[B]Đừng đợi hoàn hảo mới bắt đầu.[/B] ♥"
+```
+
+A client that injects it as HTML shows the tags literally. It must run the BBCode through a
+renderer first. The `about` field looks like plain text in the profiles sampled (a bare URL,
+no tags), but treat it as untrusted text rather than pre-rendered HTML.
 
 ### 13.3 Profile posts
 
@@ -1083,6 +1097,14 @@ These return `404` and do **not** exist on this install:
 Bookmarking and watching live only under the `/voz/` prefix
 (`/voz/posts/{id}/bookmark`, `/voz/threads/{id}/watch`) — the plain XenForo paths
 are not routed on this install.
+
+**Ignore lives only on the web frontend.** Every API path returns `404`
+(`/users/{id}/ignore`, `/voz/users/{id}/ignore`, `/voz/ignored`, `/api/me/ignored`,
+`/users/{id}/block`), and `GET /users/{id}/` reports `can_ignore: false` for a guest
+token. The real route is `https://voz.vn/u/<slug>.<id>/ignore`, which answers `403`
+without a cookie session — so it needs `_xfToken` + session cookie like
+`/attachments/upload` (§13.5), not the OAuth bearer token. A web client cannot
+therefore offer ignore; links to it must stay on voz.vn.
 
 ### 13.9 Error codes seen while probing
 

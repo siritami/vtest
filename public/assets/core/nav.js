@@ -1,6 +1,11 @@
 // Navigation helpers. The router registers itself here so views can navigate
 // without importing the router (which imports every view).
 
+// The app drives its own scroll position (top of page on navigate, the focused post for a
+// #post-… fragment). The browser's scroll restoration runs *after* those calls and would
+// restore the previous page's offset, leaving a focused post off-screen.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
 let routeHandler = () => {};
 
 export function setRouteHandler(fn) {

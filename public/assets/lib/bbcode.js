@@ -5,6 +5,7 @@ import { renderSmilies } from './smilies.js';
 import { restoreMedia } from './media.js';
 import { restoreQuoteLinks } from './quotes.js';
 import { restoreSpoilers } from './spoilers.js';
+import { rewriteVozLinks } from './postLinks.js';
 
 // message_parsed is server-rendered HTML; strip anything executable before injecting.
 // The API drops every image size attribute, so sizes are re-applied from the raw BBCode.
@@ -26,6 +27,9 @@ export function sanitizeHtml(html, bbcode) {
       el.setAttribute('rel', 'noopener nofollow ugc');
     }
   }
+  // Must run after the target/_blank pass: a link that points back at this app should
+  // navigate in place, not open a second tab. Voice-only (…/ignore) links stay absolute.
+  rewriteVozLinks(root);
   restoreQuoteLinks(root, bbcode);
   restoreMedia(root);
   applyImageSizes(root, bbcode);
