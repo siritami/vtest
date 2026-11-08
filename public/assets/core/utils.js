@@ -19,6 +19,10 @@ export const num = (value) => {
 
 export const unix = (seconds) => (seconds ? Number(seconds) * 1000 : 0);
 
+// Post numbers are shown in full with thousands separators — voz.vn prints `#13,661`, not
+// the rounded `#14K` that `num()` produces for statistics.
+export const postNumber = (value) => (Number(value) || 0).toLocaleString('en-US');
+
 export function timeAgo(seconds) {
   const ms = unix(seconds);
   if (!ms) return '';

@@ -46,6 +46,13 @@ function safeFont(value) {
   const raw = String(value || '').trim().toLowerCase().replace(/['"]/g, '');
   if (raw.includes('be vietnam pro')) return "'Be Vietnam Pro', sans-serif";
   if (raw.includes('be vietnam')) return "'Be Vietnam', sans-serif";
+  // Order matters: "sf pro display" must be tested before the generic `sf`/`pro` substrings,
+  // so these stay explicit membership tests rather than loose includes().
+  if (raw.includes('sf pro display') || raw.includes('sf-pro-display')) return "'SF Pro Display', sans-serif";
+  // "Segoe UI" is not vendored under its own CSS name (the embedded face is "Segoe UI Local")
+  // to avoid competing with the OS font, but a signature naming it should still render. The
+  // OS family is what a reader most likely has, so point at that.
+  if (raw.includes('segoe ui')) return "'Segoe UI', sans-serif";
   if (raw.includes('roboto')) return 'Roboto, sans-serif';
   return null;
 }

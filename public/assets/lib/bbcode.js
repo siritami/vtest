@@ -125,5 +125,7 @@ export function quoteBlock(post) {
   const author = String(post.username || '').replace(/"/g, '');
   const member = post.user_id ? `, member: ${post.user_id}` : '';
   const body = stripQuotes(post.message || '');
-  return `[QUOTE="${author}, post: ${post.post_id}${member}"]\n${body}\n[/QUOTE]\n\n`;
+  // A trailing blank line is added by the caller: two of them rendered as `<br><br>` and
+  // pushed three blank lines into the reply box, where voz.vn shows one.
+  return `[QUOTE="${author}, post: ${post.post_id}${member}"]\n${body}\n[/QUOTE]`;
 }

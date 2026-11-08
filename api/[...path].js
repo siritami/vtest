@@ -39,6 +39,61 @@ const OEMBED_TARGETS = {
   flickr: (key) => `https://www.flickr.com/services/oembed/?url=${encodeURIComponent(`https://flic.kr/p/${key}`)}&format=json`,
 };
 
+// Douyin (抖音) share links. Douyin's player needs the numeric aweme id, which a short
+// `v.douyin.com/<code>/` link only reveals through its `Location` header — and douyin.com
+// sends no CORS headers, so the browser cannot read that redirect itself. Following it here
+// is one hop: `v.douyin.com` answers 302 straight to `www.iesdouyin.com/share/video/<id>/`.
+const DOUYIN_SHORT_HOSTS = ['v.douyin.com'];
+const DOUYIN_MEDIA_HOSTS = ['www.douyin.com', 'douyin.com', 'www.iesdouyin.com', 'iesdouyin.com'];
+const DOUYIN_VIDEO_ID = /\/(?:share\/)?video\/(\d{6,25})(?:[/?#]|$)/;
+const DOUYIN_SHORT_CODE = /^\/[\w-]{4,32}\/?$/;
+const DOUYIN_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+
+// Accepts either a full share URL or a bare numeric id and returns the aweme id, or null.
+// Anything not recognisably douyin is rejected before a fetch, so this cannot be pointed at
+// an arbitrary host.
+async function resolveDouyinVideoId(raw) {
+  if (/^\d{6,25}$/.test(raw)) return raw;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+  const direct = url.pathname.match(DOUYIN_VIDEO_ID);
+  if (DOUYIN_MEDIA_HOSTS.includes(url.hostname) && direct) return direct[1];
+  if (!DOUYIN_SHORT_HOSTS.includes(url.hostname) || !DOUYIN_SHORT_CODE.test(url.pathname)) return null;
+  // `redirect: 'manual'` would hand back the 302 without a body on Node but not on every
+  // edge runtime, so the hops are walked explicitly, capped, and re-checked each time.
+  let next = url.href;
+  for (let hop = 0; hop < 4; hop++) {
+    let res;
+    try {
+      res = await fetch(next, { headers: { 'User-Agent': DOUYIN_UA, Accept: 'text/html,*/*' }, redirect: 'manual' });
+    } catch {
+      return null;
+    }
+    const location = res.headers.get('location');
+    if (location) {
+      try {
+        next = new URL(location, next).href;
+      } catch {
+        return null;
+      }
+      const match = next.match(DOUYIN_VIDEO_ID);
+      if (match) return match[1];
+      continue;
+    }
+    if (!res.ok) return null;
+    // Some share links land on a real page instead of redirecting; the id is in the HTML.
+    const html = (await res.text()).slice(0, 200_000);
+    const match = html.match(/"aweme_id"\s*:\s*"(\d{6,25})"/) || html.match(DOUYIN_VIDEO_ID);
+    return match ? match[1] : null;
+  }
+  return null;
+}
+
 const encoder = new TextEncoder();
 
 function b64uEncode(str) {
@@ -291,6 +346,16 @@ export default async function handler(request) {
     });
   }
 
+  // Douyin share links. The page needs the numeric aweme id to build a player iframe but
+  // cannot follow the `v.douyin.com` redirect from the browser, so the hop happens here.
+  if (path === '/api/xf/douyin') {
+    const id = await resolveDouyinVideoId(url.searchParams.get('url') || '');
+    const headers = new Headers(corsHeaders(request));
+    headers.set('Cache-Control', 'private, max-age=86400');
+    if (!id) return json({ error: 'douyin_unresolved' }, { status: 404, headers });
+    return json({ id, embed: `https://open.douyin.com/player/video?vid=${id}&autoplay=0`, page: `https://www.douyin.com/video/${id}` }, { status: 200, headers });
+  }
+
   // XenForo resolves some embeds (flickr, …) through oEmbed instead of an iframe. voz.vn
   // does that server-side with data-xf-init="oembed"; neither provider sends CORS headers,
   // so the page must relay through us.
@@ -349,6 +414,54 @@ export default async function handler(request) {
       return new Response(JSON.stringify({ success: false, status: upstream.status, error: text.slice(0, 300) }), { status: upstream.status, headers });
     }
     return new Response(text, { status: 200, headers });
+  }
+
+  if (path === '/api/image-download' && request.method === 'GET') {
+    let target;
+    try {
+      target = new URL(url.searchParams.get('url') || '');
+    } catch {
+      return json({ error: 'invalid_image_url' }, { status: 400, headers: corsHeaders(request) });
+    }
+    if (target.protocol !== 'https:' || target.username || target.password) {
+      return json({ error: 'invalid_image_url' }, { status: 400, headers: corsHeaders(request) });
+    }
+    // `limit` asks upstream for only the first N bytes. The avatar freezer uses it to tell an
+    // animated avatar from a static one without downloading most of them in full; the full
+    // body is requested only once an animation is confirmed. A server that ignores Range just
+    // sends everything, which is still correct — the caller sees the real length.
+    const limit = Number(url.searchParams.get('limit')) || 0;
+    // voz.vn sits behind Cloudflare, which answers a plain server-side fetch with a
+    // challenge page roughly half the time. A challenge is a 403 with an HTML body, so it
+    // is retried; a real 404 is not.
+    const attempt = () => {
+      const headers = { Accept: 'image/*', 'User-Agent': UA };
+      if (limit > 0) headers.Range = `bytes=0-${limit - 1}`;
+      return fetch(target, { headers, redirect: 'follow' }).catch(() => null);
+    };
+    let upstream = await attempt();
+    for (let tries = 0; tries < 3; tries++) {
+      const type = upstream?.headers.get('content-type') || '';
+      if (upstream?.ok && type.startsWith('image/')) break;
+      if (upstream && upstream.status !== 403 && upstream.status !== 429) break;
+      upstream = await attempt();
+    }
+    const contentType = upstream?.headers.get('content-type') || '';
+    if (!upstream?.ok || !contentType.startsWith('image/')) {
+      return json({ error: 'image_download_failed' }, { status: upstream?.status || 502, headers: corsHeaders(request) });
+    }
+    const headers = new Headers(corsHeaders(request));
+    headers.set('Content-Type', contentType);
+    // Avatars carry a `?<mtime>` cache-buster, so the bytes behind one URL never change: the
+    // browser may reuse them instead of re-downloading on every page. `private` keeps them out
+    // of shared caches, since the URL is the member's own image.
+    headers.set('Cache-Control', 'private, max-age=86400');
+    if (limit > 0) {
+      // Reported so the caller can tell a truncated prefix from the whole file.
+      const total = upstream.headers.get('content-range')?.split('/')[1] || upstream.headers.get('content-length') || '';
+      if (total) headers.set('X-Image-Total', total);
+    }
+    return new Response(upstream.body, { status: 200, headers });
   }
 
   // pik.vn image host. Its uploader sends no CORS headers, so the page cannot call it

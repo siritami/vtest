@@ -3,13 +3,15 @@
 import { app } from '../core/dom.js';
 import { esc } from '../core/utils.js';
 import { setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle } from '../ui/title.js';
 import { toast } from '../ui/feedback.js';
 import { openModal } from '../ui/modal.js';
 import {
   loadSettings, addShortcut, updateShortcut, removeShortcut, moveShortcut,
   exportSettingsJson, importSettingsJson, setInfiniteScroll,
   SCROLL_MODES, SCROLL_LABELS,
-  setTheme, setFont, setFontScale, getFontScale, THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
+  setTheme, setFont, setFontScale, getFontScale, setImageDownload, setPostScreenshot, setStaticAvatars,
+  THEME_MODES, THEME_LABELS, FONTS, FONT_LABELS,
   FONT_SCALE_MIN, FONT_SCALE_MAX, FONT_SCALE_STEP,
 } from '../lib/settings.js';
 import {
@@ -37,8 +39,11 @@ const THEME_HELP = {
 const FONT_HELP = {
   system: 'Dùng phông có sẵn của máy, không tải thêm gì.',
   roboto: 'Tải phông Roboto (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
+  cantarell: 'Tải phông Cantarell (400/600) kèm chữ Việt, chỉ tải khi bạn chọn.',
   'be-vietnam-pro': 'Tải phông Be Vietnam Pro (400/500/700) kèm chữ Việt, chỉ tải khi bạn chọn.',
   'be-vietnam': 'Tải phông Be Vietnam (400/500/700 + nghiêng) kèm chữ Việt, chỉ tải khi bạn chọn.',
+  'sf-pro-display': 'Tải phông SF Pro Display (400/500/700 + nghiêng) kèm chữ Việt, chỉ tải khi bạn chọn.',
+  'segoe-ui': 'Tải phông Segoe UI (400/600 + nghiêng) kèm chữ Việt, chỉ tải khi bạn chọn. Trên Windows vốn đã có sẵn phông này.',
 };
 
 const SIZE_HELP = {
@@ -156,7 +161,7 @@ function tabsHtml(active) {
 }
 
 function settingsHtml(active = settingsTabFromHash()) {
-  const { navShortcuts, infiniteScroll, theme, font, postSize, uiSize } = loadSettings();
+  const { navShortcuts, infiniteScroll, theme, font, postSize, uiSize, imageDownload, postScreenshot, staticAvatars } = loadSettings();
   const albums = getAlbums();
   return `<div class="block settings-block">
       <h1 class="block-header">Cài đặt</h1>
@@ -176,6 +181,29 @@ function settingsHtml(active = settingsTabFromHash()) {
           <p class="formHint">Tính theo % so với cỡ mặc định (100%). Hai mục dưới đây độc lập nhau nên có thể chỉnh riêng phần nội dung bài viết.</p>
           ${sizeRow('size-post', 'Cỡ chữ nội dung bài viết', SIZE_HELP.post, postSize)}
           ${sizeRow('size-ui', 'Cỡ chữ những chỗ khác', SIZE_HELP.ui, uiSize)}
+          <h3 class="settings-subhead">Ảnh trong bài viết</h3>
+          <label class="settings-toggle" for="image-download">
+            <span class="settings-toggle-copy">
+              <span class="settings-toggle-name">Tải ảnh</span>
+              <span class="option-card-desc">Hiện nút tải ở góc phải ảnh lớn. Ảnh WebP được đổi sang JPG trước khi lưu.</span>
+            </span>
+            <input type="checkbox" id="image-download"${imageDownload ? ' checked' : ''}>
+          </label>
+          <h3 class="settings-subhead">Bài viết</h3>
+          <label class="settings-toggle" for="post-screenshot">
+            <span class="settings-toggle-copy">
+              <span class="settings-toggle-name">Hiển thị nút chụp bài viết</span>
+              <span class="option-card-desc">Hiện nút ở góc phải mỗi bài viết; bấm để lưu cả bài (kèm tiêu đề chủ đề, ảnh, liên kết, nhúng) thành một ảnh PNG.</span>
+            </span>
+            <input type="checkbox" id="post-screenshot"${postScreenshot ? ' checked' : ''}>
+          </label>
+          <label class="settings-toggle" for="static-avatars">
+            <span class="settings-toggle-copy">
+              <span class="settings-toggle-name">Tắt ảnh động ảnh đại diện</span>
+              <span class="option-card-desc">Ảnh đại diện động (GIF/WebP) chỉ hiện khung hình đầu, không chạy. Ảnh tĩnh giữ nguyên.</span>
+            </span>
+            <input type="checkbox" id="static-avatars"${staticAvatars ? ' checked' : ''}>
+          </label>
         </div>
       </section>
       <section class="settings-panel" id="panel-scroll" role="tabpanel" aria-labelledby="tab-scroll"${active === 'scroll' ? '' : ' hidden'}>
@@ -723,6 +751,7 @@ function openAlbumEditor(albumId, onChange) {
 
 export function viewSettings() {
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Cài đặt' }]);
+  setTitle('Cài đặt');
   app.innerHTML = settingsHtml();
   wireSettingsTabs();
 
@@ -752,6 +781,21 @@ export function viewSettings() {
   // custom properties from the voz:settings event saveSettings fires.
   wireSizeSlider('size-post', (value) => setFontScale({ ...getFontScale(), postSize: value }));
   wireSizeSlider('size-ui', (value) => setFontScale({ ...getFontScale(), uiSize: value }));
+  document.getElementById('image-download')?.addEventListener('change', (event) => {
+    const enabled = event.currentTarget.checked;
+    setImageDownload(enabled);
+    toast(`Tải ảnh: ${enabled ? 'Bật' : 'Tắt'}`);
+  });
+  document.getElementById('post-screenshot')?.addEventListener('change', (event) => {
+    const enabled = event.currentTarget.checked;
+    setPostScreenshot(enabled);
+    toast(`Nút chụp bài viết: ${enabled ? 'Bật' : 'Tắt'}`);
+  });
+  document.getElementById('static-avatars')?.addEventListener('change', (event) => {
+    const enabled = event.currentTarget.checked;
+    setStaticAvatars(enabled);
+    toast(`Tắt ảnh động ảnh đại diện: ${enabled ? 'Bật' : 'Tắt'}`);
+  });
   wireOptionGroup('infinite-scroll', (value) => {
     setInfiniteScroll(value);
     toast(`Cuộn trang liên tục: ${SCROLL_LABELS[value]}`);

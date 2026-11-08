@@ -14,7 +14,7 @@
 //         data-font="system|roboto|be-vietnam-pro|be-vietnam"
 //         data-post-size="100" data-ui-size="100">
 
-import { getTheme, getFont, getFontScale, FONT_STACKS } from '../lib/settings.js';
+import { getTheme, getFont, getFontScale, FONT_STACKS, FONT_DEFAULT as DEFAULT_FONT_KEY } from '../lib/settings.js';
 
 const FONT_HREF = '/assets/css/fonts.css';
 
@@ -37,7 +37,9 @@ function applyTheme(mode) {
 
 // The font stylesheet is a single <link> that is added on first use and never removed: once
 // the user has tried a vendored font, keeping the link avoids a re-download if they switch
-// back and forth. The family is still switched through --font so `system` uses no download.
+// back and forth. `be-vietnam` is the default and its face is already declared by
+// font-default.css, which index.html links directly — so it never needs this, and asking for
+// it would pull in the other five families' faces for nothing.
 function ensureFontStylesheet() {
   if (document.getElementById('font-faces')) return;
   const link = document.createElement('link');
@@ -49,14 +51,19 @@ function ensureFontStylesheet() {
 
 function applyFont(font) {
   const root = document.documentElement;
-  const stack = FONT_STACKS[font] ?? null;
   root.dataset.font = font;
-  if (stack) {
-    ensureFontStylesheet();
-    root.style.setProperty('--font', stack);
-  } else {
+  if (font === DEFAULT_FONT_KEY) {
+    // base.css already names the default family and font-default.css declares the face, so
+    // clearing the inline value lets those apply. Setting it here would be equivalent but would
+    // also pull a stylesheet reference into the inline style attribute.
     root.style.removeProperty('--font');
+    return;
   }
+  const stack = FONT_STACKS[font];
+  if (!stack) return;
+  // Only a vendored family needs fonts.css; `system` names OS fonts and must not fetch it.
+  if (font !== 'system') ensureFontStylesheet();
+  root.style.setProperty('--font', stack);
 }
 
 // Font size follows the same attribute-plus-custom-property shape. The numbers are published

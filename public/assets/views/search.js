@@ -5,6 +5,7 @@ import { esc, num } from '../core/utils.js';
 import { navigate } from '../core/nav.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle } from '../ui/title.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { pagination, wirePageJump } from '../ui/pagination.js';
 import { postRow } from '../ui/threadRow.js';
@@ -12,6 +13,7 @@ import { postRow } from '../ui/threadRow.js';
 export async function viewSearch(query, searchId, page) {
   setActiveNav('search');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Tìm kiếm' }]);
+  setTitle('Search', searchId ? page : 1);
   const member = new URLSearchParams(location.search).get('member') || '';
   if (!searchId) {
     app.innerHTML = `

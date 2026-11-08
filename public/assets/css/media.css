@@ -18,10 +18,22 @@
 .media-frame { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; background: var(--content-bg); }
 .media-embed--portrait { max-width: 325px; }
 .media-embed--portrait > .media-frame { aspect-ratio: 9 / 16; }
+/* Douyin's player is a vertical 325x735 frame (the userscript's fixed size). Its own UI is
+   inside the iframe, so the wrapper only reserves the box and keeps the source link below. */
+.media-embed--douyin { max-width: 325px; }
+.media-embed--douyin > .media-frame { aspect-ratio: 325 / 735; height: auto; }
+.media-embed--douyin > .media-source { display: block; text-align: center; }
 .media-embed--imgur { max-width: 560px; }
 .media-embed--imgur > .media-frame { aspect-ratio: auto; height: 500px; }
 .media-embed--social { max-width: 550px; }
 .media-embed--social > .media-frame { aspect-ratio: auto; height: 650px; }
+/* Facebook renders through its own SDK, which replaces `.fb-video` with a fluid `<span>`
+   wrapper and sizes the iframe itself (a vertical video comes out ~9:16, a post much
+   shorter). So the wrapper must not impose an aspect-ratio or a max-width smaller than the
+   plugin needs — only centre it and keep the source link underneath. */
+.media-embed--facebook { max-width: 560px; }
+.media-embed--facebook .fb-video { width: 100%; }
+.media-embed--facebook iframe { border: 0; }
 .media-source { display: inline-block; margin-top: 5px; font-size: calc(12px * var(--ui-scale)); }
 /* oEmbed embeds resolve to a picture (the fallback provider link shows briefly). */
 .media-embed--oembed { max-width: 100%; margin: 12px 0; }

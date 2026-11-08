@@ -159,6 +159,34 @@
 }
 .message-postNumber:hover { color: var(--link-hover) !important; }
 
+/* The share menu behind a post number. Fixed rather than absolute so it escapes the post's
+   stacking context, and `z-index` above the sticky chrome but below the toast. */
+.post-share-popup {
+  position: fixed;
+  z-index: 300;
+  min-width: 210px;
+  padding: 4px 0;
+  background: var(--content-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow-menu);
+}
+.post-share-option {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: calc(13px * var(--ui-scale));
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.post-share-option:hover,
+.post-share-option:focus-visible { background: var(--content-bg-alt); outline: none; }
+
 .message-content { display: flex; flex-direction: column; flex: 1 1 auto; }
 .message-userContent { margin-top: 10px; }
 .message-body {
@@ -170,6 +198,92 @@
   --ui-scale: var(--post-scale);
 }
 .message-body img { border-radius: 3px; }
+/* Mirrors voz.vn's `.bbImageWrapper`: an inline-block on the text baseline with an inline
+   image inside. `vertical-align: top` (the previous value) lifted a tall image above its own
+   line and made it overlap the line above, which is what broke the layout. */
+.downloadable-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: baseline;
+}
+.downloadable-image > img,
+.downloadable-image > picture > img { display: inline; }
+.image-download-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 4px;
+  background: rgba(16, 33, 56, .5);
+  color: #fff;
+  opacity: .6;
+  cursor: pointer;
+  touch-action: manipulation;
+  backdrop-filter: blur(2px);
+  transition: opacity .15s ease, background-color .15s ease;
+}
+.image-download-button svg { display: block; }
+.image-download-button:hover,
+.image-download-button:focus-visible { opacity: 1; background: rgba(16, 33, 56, .82); }
+.image-download-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.image-download-button.is-loading { cursor: wait; opacity: .35; }
+.image-download-button.is-saved { opacity: 1; background: rgba(22, 128, 67, .9); border-color: rgba(255, 255, 255, .6); }
+
+/* Per-post screenshot control. It sits in the attribution row next to the bookmark rather
+   than floating over the post, so it can never cover the #number. */
+.post-screenshot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dimmed);
+  opacity: .6;
+  cursor: pointer;
+  vertical-align: middle;
+  touch-action: manipulation;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+}
+.post-screenshot-button svg { display: block; width: 16px; height: 16px; }
+.post-screenshot-button:hover,
+.post-screenshot-button:focus-visible { opacity: 1; color: var(--link); background: var(--surface-raised); }
+.post-screenshot-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.post-screenshot-button.is-loading { cursor: wait; opacity: .35; }
+.post-screenshot-button.is-saved { opacity: 1; color: var(--link); }
+/* No hover on touch, so the control must stay findable. */
+@media (hover: none) {
+  .post-screenshot-button { opacity: .75; }
+}
+
+/* Off-screen capture sheet: the wrapper drawn into the PNG, plus the thread title band. */
+.screenshot-sheet { color: var(--text); }
+.screenshot-title {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  font-size: calc(20px * var(--ui-scale));
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+}
+.screenshot-sheet .message { margin: 0; overflow: visible; }
+.screenshot-sheet .message-inner { align-items: flex-start; }
+/* Touch devices have no hover, so the control must stay visible enough to find. */
+@media (hover: none) {
+  .image-download-button { opacity: .75; }
+}
 
 .message-footer {
   margin: auto 0 0;
@@ -266,6 +380,37 @@
 .bbWrapper blockquote[data-name=""]::before,
 .bbWrapper blockquote.has-quote-source::before { content: none; }
 .bbWrapper .quote-source { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui-scale)); font-weight: 700; }
+
+/* Long quotes are clipped to 800px with a fade, matching voz.vn's `.bbCodeBlock--expandable`.
+   Only quotes that actually overflow get the wrapper, so short ones are untouched. */
+.bbWrapper blockquote.is-expandable { position: relative; }
+.bbWrapper blockquote .quote-expand-content { max-height: 800px; overflow: hidden; }
+.bbWrapper blockquote.is-expanded .quote-expand-content { max-height: none; }
+.bbWrapper blockquote .quote-expand-link {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 400px;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(rgba(0, 0, 0, 0) 0%, var(--quote-bg) 80%);
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  cursor: pointer;
+}
+.bbWrapper blockquote .quote-expand-link span {
+  display: block;
+  width: 100%;
+  padding-bottom: 6px;
+  text-align: center;
+}
+.bbWrapper blockquote .quote-expand-link:hover span { text-decoration: underline; }
+.bbWrapper blockquote.is-expanded .quote-expand-link { display: none; }
+.bbWrapper blockquote .quote-expand-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .bbWrapper h2, .bbWrapper h3, .bbWrapper h4 { margin: 12px 0 6px; font-size: calc(18px * var(--ui-scale)); }
 .bbWrapper ul, .bbWrapper ol { margin: 6px 0; padding-left: 22px; }
 .bbWrapper code {

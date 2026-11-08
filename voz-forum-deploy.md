@@ -35,7 +35,7 @@ vtest/
 │   │   │   ├── postLinks.js  # link voz.vn trong bài → route nội bộ
 │   │   │   ├── signature.js  # chữ ký (BBCode thô) → HTML
 │   │   │   ├── editorCodec.js # BBCode ⇄ HTML cho trình soạn
-│   │   │   ├── media.js      # khôi phục iframe/media + resize Reddit + Flickr oEmbed
+│   │   │   ├── media.js      # khôi phục iframe/media + resize Reddit + Facebook SDK + Flickr oEmbed + Douyin
 │   │   │   ├── imageFallback.js # data-onerror (hide-parent/hide) — sự kiện error pha capture
 │   │   │   ├── prefix.js     # prefix_id → class màu
 │   │   │   ├── quotes.js     # khôi phục link nguồn của quote
@@ -64,6 +64,7 @@ vtest/
 │   │   │   ├── titleHold.js  # giữ tiêu đề 1,5 s để theo dõi
 │   │   │   ├── unreadCounts.js # badge hộp thư / thông báo
 │   │   │   ├── inlineEdit.js # sửa bài tại chỗ (không modal)
+│   │   │   ├── postNumberPopup.js # menu chia sẻ của số bài (link voz.vn / link web)
 │   │   │   ├── modal.js      # modal shell + báo cáo
 │   │   │   ├── theme.js      # áp data-theme (sáng/tối/auto) + cỡ chữ + nạp font lười
 │   │   │   ├── chromeAutoHide.js # ẩn/hiện header + nav theo hướng cuộn
@@ -78,7 +79,8 @@ vtest/
 │   │   │   ├── user.js
 │   │   │   ├── settings.js  # /cai-dat-tuivoz — giao diện + phím tắt nav + sticker + JSON backup
 │   │   │   └── login.js
-│   │   ├── fonts/        # woff2 (roboto / be-vietnam-pro / be-vietnam) + OFL.txt, OFL-BeVietnam.txt
+│   │   ├── fonts/        # woff2 (roboto / be-vietnam-pro / be-vietnam / sf-pro-display / segoe-ui) + OFL.txt, OFL-BeVietnam.txt
+│   │   │                 # (SF Pro + Segoe UI: no OFL file — proprietary, see css/fonts.css)
 │   │   ├── img/          # voz-lockup.svg — logo header, chép từ voz.vn
 │   │   └── css/          # theme, tách theo khu vực
 │   │       ├── base.css      # bảng màu sáng + bảng tối + reset + utility + token cỡ chữ
@@ -98,11 +100,17 @@ vtest/
 │   │       ├── home.css
 │   │       ├── settings.css   # trang cài đặt + danh sách phím tắt + thanh trượt cỡ chữ
 │   │       ├── stickers.css   # popup sticker + quản lý album
-│   │       └── fonts.css      # @font-face — chỉ được link khi người dùng chọn phông
+│   │       └── fonts.css      # @font-face của 5 họ không mặc định — chỉ link khi chọn
+│   │       └── font-default.css  # face Be Vietnam 400, link thẳng từ <head> (mặc định)
 │   └── userscript/
 │       └── voz-oauth-helper.user.js
 ├── tools/
-│   └── build-fonts.py    # dựng woff2 từ font OFL gốc (instance + subset)
+│   ├── build-fonts.py    # dựng woff2 từ font OFL gốc (instance + subset)
+│   ├── build-be-vietnam.py      # [không còn dùng] bản 2.000, xem build-be-vietnam-gstatic.py
+│   ├── build-be-vietnam-gstatic.py  # Be Vietnam + Be Vietnam Pro khớp voz.vn (merge gstatic)
+│   ├── build-sf-pro-display.py  # dựng SF Pro Display (CFF/OTF, sửa usWeightClass)
+│   ├── build-segoe-ui.py        # dựng Segoe UI từ C:/Windows/Fonts (Bold vào ô 600)
+│   └── build-cantarell.py       # tải nguồn GNOME + fontmake + subset (KHÔNG dùng bản Google Fonts)
 ├── dev-server.mjs        # server local (không deploy)
 ├── package.json
 ├── vercel.json
@@ -135,14 +143,28 @@ ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống
 - Avatar mặc định giữ bảng màu hiện tại; chữ cái bằng 60% chiều rộng avatar (`60cqi`).
 - Thời gian đăng bài trong chủ đề dùng dạng tương đối đến hết ngày thứ 7; từ 8 ngày hiển thị ngày giờ đầy đủ. Hover thời gian luôn xem được ngày giờ chính xác. Trên mobile ≤620px, chạm thời gian sẽ đổi thành ngày giờ đầy đủ tại chỗ, không chuyển đến permalink bài viết; liên kết số bài vẫn hoạt động. Các định dạng thời gian ở khu vực khác giữ nguyên.
 - API thay nội dung spoiler bằng `Spoiler content hidden.`; `lib/spoilers.js` lấy lại nội dung từ BBCode gốc bằng parser stack, dựng `details/summary` hỗ trợ spoiler lồng nhau. Giữ các định dạng cơ bản, list, URL, ảnh/attachment, code, quote và media; EMBED chưa hỗ trợ giữ liên kết nguồn. Chỉ thay placeholder khi số spoiler ngoài cùng khớp, không tải HTML ngoài hay chạy BBCode như HTML. Nội dung phục hồi tiếp tục đi qua sanitizer, khôi phục quote/media/smiley và kích thước ảnh.
-- `lib/quotes.js` khôi phục liên kết bài gốc trong tên tác giả quote từ BBCode (bao gồm quote lồng nhau); quote không có post ID giữ tên thường. Route `/p/<id>/` lấy bài gốc và pagination API để chuyển đến đúng thread/trang rồi cuộn tới bài, không giả định 20 bài/trang.
+- `lib/quotes.js` khôi phục liên kết bài gốc trong tên tác giả quote từ BBCode (bao gồm quote lồng nhau); quote không có post ID giữ tên thường. Route `/p/<id>/` lấy bài gốc và pagination API để chuyển đến đúng thread/trang rồi cuộn tới bài, không giả định 20 bài/trang. Cùng file này còn **gấp quote dài**: quote cao quá 800px được cắt, làm mờ dần và hiện nút *Bấm để mở rộng...*, đúng như `.bbCodeBlock--expandable` + `.bbCodeBlock-expandLink` của voz.vn (bài #1 thread 1296038 có quote cao 13.700px).
 - `css/media.css` định dạng preview URL (`bbCodeBlock--unfurl`) từ HTML API: thumbnail, tiêu đề, mô tả, favicon; ảnh preview không nhận class ảnh bài viết. Không tự fetch URL tùy ý để lấy metadata. Khối embed (`.media-embed`) canh giữa bằng `margin: 12px auto` để video không dạt trái so với voz.vn.
   - **Bẫy specificity (đã sửa).** `.bbWrapper img:not(.smilie)` ở `post.css` đặt `height: auto` với specificity (0,2,1), thắng `.bbCodeBlockUnfurl-icon` (0,2,0). Favicon tải lỗi có `naturalHeight = 0`, nên `height: auto` + `width: 16px` biến alt text (`discord.com`) thành một cột chữ 16px cao hàng trăm pixel: card từ ~130px phình lên ~400px, và vì chữ trong bài co giãn theo `--post-scale` nên lỗi nặng dần khi tăng cỡ chữ (100% → 397px, 150% → 397px, 200% → lớn hơn nữa). Hai ảnh của card giờ được ghim qua chính hàng của chúng — `.contentRow-figure .bbCodeBlockUnfurl-image` và `.contentRow-minor .bbCodeBlockUnfurl-icon`, đều (0,3,0) — nên thắng rule chung mà **không** phụ thuộc tổ tiên `.bbWrapper` (card vẫn đúng khi render ngoài `.bbWrapper`). Icon còn có `max-height: 16px` làm lớp bảo hiểm. Đo lại: card 131px ở 100%, 206px ở 150%, 306px ở 200% — chênh lệch chỉ do chữ, không do ảnh.
   - **`data-onerror="hide-parent"` (đã hiện thực).** HTML của voz.vn gắn thuộc tính này lên favicon; bản thân nó là **trơ** — XenForo bind bằng JavaScript mà app không tải — nên favicon chết vẫn chiếm chỗ và hiện alt text. `lib/imageFallback.js` (`wireImageFallbacks()`, gọi một lần trong `app.js`) bắt `error` ở **pha capture** trên `document` (sự kiện `error` không bubble) và ẩn phần tử cha (`hide-parent`) hoặc chính ảnh (`hide`). Ảnh không có `data-onerror` không bị đụng tới. Chỉ favicon chết mới ẩn; ảnh preview 1×1 vẫn được kéo đầy khung 80/60px với `object-fit: cover`.
-- `lib/media.js` khôi phục wrapper media của API: YouTube, X/Twitter, TikTok, Reddit (`subreddit/comments/id`) và Imgur (`[MEDIA=imgur]<album_id>[/MEDIA]` → `https://imgur.com/<id>/embed`) được dựng iframe từ ID đã kiểm tra, có liên kết mở nguồn. Iframe sẵn có chỉ được giữ khi khớp HTTPS host/path cho YouTube, Vimeo, Dailymotion, Facebook plugins, Spotify, SoundCloud, TikTok, Twitter hoặc Imgur (`/^\/[\w-]+\/embed\/?$/`). Mọi thuộc tính iframe được dựng lại, loại `srcdoc`/event handler và áp sandbox; script bên ngoài không được chèn. Provider chưa hỗ trợ giữ nội dung/link fallback của API. Không sao chép mã plugin XenForo. Reddit và Imgur tự điều chỉnh chiều cao từ message của provider — Reddit dùng `resize.embed` (origin `embed.reddit.com`/`www.redditmedia.com`), Imgur dùng `resize_imgur` (origin `https://imgur.com`); cả hai đều kiểm tra `event.source` đúng iframe và giới hạn 100–3000px. Ảnh Imgur đơn lẻ không bị đổi: `i.imgur.com` vẫn là `<img>` bình thường. X dùng khung cao cố định có cuộn; nội dung bị xóa, giới hạn vùng/đăng nhập hoặc chặn embed phụ thuộc provider.
-- **Flickr qua oEmbed.** `[MEDIA=flickr]<short_id>[/MEDIA]` không có iframe để dựng: voz.vn để XenForo tự phân giải (`data-xf-init="oembed"`) và kết quả cuối cùng là **một ảnh**, không phải khung. Trang này làm tương tự: `restoreMedia()` thấy provider trong `OEMBED_SITES`, đánh dấu `media-embed--oembed` (giữ link fallback của API trong lúc chờ) rồi gọi `hydrateOembed()`. Hàm này `fetch('/api/xf/oembed?site=flickr&key=…')` — proxy vì Flickr **không gửi header CORS** — chờ placeholder xuất hiện trong DOM thật (`sanitizeHtml()` trả về chuỗi nên node lúc parse không phải node được chèn) rồi thay bằng `<a><img class="bbImage"></a>` + link "Xem trên Flickr". Ảnh chỉ được nhận khi host nằm trong `OEMBED_IMAGE_HOSTS` (`live.staticflickr.com` và các `farm*.staticflickr.com`), phải HTTPS và không có credentials; sai host thì bỏ ảnh và quay về fallback có viền. Giới hạn hiển thị `max-width: min(100%, 683px)`, giữ đúng tỉ lệ, canh trái như ảnh thường.
-- Trang chủ đề tải danh mục `/voz/smilies` qua `lib/smilies.js`, đổi mã smiley trong văn bản thành ảnh đúng kích thước/2x. Không thay mã trong liên kết hoặc khối code. Trình soạn cũng hiển thị smiley ngay khi chọn hoặc gõ mã, không cần bấm Xem trước; ảnh nằm trong `contenteditable` nên `data-smilie` giữ mã gốc để serialize về BBCode, caret được đặt lại theo độ dài mã khi ảnh thay thế text.
-- `ui/memberTooltip.js` hiện thẻ thông tin khi hover/focus tên hoặc avatar tác giả trên desktop; trên mobile ≤620px hoặc thiết bị không hỗ trợ hover, chạm tên/avatar để mở, chạm lại hoặc bên ngoài để đóng, dùng liên kết Hồ sơ trong thẻ để vào trang thành viên: avatar, chức danh, ngày tham gia, hoạt động, thống kê và liên kết hồ sơ/tin nhắn. Chi tiết được tải khi mở và cache theo thành viên; Escape, cuộn hoặc rời thẻ sẽ đóng.
+- `lib/media.js` khôi phục wrapper media của API: YouTube, X/Twitter, TikTok, Reddit (`subreddit/comments/id`), Imgur (`[MEDIA=imgur]<album_id>[/MEDIA]` → `https://imgur.com/<id>/embed`) và **Facebook** được dựng iframe từ ID đã kiểm tra, có liên kết mở nguồn. Iframe sẵn có chỉ được giữ khi khớp HTTPS host/path cho YouTube, Vimeo, Dailymotion, Facebook plugins, Spotify, SoundCloud, TikTok, Twitter hoặc Imgur (`/^\/[\w-]+\/embed\/?$/`). Mọi thuộc tính iframe được dựng lại, loại `srcdoc`/event handler và áp sandbox; script bên ngoài không được chèn. Provider chưa hỗ trợ giữ nội dung/link fallback của API. Không sao chép mã plugin XenForo. Reddit và Imgur tự điều chỉnh chiều cao từ message của provider — Reddit dùng `resize.embed` (origin `embed.reddit.com`/`www.redditmedia.com`), Imgur dùng `resize_imgur` (origin `https://imgur.com`); cả hai đều kiểm tra `event.source` đúng iframe và giới hạn 100–3000px. Ảnh Imgur đơn lẻ không bị đổi: `i.imgur.com` vẫn là `<img>` bình thường. X dùng khung cao cố định có cuộn; nội dung bị xóa, giới hạn vùng/đăng nhập hoặc chặn embed phụ thuộc provider.
+  - **Facebook.** Đây **không** phải provider dựng-iframe-từ-ID như các provider trên: XenForo trả về markup plugin (`<div class="fb-video" data-href="https://www.facebook.com/video.php?v=…" data-show-text="true" data-show-captions="true">`) và **Facebook JS SDK** (`connect.facebook.net/vi_VN/sdk.js#xfbml=1`) mới là thứ thay nó bằng iframe thật — đúng cách voz.vn làm. Bốn điểm phải giữ: (1) nhánh `site === 'facebook'` chỉ chạy khi có `.fb-video`; (2) **không** `replaceChildren()` — SDK đọc `data-href`/`data-show-text`/`data-show-captions` từ chính div đó; (3) điều kiện bỏ class fallback là `!frame && !pendingFacebook`, nếu không thì plugin **và** link fallback cùng hiện; (4) gọi `FB.XFBML.parse()` trên **DOM thật**, không phải `root` của `restoreMedia()`.
+    - **Bẫy document tách rời (dễ sai nhất).** `sanitizeHtml()` `DOMParser` một chuỗi rồi trả `innerHTML`, nên node mà `restoreMedia()` thấy sẽ bị vứt đi và parse lại trên trang; parse trên `root` sẽ render một iframe không bao giờ tới DOM. `waitForFacebookEmbeds()` poll `document.querySelectorAll('.fb-video')` (~4 s) rồi mới parse, y như `hydrateOembed()` làm cho Flickr.
+    - **Vì sao không dựa vào `#xfbml=1`?** Nó **chỉ tự quét một lần lúc load**. Embed đến sau (bài trả lời mới, trang nối khi cuộn liên tục, xem trước trích dẫn) sẽ nằm im vĩnh viễn. Đã kiểm chứng: vào `/f/phan-mem.13/` (không có embed, `sdk: false`) rồi điều hướng SPA sang thread Facebook → **2/2 embed render**. Ngược lại re-parse an toàn vì poll lọc bỏ `.fb_iframe_widget` đã render.
+    - **Chỉ một thẻ script, và không poll khi vô ích.** `facebookSdkPromise` cache ở cấp module (mỗi bài gọi `restoreMedia()` một lần nhưng chỉ nạp SDK một lần) + kiểm tra `#facebook-jssdk`. `scheduleFacebookHydration(sawFacebook)` chỉ poll khi lần render đó thật sự sinh `.fb-video`, nên trang 20 bài không có Facebook không để lại 20 timer 4 giây và **không nạp SDK**. SDK hỏng thì `script.onerror` resolve `null` → về link fallback, không unhandled rejection. Không cần file nào trong repo: SDK nạp từ CDN Facebook.
+    - **CSS.** `media-embed--facebook` **không** áp `aspect-ratio: 16/9` như `media-frame` — SDK tự đo và tự đặt kích thước (video dọc ra ~9:16, bài viết lùn hơn nhiều); chỉ cần `max-width: 560px` và bỏ viền iframe.
+    - **Đối chiếu voz.vn.** Cùng thread, cùng plugin: voz.vn dùng `v2.7` với iframe 223px (hẹp vì SDK đo lúc viewport nhỏ), trang này `v21.0` 560px — cùng nội dung. Cả hai sinh **đúng hai class lỗi giống nhau** trong console (`Cookie "d79fa363-…" bị từ chối vì cross-site` và `ErrorUtils caught an error … Cannot listen to an undefined element` từ `static.xx.fbcdn.net`), tức lỗi thuộc plugin Facebook chứ không phải tích hợp này.
+  - **Flickr qua oEmbed.** `[MEDIA=flickr]<short_id>[/MEDIA]` không có iframe để dựng: voz.vn để XenForo tự phân giải (`data-xf-init="oembed"`) và kết quả cuối cùng là **một ảnh**, không phải khung. Trang này làm tương tự: `restoreMedia()` thấy provider trong `OEMBED_SITES`, đánh dấu `media-embed--oembed` (giữ link fallback của API trong lúc chờ) rồi gọi `hydrateOembed()`. Hàm này `fetch('/api/xf/oembed?site=flickr&key=…')` — proxy vì Flickr **không gửi header CORS** — chờ placeholder xuất hiện trong DOM thật (`sanitizeHtml()` trả về chuỗi nên node lúc parse không phải node được chèn) rồi thay bằng `<a><img class="bbImage"></a>` + link "Xem trên Flickr". Ảnh chỉ được nhận khi host nằm trong `OEMBED_IMAGE_HOSTS` (`live.staticflickr.com` và các `farm*.staticflickr.com`), phải HTTPS và không có credentials; sai host thì bỏ ảnh và quay về fallback có viền. Giới hạn hiển thị `max-width: min(100%, 683px)`, giữ đúng tỉ lệ, canh trái như ảnh thường.
+    - **Douyin (抖音) từ liên kết trần (mới).** Người dùng dán link douyin dạng trần trong bài (post 32957522, thread 979840: hai link `https://v.douyin.com/iMQxf2vB/` và `https://v.douyin.com/iMQCJ3SA/`). **voz.vn cũng không nhúng** hai link này — đã kiểm tra DOM thật, chúng chỉ là `<a class="link link--external">` trong `.bbWrapper`. Nên đây là tính năng mới, làm theo gợi ý của userscript *Douyin embedded videos on voz* (kylyte) nhưng khác userscript ở **hai** điểm quan trọng:
+      - **Short link không tự phân giải được ở trình duyệt.** `v.douyin.com/<code>/` chỉ lộ ra aweme id qua header `Location` khi redirect sang `www.iesdouyin.com/share/video/<id>/`; douyin.com **không gửi CORS** nên trang không đọc được redirect bằng `fetch`. Userscript dùng `GM_xmlhttpRequest` (đặc quyền), trang web thường không có. Vì vậy bước nhảy redirect do **`/api/xf/douyin?url=…`** làm phía server: nó đi tối đa 4 hop với `redirect: 'manual'`, kiểm tra host/path ở **từng** hop (chỉ `v.douyin.com` cho short link, `www.douyin.com`/`douyin.com`/`www.iesdouyin.com`/`iesdouyin.com` cho link đầy đủ), rồi trả `{ id, embed, page }`. Id luôn được kiểm tra `\d{6,25}` trước khi dựng URL, nên endpoint không thể bị trỏ sang host khác và không thể trả về một URL tùy ý.
+      - **`restoreMedia()` chạy trên document tách rời.** Link tìm thấy lúc parse **không phải** node được chèn lên trang (cùng bẫy như Facebook/Flickr), nên phải quét lại `document` sau khi có id. `hydrateDouyinLinks()` chạy ở đầu `restoreMedia()`: link đầy đủ có sẵn id thì thay **ngay** (không cần mạng), short link gom theo `href` để **một** request dùng chung cho mọi bản sao (bài gốc + trích dẫn). `douyinIds` cache theo `href` ở cấp module; **request lỗi không được cache** (`douyinIds.delete(href)`) nên lần render sau tự thử lại.
+      - **Player.** `https://open.douyin.com/player/video?vid=<id>&autoplay=0` dựng qua `configureFrame()` nên thừa hưởng nguyên sandbox/allow/referrer-policy như mọi embed khác. Đã xác minh endpoint trả **200**, không `X-Frame-Options`, không CSP → nhúng được.
+      - **Link nằm trong card unfurl.** Link trần thường bị XenForo bọc trong `.bbCodeBlock--unfurl`, mà card này xếp link vào cột `.contentRow-figure` rộng 80px → player 9:16 bị bóp dẹt. `DOUYIN_WRAPPER = 'p, .bbCodeBlock--unfurl'` nên **cả card** bị thay, không phải chỉ cái link.
+      - **CSS.** `.media-embed--douyin > .media-frame { aspect-ratio: 325 / 735 }` — đúng khung 325×735 của userscript, `.media-embed--portrait` lo `max-width: 325px`. **Không** đặt `max-height` theo viewport: bản đầu dùng `max-height: 80vh` và trên viewport 443px nó kẹp khung còn 354px, bóp méo player. Test `douyin-embed.test.mjs` có ca `assert.doesNotMatch` chặn việc thêm lại.
+      - **Hai lỗi thật đã tìm ra khi tự kiểm chứng (quan trọng, đừng xoá).** Cả hai chỉ lộ ra khi **gọi lại** `restoreMedia()` trên một thân bài **đã có embed** — tức đúng tình huống SPA điều hướng / render lại / nối thêm trang, còn lần render đầu thì hoàn toàn bình thường:
+        1. **Nhân bản player.** `hydrateDouyinLinks()` lọc `a[href]` mà không loại link đã nằm trong `.media-embed`, nên mỗi lần render lại thêm một player nữa. Đo trên trang thật: **2 → 6** player sau hai lần gọi thêm (3 lớp cho mỗi link). Sửa: thêm `!a.closest('.media-embed') &&` vào **chính** filter đồng bộ, không chỉ ở nhánh async. Nay `before: 2 → after: 2`.
+        2. **`frameRules` thiếu `open.douyin.com` → iframe bị xoá.** `restoreMedia()` mở đầu bằng `safeMediaUrl(frame.getAttribute('src'))` và **`frame.remove()`** khi trả `null`. URL player `https://open.douyin.com/player/video?vid=…` không nằm trong `frameRules`, nên nó sống sót qua lần render đã tạo ra nó nhưng bị lần render **sau** xoá sạch. Đo trên trang thật: **2 iframe → 0**, và `iframe.media-frame` mồ côi = **0** — tức bị **huỷ**, không phải bị di chuyển (triệu chứng dễ chẩn đoán sai thành lỗi CSS hoặc lỗi `replaceWith`). Sửa: thêm `['open.douyin.com', /^\/player\/video$/]`. Đây cũng là lý do test có ca khẳng định URL mà endpoint trả về **phải khớp** hình dạng của entry `frameRules`: đổi đường dẫn player mà quên sửa allow-list sẽ làm embed biến mất trong im lặng.
+      - **Đã kiểm chứng trong Firefox thật.** 4 embed (`media-embed--douyin`) với đúng `vid=`, `0` link `link--external` còn sót, khung đúng 325×735, và đọc trực tiếp trong iframe cho thấy **video phát thật**: `readyState: 4`, `videoWidth` 1080/720, `duration` 8.4s / 33.09s, có phụ đề + nút chia sẻ của xgplayer. Ca tổng hợp (một link đầy đủ trong `<p>`, một link short trong card unfurl, một link `example.com/video/<id>` làm nhiễu) cho: **2** player đúng src, card unfurl **bị thay cả card**, link ngoài **không bị đụng**, và **không** wrapper rỗng nào. Log lỗi trong console (telemetry `mcs.zijieapi.com`, `wss://open.douyin.com/player/Create WebSocket`) đến từ **SDK chống bot của chính douyin bên trong iframe**, không phải từ mã này, và không cản video phát.- Trang chủ đề tải danh mục `/voz/smilies` qua `lib/smilies.js`, đổi mã smiley trong văn bản thành ảnh đúng kích thước/2x. Không thay mã trong liên kết hoặc khối code. Trình soạn cũng hiển thị smiley ngay khi chọn hoặc gõ mã, không cần bấm Xem trước; ảnh nằm trong `contenteditable` nên `data-smilie` giữ mã gốc để serialize về BBCode, caret được đặt lại theo độ dài mã khi ảnh thay thế text.- `ui/memberTooltip.js` hiện thẻ thông tin khi hover/focus tên hoặc avatar tác giả trên desktop; trên mobile ≤620px hoặc thiết bị không hỗ trợ hover, chạm tên/avatar để mở, chạm lại hoặc bên ngoài để đóng, dùng liên kết Hồ sơ trong thẻ để vào trang thành viên: avatar, chức danh, ngày tham gia, hoạt động, thống kê và liên kết hồ sơ/tin nhắn. Chi tiết được tải khi mở và cache theo thành viên; Escape, cuộn hoặc rời thẻ sẽ đóng.
 - Tiêu đề trang chủ đề dùng nền trong suốt; các tiêu đề nhóm diễn đàn vẫn giữ màu xanh. Mobile ≤620px ẩn số trả lời/lượt xem, icon theo dõi và liên kết tác giả cạnh phân trang để tiết kiệm không gian; thông tin tác giả từng bài viết vẫn hiển thị. `ui/titleHold.js` bật/tắt theo dõi khi giữ tiêu đề 1,5 giây (hoặc Enter/Space khi focus); thả sớm, di chuyển quá 10px hoặc pointercancel sẽ hủy. Desktop giữ nút theo dõi và thống kê; yêu cầu theo dõi đang chạy được khóa để tránh gửi trùng.
 - Thả/bỏ/đổi cảm xúc chỉ cập nhật nút và số đếm tại bài viết, không tải lại thread; giữ vị trí đọc và bản nháp trả lời. Các nút của cùng bài bị khoá khi đang gửi; lỗi giữ trạng thái cũ.
 - Mỗi bài viết có icon đánh dấu cạnh số bài, dùng `POST /voz/posts/{id}/bookmark` với `state=bookmark|unbookmark`. Icon tô đầy khi đã lưu, khoá trong lúc gửi, giữ trạng thái cũ nếu lỗi. Khách được chuyển đến đăng nhập; danh sách đã lưu nằm trong menu tài khoản → Đánh dấu.
@@ -430,7 +452,9 @@ Nếu upstream trả `401` và request có session, edge gọi `refreshTokens()`
 | `POST` | `/api/oauth/exchange` | `{ code, verifier }` → `tokenRequest(grant_type=authorization_code)` → set cookie → `{ ok, me }` |
 | `POST` | `/api/oauth/logout` | revoke refresh token (best-effort) + `Set-Cookie` rỗng `Max-Age=0` |
 | `POST` | `/api/pik/upload` | chuyển tiếp multipart sang `https://pik.vn/api/upload`, trả nguyên `{ url, deleteUrl, exists }`; cần `Content-Type: multipart/form-data` |
+| `GET` | `/api/image-download?url=…` | relay ảnh HTTPS cho nút tải khi host nguồn không cho CORS; chỉ trả `image/*` |
 | `GET` | `/api/xf/oembed?site=…&key=…` | phân giải oEmbed (hiện chỉ `flickr`) qua `OEMBED_TARGETS`, chỉ trả các trường an toàn (`url`, `title`, `width`, `height`, `web_page`); provider không gửi CORS nên phải đi qua proxy |
+| `GET` | `/api/xf/douyin?url=…` | theo redirect `v.douyin.com/<code>/` phía server để lấy aweme id (trình duyệt không đọc được `Location`, douyin.com không gửi CORS); chỉ trả `{ id, embed, page }`, từ chối mọi host không phải douyin; `Cache-Control: max-age=86400` |
 | `*` | `/api/xf` hoặc `/api/xf/…` | `handleProxy()` |
 | `*` | còn lại | `404 { error: 'not_found', path }` |
 
@@ -478,12 +502,14 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | `signature.js` | `signatureHtml` | chữ ký trả về dạng **BBCode thô** (xem §6.0b) nên phải render trước khi hiển thị; nhận `[URL=…]`, `[B]`, `[COLOR]`, `[SIZE]`, `[FONT]`, `[LIST]`, `[IMG]`…, tag lạ hiện nguyên văn |
 | `editorCodec.js` | `safeEditorUrl`, `parseEditorCode`, `editorCodePlain`, `editorCodeHtml`, `editorDomCode` | BBCode ⇄ HTML cho trình soạn; tag lạ giữ nguyên dạng `data-bb-raw` (atomic, `contenteditable=false`); `[IMG size=…]` và `[ATTACH]` đã đăng ký được vẽ thành `<img>` thật, thuộc tính giữ qua `data-bb-attrs` |
 | `attachments.js` | `registerAttachments`, `getAttachment`, `attachmentIdForUrl`, `clearAttachments`, `attachmentImage` | API trả `[ATTACH]id[/ATTACH]` trong `message` còn URL thật nằm ở `post.Attachments[].direct_url`; view đăng ký danh sách này để codec vẽ được ảnh. Không đăng ký thì giữ nguyên `data-bb-raw` (không mất dữ liệu) |
-| `media.js` | `safeMediaUrl`, `restoreMedia` | allowlist host/path cho iframe; dựng lại `[MEDIA=…]`; nghe `resize.embed` của Reddit; phân giải Flickr qua `/api/xf/oembed` thành ảnh (`OEMBED_SITES`, `OEMBED_IMAGE_HOSTS`) |
+| `media.js` | `safeMediaUrl`, `restoreMedia`, `douyinVideoId`, `isDouyinLink` | allowlist host/path cho iframe; dựng lại `[MEDIA=…]`; nghe `resize.embed` của Reddit; phân giải Flickr qua `/api/xf/oembed` thành ảnh (`OEMBED_SITES`, `OEMBED_IMAGE_HOSTS`); nạp Facebook JS SDK một lần và `FB.XFBML.parse()` trên DOM thật cho `[MEDIA=facebook]` (`loadFacebookSdk`, `waitForFacebookEmbeds`, `scheduleFacebookHydration`); **Douyin**: tìm link `v.douyin.com`/`douyin.com/video/<id>` trong thân bài, nhờ `/api/xf/douyin` phân giải short link rồi thay bằng player `open.douyin.com` (`hydrateDouyinLinks`, `embedDouyin`, `resolveDouyinShortLink`) |
 | `imageFallback.js` | `wireImageFallbacks` | hiện thực `data-onerror` mà HTML voz.vn giả định có: bắt `error` pha **capture** trên `document` (sự kiện không bubble), `hide-parent` ẩn phần tử cha, `hide` ẩn ảnh. Gọi một lần ở `app.js`; không có `data-onerror` thì không đụng gì |
+| `imageDownload.js` | `wireImageDownloads`, `resolveAttachment`, `fetchImageBlob` | bọc ảnh lớn trong `.downloadable-image` (inline-block, baseline — đúng như `.bbImageWrapper` của voz.vn) + nút tải 26px trong suốt; bỏ qua smilie/sticker/favicon và ảnh dưới 96px **và** 20.000px²; `resolveAttachment()` đổi `/attachments/{id}/` thành URL canonical qua REST (tránh challenge Cloudflare + lấy đúng tên file); `fetchImageBlob()` đi proxy trước cho ảnh khác origin; WebP **tĩnh** → JPEG, WebP **động** giữ nguyên `.webp` (chunk `ANIM`+`ANMF`); một `MutationObserver` + listener `load` pha capture, throttle bằng `requestAnimationFrame`; gọi một lần ở `app.js` |
+| `postScreenshot.js` | `wirePostScreenshots` | nút chụp bài viết; nhân bản `.message`, chèn dải tiêu đề chủ đề, inline ảnh + CSS rồi dựng qua SVG `<foreignObject>` → canvas → PNG (tỉ lệ 2×, tự giảm cho bài dài, không cắt nội dung); dùng chung `resolveAttachment`/`fetchImageBlob`; gọi một lần ở `app.js` |
 | `prefix.js` | `prefixLabel` | `prefix_id` → `label--{green,red,royalBlue,orange,primary,accent,gray,olive}` |
-| `quotes.js` | `restoreQuoteLinks` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/` |
+| `quotes.js` | `restoreQuoteLinks`, `wireQuoteExpansion`, `wireAllQuoteExpansion`, `MAX_QUOTE_HEIGHT` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/`; gấp quote cao hơn `MAX_QUOTE_HEIGHT` (800px) vào `.quote-expand-content` + nút `.quote-expand-link` (bỏ qua quote ngắn); `wireAllQuoteExpansion()` đo trong `requestAnimationFrame` vì phải có layout mới biết chiều cao, và đo lại khi ảnh trong quote tải xong |
 | `smilies.js` | `smilieChoices`, `loadSmilies`, `smiliesReady`, `splitSmilieText`, `renderSmilies` | tải `/voz/smilies` một lần, dựng regex từ mã đã escape, chỉ thay trong text node không nằm trong `a/code/pre/script/style`, chỉ nhận ảnh `https://data.voz.vn/`; trả `true` khi có thay đổi để editor biết khi nào cần đặt lại caret |
-| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `getFontScale`, `setFontScale`, `normalizeFontScale`, `FONT_SCALE_MIN/MAX/STEP/DEFAULT`, `DEFAULT_SHORTCUTS` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`), `font` (`system`/`roboto`/`be-vietnam-pro`/`be-vietnam`, mặc định `system`) và cỡ chữ (`postSize`/`uiSize`, % 80–200 bước 5, mặc định `100`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; `normalizeFontScale()` chỉ nhận number hoặc chuỗi số (vì `Number(null)`/`Number('')`/`Number([])` đều là `0` và sẽ kẹp về sàn 80%); phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent})` gộp cả dữ liệu sticker vào cùng file JSON (không còn khoá `clientId` — imgur Client-ID là hằng số) |
+| `settings.js` | `loadSettings`, `saveSettings`, `addShortcut`, `updateShortcut`, `removeShortcut`, `moveShortcut`, `exportSettingsJson`, `importSettingsJson`, `normalizeShortcut`, `normalizeUrl`, `getInfiniteScroll`, `setInfiniteScroll`, `SCROLL_MODES`, `SCROLL_LABELS`, `getTheme`, `setTheme`, `THEME_MODES`, `THEME_LABELS`, `getFont`, `setFont`, `FONTS`, `FONT_LABELS`, `FONT_STACKS`, `getFontScale`, `setFontScale`, `normalizeFontScale`, `FONT_SCALE_MIN/MAX/STEP/DEFAULT`, `DEFAULT_SHORTCUTS`, `getImageDownload`, `setImageDownload`, `IMAGE_DOWNLOAD_DEFAULT`, `getPostScreenshot`, `setPostScreenshot`, `POST_SCREENSHOT_DEFAULT` | thiết lập lưu ở `localStorage['voz-settings:v1']`; chưa có key thì trả về `DEFAULT_SHORTCUTS` (F33, F17) chỉ để hiển thị, lần ghi đầu tiên mới lưu; `infiniteScroll` (`on`/`manual`/`off`, mặc định `manual`), `theme` (`auto`/`light`/`dark`, mặc định `auto`), `font` (`be-vietnam`/`be-vietnam-pro`/`system`/`segoe-ui`/`cantarell`/`roboto`/`sf-pro-display`, mặc định `be-vietnam`), cỡ chữ (`postSize`/`uiSize`, % 80–200 bước 5, mặc định `100`), `imageDownload` và `postScreenshot` (boolean, mặc định `false`, chỉ nhận đúng `true`) đi kèm trong cùng JSON backup; chỉ nhận URL http(s) tuyệt đối hoặc đường dẫn bắt đầu bằng `/`, chặn `javascript:`/credentials; `normalizeFontScale()` chỉ nhận number hoặc chuỗi số (vì `Number(null)`/`Number('')`/`Number([])` đều là `0` và sẽ kẹp về sàn 80%); phát event `voz:settings` mỗi lần ghi. `exportSettingsJson({albums, recent})` gộp cả dữ liệu sticker vào cùng file JSON (không còn khoá `clientId` — imgur Client-ID là hằng số) |
 | `stickers.js` | `getAlbums`, `addAlbum`, `updateAlbum`, `renameAlbum`, `removeAlbums`, `moveAlbum`, `setAlbumImages`, `getRecentStickers`, `addRecentSticker`, `removeRecentSticker`, `clearRecentStickers`, `getClientId`, `imageFileToBase64`, `downscaleDataUrl`, `urlToBase64`, `downloadImagesInParallel`, `DEFAULT_CLIENT_ID` | album sticker trong `localStorage['voz-stickers:v1']`, gần đây ở `voz-stickers:recent:v1` (tối đa 30); `getClientId()` luôn trả `DEFAULT_CLIENT_ID` (không còn override lưu localStorage); ảnh thu nhỏ ≤ 400px, mã hoá WebP 0.8 (GIF giữ nguyên); chỉ nhận `https:` hoặc `data:image/…;base64,` |
 | `views/settings.js` | `viewSettings` (+ `applyImported` nội bộ) | `applyImported(result)` dùng chung cho ô "Nhập album từ JSON" và mục Sao lưu: file `addOnly` chỉ thêm album mới (bỏ qua trùng tên), file đầy đủ thay thế album + gần đây; khoá `clientId` trong file cũ bị bỏ qua |
 | `imgurImport.js` | `extractAlbumId`, `fetchImgurAlbumImages`, `importImgurAlbum`, `clearImgurCache` | tách album id từ `imgur.com/a/<slug>-<id>`, gọi qua proxy `/api/xf/imgur/album/{id}/images`, tải base64 song song 5 ảnh/lô |
@@ -495,6 +521,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | File | Export | Việc làm |
 |---|---|---|
 | `chrome.js` | `renderAccount`, `renderNavShortcuts`, `wireNavShortcuts`, `setBreadcrumbs`, `setActiveNav` | header account (menu hồ sơ/đánh dấu/theo dõi/**cài đặt**/đăng xuất + 3 menu tiện ích), vẽ lại phím tắt ở thanh nav khi `voz:settings` hoặc `storage` đổi, breadcrumb có nút CTA, tô nav active |
+| `title.js` | `setTitle`, `setBrandTitle`, `setThreadTitle` | ghi `document.title` theo đúng cách voz.vn ghép: `<tên> \| VOZ`, chèn `\| Page N` **giữa** tên và thương hiệu ở trang 2+, và đặt tiền tố chủ đề **sau** tiêu đề (`<tiêu đề> - <tiền tố>`). Xem mục "Tiêu đề trang" bên dưới |
 | `headerMenus.js` | `closeHeaderMenus`, `wireHeaderMenus` | mở/đóng dropdown, tải 6 mục đầu, đánh dấu đã xem, Escape/click ngoài, submit form tìm kiếm nhanh |
 | `forumNodes.js` | `nodeTree`, `nodeRow`, `nodeLink`, `childNodes`, `subForumBlock` | dựng cây node từ `nodes` + `tree_map`, `SearchForum` trỏ `/s/…` nội bộ; `subForumBlock` dựng khối diễn đàn con không tiêu đề cho trang `/f/…` |
 | `feedback.js` | `toast`, `loading`, `errorBox` | toast 3,2 s; spinner; hộp lỗi đọc `ApiError.message` + `code` |
@@ -512,6 +539,7 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | `titleHold.js` | `wireTitleHold` | giữ tiêu đề 1,5 s (hoặc Enter/Space) để bật/tắt theo dõi; huỷ khi thả sớm, di chuyển > 10px, `pointercancel` |
 | `unreadCounts.js` | `refreshUnreadCounts`, `wireUnreadCounts` | badge đỏ từ `pagination.total` của `?unread=true` / `?unviewed=true`; `99+`; refresh khi focus, đổi tab, mỗi 60 s; `force=true` chờ request đang chạy rồi mới tải lại |
 | `inlineEdit.js` | `openInlineEdit`, `cancelInlineEdit` | sửa bài tại chỗ: thay `.message-main` bằng `.inline-edit` trong cùng `.message-cell--main.is-editing`, lưu xong vẽ lại thân bài + dòng attribution, huỷ thì trả DOM cũ | 
+| `postNumberPopup.js` | `openPostNumberPopup`, `closePostNumberPopup`, `vozPostUrl`, `webPostUrl` | menu chia sẻ của số bài: hai mục **Sao chép liên kết voz.vn** (`https://voz.vn/t/<slug>.<id>/post-<postId>`) và **Sao chép liên kết web** (`location.origin` + trang hiện tại + `#post-…`); `position: fixed` neo dưới số bài; đóng khi bấm ra ngoài/Escape/cuộn/resize hoặc khi số bài bị gỡ khỏi DOM; bấm lần nữa vào cùng số bài thì đóng |
 | `modal.js` | `openModal`, `openReportModal` | modal shell; báo cáo gọi `/api/xf/posts/{id}/report` |
 | `session.js` | `loadSession`, `requireLogin` | boot session qua `/api/oauth/status`; chặn view khi chưa đăng nhập |
 
@@ -564,32 +592,33 @@ gọi `fetch('/api/xf/posts/')` trực tiếp.
 
 ### 5.1 Bảng route
 
-| Route | View | API dùng |
-|---|---|---|
-| `/` | Danh sách node/forum (cây 61 node) | `GET /nodes/` |
-| `/f/{slug}.{node_id}/` | Danh sách chủ đề trong forum | `GET /forums/{id}/`, `GET /forums/{id}/threads` |
-| `/f/{slug}.{node_id}/page-{n}/` | Trang n của forum | `GET /forums/{id}/threads?page=n` |
-| `/s/{slug}.{node_id}/` | Node tổng hợp (SearchForum): Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức | `GET /search-forums/{id}/`, `GET /search-forums/{id}/threads` |
-| `/s/{slug}.{node_id}/page-{n}/` | Trang n của node tổng hợp | `GET /search-forums/{id}/threads?page=n` |
-| `/t/{slug}.{thread_id}/` | Bài viết trong chủ đề | `GET /threads/{id}/?with_posts=true` |
-| `/t/{slug}.{thread_id}/page-{n}/` | Trang n của chủ đề | `GET /threads/{id}/?page=n` |
-| `/t/{slug}.{thread_id}/page-{n}/#post-{post_id}` | Nhảy tới bài cụ thể | `scrollIntoView` |
-| `/t/{slug}.{thread_id}/?post={post_id}` | Mở đúng trang chứa bài rồi cuộn tới | `GET /threads/{id}/?page=n` |
-| `/t/{slug}.{thread_id}/unread` | Nhảy tới bài chưa đọc đầu tiên → `replaceState` sang `page-N/#post-{id}` | `GET /threads/{id}/` (đọc `visitor_read_date`) → `GET /threads/{id}/posts?page=n` đi ngược từ trang cuối |
-| `/p/{post_id}/` | Permalink bài viết → redirect sang thread | `GET /posts/{id}/` → `GET /threads/{id}/` |
-| `/f/{slug}.{node_id}/post-thread` | Tạo chủ đề mới | `GET /forums/{id}/`, `POST /threads/` |
-| `/new/` | Bài mới toàn diễn đàn (mở trực tiếp bằng URL, không còn mục nav) | `GET /threads/?order=post_date` |
-| `/search?q=` | Tìm kiếm theo từ khoá | `POST /search/` → `GET /search/{id}/` |
-| `/search?member=` | Tìm bài của một thành viên | `GET /users/find-name` → `POST /search/member` |
-| `/direct-messages/` (alias `/dm/`) | Hộp thư | `GET /conversations/` |
-| `/direct-messages/{slug}.{id}/` | Đọc + trả lời tin nhắn | `GET /conversations/{id}/?with_messages=true`, `POST /conversation-messages/` |
-| `/direct-messages/new?to=` | Tạo tin nhắn mới | `GET /users/find-name`, `POST /conversations/` |
-| `/alerts/` | Thông báo | `GET /alerts/` |
-| `/bookmarks/` | Bài đánh dấu | `GET /voz/bookmarks` |
-| `/watched/` | Chủ đề theo dõi | `GET /voz/watched-threads` |
-| `/u/{slug}.{user_id}/` | Trang cá nhân | `GET /users/{id}/` |
-| `/cai-dat-tuivoz` | Cài đặt (phím tắt nav + JSON backup) | không gọi API |
-| `/login` | Đăng nhập | `/api/oauth/*` |
+| Route | View | API dùng | Tiêu đề (`document.title`) |
+|---|---|---|---|
+| `/` | Danh sách node/forum (cây 61 node) | `GET /nodes/` | `VOZ` |
+| `/f/{slug}.{node_id}/` | Danh sách chủ đề trong forum | `GET /forums/{id}/`, `GET /forums/{id}/threads` | `<tên forum> \| VOZ` |
+| `/f/{slug}.{node_id}/page-{n}/` | Trang n của forum | `GET /forums/{id}/threads?page=n` | `<tên forum> \| Page n \| VOZ` |
+| `/s/{slug}.{node_id}/` | Node tổng hợp (SearchForum): Tin tức iNet, Review sản phẩm, Chia sẻ kiến thức | `GET /search-forums/{id}/`, `GET /search-forums/{id}/threads` | `<tên node> \| VOZ` |
+| `/s/{slug}.{node_id}/page-{n}/` | Trang n của node tổng hợp | `GET /search-forums/{id}/threads?page=n` | `<tên node> \| Page n \| VOZ` |
+| `/t/{slug}.{thread_id}/` | Bài viết trong chủ đề | `GET /threads/{id}/?with_posts=true` | `<tiêu đề> - <tiền tố> \| VOZ` |
+| `/t/{slug}.{thread_id}/page-{n}/` | Trang n của chủ đề | `GET /threads/{id}/?page=n` | `<tiêu đề> - <tiền tố> \| Page n \| VOZ` |
+| `/t/{slug}.{thread_id}/page-{n}/#post-{post_id}` | Nhảy tới bài cụ thể | `scrollIntoView` | như trên |
+| `/t/{slug}.{thread_id}/?post={post_id}` | Mở đúng trang chứa bài rồi cuộn tới | `GET /threads/{id}/?page=n` | như trên |
+| `/t/{slug}.{thread_id}/unread` | Nhảy tới bài chưa đọc đầu tiên → `replaceState` sang `page-N/#post-{id}` | `GET /threads/{id}/` (đọc `visitor_read_date`) → `GET /threads/{id}/posts?page=n` đi ngược từ trang cuối | `<tiêu đề> - <tiền tố> \| Page n \| VOZ` (số trang đã phân giải, không phải chữ `unread`) |
+| `/p/{post_id}/` | Permalink bài viết → redirect sang thread | `GET /posts/{id}/` → `GET /threads/{id}/` | do thread đích đặt |
+| `/f/{slug}.{node_id}/post-thread` | Tạo chủ đề mới | `GET /forums/{id}/`, `POST /threads/` | `Post thread \| VOZ` |
+| `/new/` | Bài mới toàn diễn đàn (mở trực tiếp bằng URL, không còn mục nav) | `GET /threads/?order=post_date` | `What's new \| VOZ` |
+| `/search?q=` | Tìm kiếm theo từ khoá | `POST /search/` → `GET /search/{id}/` | `Search \| VOZ` (trang 2+: `Search \| Page n \| VOZ`) |
+| `/search?member=` | Tìm bài của một thành viên | `GET /users/find-name` → `POST /search/member` | như trên |
+| `/direct-messages/` (alias `/dm/`) | Hộp thư | `GET /conversations/` | `Direct messages \| VOZ` |
+| `/direct-messages/{slug}.{id}/` | Đọc + trả lời tin nhắn | `GET /conversations/{id}/?with_messages=true`, `POST /conversation-messages/` | `<tiêu đề hội thoại> \| VOZ` |
+| `/direct-messages/new?to=` | Tạo tin nhắn mới | `GET /users/find-name`, `POST /conversations/` | `Send direct message \| VOZ` |
+| `/alerts/` | Thông báo | `GET /alerts/` | `Alerts \| VOZ` |
+| `/bookmarks/` | Bài đánh dấu | `GET /voz/bookmarks` | `Bookmarks \| VOZ` |
+| `/watched/` | Chủ đề theo dõi | `GET /voz/watched-threads` | `Watched threads \| VOZ` |
+| `/u/{slug}.{user_id}/` | Trang cá nhân | `GET /users/{id}/` | `<tên thành viên> \| VOZ` |
+| `/cai-dat-tuivoz` | Cài đặt (phím tắt nav + JSON backup) | không gọi API | `Cài đặt \| VOZ` |
+| `/login` | Đăng nhập | `/api/oauth/*` | `VOZ` |
+| route không khớp / lỗi | `errorBox()` | — | `Oops! We ran into some problems. \| VOZ` |
 
 ### 5.1.1 Routing — giống hệt voz.vn
 
@@ -635,7 +664,40 @@ withPage(path, n)      // → path + "page-n/" (bỏ khi n = 1)
 | Click interception | listener ở `document`; bỏ qua `target=_blank`, `download`, khác origin, `/api/`, `/assets/`, `/userscript/` |
 | Fragment cùng trang | `#post-…` chỉ scroll + `replaceState`, không render lại |
 | Back/forward | `popstate` → `route()` |
-| Legacy hash | `#/t/123` được `history.replaceState` sang `/t/123` lúc boot |
+| Legacy hash | `#/thread/123` được `history.replaceState` sang `/t/123` lúc boot |
+
+### 5.1.2 Tiêu đề trang (`document.title`)
+
+`ui/title.js` là **nơi duy nhất** ghi `document.title`. Mỗi view gọi một trong ba hàm ngay
+lúc render; không view nào tự gán `document.title`.
+
+```js
+setTitle(name, page)          // "<name> | VOZ"  hoặc  "<name> | Page N | VOZ"
+setBrandTitle()               // "VOZ"  (trang chủ và trang đăng nhập)
+setThreadTitle(thread, page)  // "<tiêu đề> - <tiền tố> | [Page N | ]VOZ"
+```
+
+Ba quy tắc, **mỗi quy tắc đều đã đối chiếu với voz.vn thật**:
+
+| Quy tắc | Chi tiết |
+|---|---|
+| Thương hiệu | `VOZ` là segment **cuối cùng**, luôn có. Trang chủ (`/`) và trang đăng nhập (`/login/`) chỉ có đúng chữ `VOZ`, không có `\| VOZ` |
+| Số trang | `\| Page N` chèn **giữa** tên và thương hiệu ở trang **2 trở đi**. Trang 1 **không** có segment này — `/f/phan-mem.13/` và `/f/phan-mem.13/page-1` đều ra `Phần mềm \| VOZ` |
+| Tiền tố chủ đề | Nằm **sau** tiêu đề, nối bằng ` - `: `Tất tần tật về dịch vụ nextDNS - thảo luận \| VOZ`. Trên trang thì ngược lại (nhãn hiện **trước** tiêu đề) — **đừng** lấy thứ tự trên trang |
+| Trang lỗi | Route không khớp **và** mọi lỗi throw đều dùng `Oops! We ran into some problems. \| VOZ`, đúng tiêu đề trang lỗi của voz.vn |
+
+Hai điểm dễ sai khi sửa:
+
+- **Số trang phải là số đã phân giải, không phải segment thô.** `viewThread` nhận
+  `page === 'last'` và route `/unread`; đọc thẳng `page` sẽ in ra `Page last`. Vì vậy
+  `setThreadTitle` nhận `res.pagination.current_page`, và được gọi **sau** nhánh đệ quy
+  `page === 'last'` (nhánh đó `return` sớm nên số trang đã là số thật ở lần vào sau).
+- **`<title>VOZ</title>` trong `index.html` phải giữ nguyên.** Đó là tiêu đề cho lần vẽ đầu
+  trước khi JS chạy; gỡ đi thì tab trắng tiêu đề cho tới khi view tải xong.
+
+Guard: `vtesst1/page-title.test.mjs` (10 test cho ba hàm) và
+`vtesst1/page-title-wiring.test.mjs` (5 test chặn việc thêm view mà quên đặt tiêu đề, chặn
+`viewThread` truyền segment thô, và chặn gỡ `<title>` khỏi `index.html`).
 
 Vercel cần SPA fallback để deep link không 404:
 
@@ -677,12 +739,15 @@ Không có endpoint quote riêng. Web client dựng BBCode giống app:
 [QUOTE="<author>, post: <post_id>, member: <user_id>"]
 <nội dung, đã bỏ quote lồng>
 [/QUOTE]
-
-<nội dung bạn gõ>
 ```
 
 `stripQuotes()` là bộ đếm độ sâu trên `/\[(\/?)quote(?:=[^\]]*)?\]/gi` — chỉ giữ text khi
 depth = 0, nên quote lồng không bị nhân bản.
+
+`quoteBlock()` trả về đúng khối trên, **không** kèm dòng trống; khoảng trắng cuối do
+`insertQuote()` thêm: mỗi lần Trích dẫn/Trả lời nối thẳng block mới vào sau block cũ (không
+dòng phân cách) rồi để lại **một** dòng trống để gõ tiếp — đúng như voz.vn. Bản cũ luôn phát
+`\n\n` và chèn lên đầu, nên editor render ra `<br><br>` và tạo tận ba dòng trống dưới quote.
 
 ### 5.4 Cảm xúc
 
@@ -842,8 +907,8 @@ CSS chia theo khu vực, nạp đúng thứ tự trong `index.html`:
 | `layout.css` | `.p-header`, `.p-nav`, `.p-body`, `.block`, `.p-footer` |
 | `forum.css` | `.node-*`, `.structItem*`, `.pairs`, `.pageNav` |
 | `avatar.css` | `.avatar`, `.avatar-fallback`, `.label--*` |
-| `post.css` | `.message*`, `.inline-edit*`, `.member-card`, `.block-outer`, `.reactionsBar`, BBCode |
-| `media.css` | `.bbCodeBlock--unfurl`, `.media-embed`, `.media-frame` |
+| `post.css` | `.message*`, `.inline-edit*`, `.member-card`, `.block-outer`, `.reactionsBar`, `.post-share-popup`, `.image-download-button`, BBCode |
+| `media.css` | `.bbCodeBlock--unfurl`, `.media-embed`, `.media-frame`, `.media-embed--facebook` |
 | `reaction.css` | `.reaction`, `.reaction-count` |
 | `forms.css` | `.button`, `.input`, `.textarea`, `.tabs` |
 | `editor.css` | `.rich-editor`, `.editor-toolbar`, `.editor-overflow`, `.editor-panel` |
@@ -915,7 +980,8 @@ chưa parse**. Chuyển thẳng vào `sanitizeHtml()` thì thẻ hiện nguyên 
 - `[URL=<url>]nhãn[/URL]` và `[URL]<url>[/URL]` → `<a>`, URL qua `safeEditorUrl()` (chỉ
   http/https, không credentials).
 - `[B] [I] [U] [S]`, `[LIST][*]`, `[COLOR]` (hex + tên màu voz.vn), `[SIZE]` (thang 1–7 hoặc
-  px 8–40), `[FONT]` (**chỉ** phông app có: Be Vietnam, Be Vietnam Pro, Roboto), `[IMG]`.
+  px 8–40), `[FONT]` (các họ app có: Be Vietnam, Be Vietnam Pro, Roboto, SF Pro Display,
+  Segoe UI), `[IMG]`.
 - `[QUOTE]`/`[SPOILER]`: giữ chữ, bỏ khung.
 - Tag lạ: hiện **nguyên văn** (không đoán, không mất nội dung).
 - HTML thô trong chữ ký bị escape.
@@ -980,7 +1046,7 @@ Kết quả so với voz.vn (cùng một post):
 
 | Vị trí | Nội dung |
 |---|---|
-| Góc trên phải | icon đánh dấu (`data-bookmark`) + `#<số bài>` (API trả `position` **0-based**, hiển thị `position + 1`) |
+| Góc trên phải | icon đánh dấu (`data-bookmark`) + `#<số bài>` (API trả `position` **0-based**, hiển thị `position + 1`, in đủ chữ số có dấu phẩy như voz.vn: `#13,661`) |
 | Đáy trái | icon báo cáo (cờ) → `Sửa` / `Xoá` (chỉ khi `can_edit` / `can_soft_delete`) |
 | Đáy phải | `Ưng` / `Gạch` → icon trích dẫn → icon trả lời |
 | Dải xám dưới đáy | icon cảm xúc + tên thành viên đã thả |
@@ -1002,6 +1068,34 @@ trong cùng `.message-cell--main.is-editing`, không có modal. Editor dùng chu
 hoặc nút Huỷ trả DOM cũ nguyên vẹn; lưu xong chỉ vẽ lại thân bài + dòng attribution
 (không reload trang). Chỉ mở một editor tại một thời điểm — mở bài khác tự đóng bài trước.
 Xoá bài luôn hỏi `confirm()` trước khi gọi `DELETE /posts/{id}/`.
+
+**Số bài là một menu chia sẻ.** Bấm vào `#13,661` vẫn nhảy tới bài như cũ (giữ nguyên
+`href="#post-…"`, không `preventDefault`), đồng thời mở một menu neo bên dưới con số
+(`.post-share-popup`, `position: fixed`) với hai lựa chọn:
+
+| Mục | Nội dung sao chép |
+|---|---|
+| Sao chép liên kết voz.vn | `https://voz.vn/t/<slug>.<id>/post-<postId>` — permalink chính thức, XenForo tự phân giải sang đúng trang |
+| Sao chép liên kết web | `<location.origin>/t/<slug>.<id>/page-<n>/#post-<postId>` — URL của chính site đang xem (localhost, bản preview, bản fork) |
+
+Đóng menu khi: bấm lần nữa vào cùng con số, bấm ra ngoài, `Escape` (trả focus về con số),
+cuộn hoặc đổi kích thước cửa sổ; sao chép thành công cũng đóng và hiện toast
+*Đã sao chép liên kết*. Nếu cả hai URL rỗng (thiếu `thread_id`) thì mục đó bị lọc bỏ thay vì
+hiện nút chết. `navigator.clipboard.writeText` chỉ chạy trong secure context, nên có nhánh
+dự phòng `textarea` + `document.execCommand('copy')` cho bản deploy qua LAN.
+
+Hai cái bẫy đã gặp khi làm việc này:
+
+- **Không được gắn listener đóng menu ngay trong lúc mở.** `document` capture listener thêm
+  giữa chừng sẽ chạy cho **chính** cú click vừa mở menu và đóng nó sau ~1 ms. Vì vậy listener
+  được gắn ở task kế tiếp (`setTimeout(…, 0)`).
+- **Không được đóng menu trong `viewThread`.** Một liên kết `#post-…` có thể khiến view render
+  lại, và việc đóng theo mỗi lần render giết menu vừa mở. Thay vào đó menu tự theo dõi
+  `trigger.isConnected` bằng `requestAnimationFrame` và tự đóng khi con số rời DOM.
+
+`vtesst1/post-number-popup.test.mjs` khoá lại: hai URL, nhãn đúng chữ, `VOZ_ORIGIN` cứng,
+việc tái dùng `slugify` từ `core/paths.js` (không chép lại logic slug), thời điểm gắn listener,
+và `postNumber()` in đủ chữ số.
 
 ### 6.3 Thanh trên cùng của chủ đề
 
@@ -1241,58 +1335,286 @@ tương phản với nền chrome tối.
   không thuộc hệ token. Giữ nguyên (không viết lại nội dung người dùng) nên một màu chữ tối
   do tác giả chọn có thể chìm trên nền tối — giống voz.vn.
 
-**Phông chữ** (`font`: `system` | `roboto` | `be-vietnam-pro` | `be-vietnam`, mặc định `system`).
+**Phông chữ** (`font`: `be-vietnam` | `be-vietnam-pro` | `system` | `segoe-ui` | `roboto` | `sf-pro-display`, mặc định `be-vietnam`).
 
-- Phông nằm trong repo tại `public/assets/fonts/`: 6 file woff2 của Roboto + Be Vietnam Pro
-  dựng bằng `tools/build-fonts.py`, cộng **4 file của Be Vietnam** dựng bằng
-  `tools/build-be-vietnam.py`, và hai tệp giấy phép `OFL.txt` + `OFL-BeVietnam.txt`.
+Thứ tự trong `FONTS` **chính là thứ tự** radio group ở Cài đặt → Giao diện, nên mảng đó là
+nguồn duy nhất cho cả hai. `be-vietnam` đứng đầu và là mặc định vì đó là họ voz.vn tự render
+nội dung bài viết — khách mới vào là thấy ngay đúng kiểu chữ của trang, không phải vào cài đặt.
+`system` nay có nhãn **"Hệ thống"** (trước là "Mặc định hệ thống").
+
+| # | Key | Nhãn |
+|---|---|---|
+| 1 | `be-vietnam` | Be Vietnam *(mặc định)* |
+| 2 | `be-vietnam-pro` | Be Vietnam Pro |
+| 3 | `system` | Hệ thống |
+| 4 | `segoe-ui` | Segoe UI |
+| 5 | `cantarell` | Cantarell |
+| 6 | `roboto` | Roboto |
+| 7 | `sf-pro-display` | SF Pro Display |
+
+- Phông nằm trong repo tại `public/assets/fonts/`: **3 file Roboto** + **5 file Be Vietnam Pro**
+  dựng bằng `tools/build-fonts.py` (từ google/fonts), **1 file Be Vietnam** + 4 file Pro
+  gốc voz.vn dựng bằng `tools/build-be-vietnam-gstatic.py`, **4 file của SF Pro Display**
+  dựng bằng `tools/build-sf-pro-display.py`, **4 file Segoe UI** dựng bằng
+  `tools/build-segoe-ui.py`, **2 file Cantarell** dựng bằng `tools/build-cantarell.py`,
+  và ba tệp giấy phép `OFL.txt` + `OFL-BeVietnam.txt` + `OFL-Cantarell.txt`.
+  (SF Pro và Segoe UI **không** có tệp giấy phép OFL — xem bên dưới.)
 - Roboto và Be Vietnam Pro được dựng từ font gốc OFL của Google Fonts: mỗi họ cắt còn
-  `latin` + `vietnamese` ở 3 mức 400/500/700. Tổng ~186 KB thay vì ~1 MB bản đầy đủ, và
+  `latin` + `vietnamese`. Tổng ~186 KB thay vì ~1 MB bản đầy đủ, và
   dấu tiếng Việt (vốn là phần lớn nội dung) luôn được giữ đủ.
+
+**Cách xếp mức đậm — đọc trước khi sửa `fonts.css`.** UI hỏi `font-weight: 600` ở **~24 chỗ**
+(username, tiêu đề, tên mục, nút) và `700` ở ~11 chỗ; `500` chỉ xuất hiện **một lần**, ngay
+trong `fonts.css`. Không họ nào có face 600 thật, nên trước đây `600` buộc trình duyệt lấy
+file 700 — một bold thật — và mọi tiêu đề ra nặng hơn thiết kế. Cách sửa (đúng như voz.vn làm
+với Be Vietnam Pro: chỉ có 400 + 600, **không** có 700):
+
+| Họ | Face khai báo | Ghi chú |
+|---|---|---|
+| Roboto | 400, 500, **600** (`roboto-600.woff2`) | file 700 cũ được đặt vào ô 600; 700 dùng lại chính face đó |
+| SF Pro Display | 400, 500, **600** (`sf-pro-display-600.woff2`), italic 400 | Apple khai cut "Bold" là `usWeightClass 600` sẵn |
+| Be Vietnam Pro | 400, 500, **600**, italic 400, italic 600 | lấy nguyên từ voz.vn |
+| Segoe UI | 400, **600**, italic 400, italic 600 | không có cut 500/600/700 thật → Bold vào ô 600 |
+| Be Vietnam | **chỉ 400** | xem mục riêng bên dưới |
+
+Vì vậy **đừng thêm face 700 trở lại**: nó sẽ khiến `600` nhảy sang face nặng hơn và tái hiện
+đúng lỗi "chữ đậm quá" mà thay đổi này sửa. `vtesst1/settings-appearance.test.mjs` chặn việc
+đó (`Roboto and SF Pro declare their bold file in the 600 slot, not 700`).
+
 - Roboto ở upstream là variable font (`wght` 100–900, `wdth` 75–100) nên script
   **instance** ra ba mức tĩnh trước khi subset; Be Vietnam Pro upstream đã là file tĩnh.
-- **Be Vietnam** (`be-vietnam`) là họ *tiền nhiệm* của Be Vietnam Pro, và là họ mà các
-  userscript trên voz.vn dùng. Nguồn là repo upstream
-  `github.com/bettergui/BeVietnam` v2.000 (7 mức + nghiêng, file `.ttf` tĩnh).
-  - **Vì sao không dùng CDN nữa:** Google chỉ phát hành **một mức 400** của họ này. Bản đầu
-    tiên chép 3 file đó về, hệ quả là chữ đậm bị trình duyệt **giả lập** (kéo ngang 4%) và
-    chữ nghiêng là **nghiêng giả**. Đo trên trang thật: `font-weight: 600` và `700` ra cùng
-    một bề rộng `189.82px`, tức hai mức đậm giống hệt nhau — trong khi username là 600 và
-    một trang chủ đề có ~18 chỗ như vậy. Nay dựng thật 400/500/700 + italic 400.
-  - **Bẫy name table:** chỉ `Regular`/`Bold`/`Italic` khai họ là `"Be Vietnam"`. Các mức
-    khác tự nhận là họ riêng — `Medium` là `"Be Vietnam Medium"` **và** nameID 2 của
-    Windows là `Regular`, nên trình duyệt thấy đó là một "regular" của họ khác chứ không
-    phải mức 500. Script chuẩn hoá lại toàn bộ nameID 1/2/4/6/16/17 + `usWeightClass` +
-    bit `fsSelection`/`macStyle`; đã kiểm chứng bằng cách đọc lại name table **trong file
-    woff2 đã build**, không chỉ tin bản gốc.
-  - **Một file cho mỗi mức, không `unicode-range`.** File build ra gộp cả `latin` +
-    `vietnamese` giống Roboto/Be Vietnam Pro, nên không cần chia dải. Bản 400 chia dải cũ
-    đã bị xoá (script tự xoá `be-vietnam-400-*.woff2`): nếu còn, `unicode-range` của chúng
-    sẽ chồng một phần lên face 400 mới.
-  - Tổng **121.3 KB** cho 4 file (từ 495.9 KB file gốc): 400 = 29.4 KB, 500 = 29.7 KB,
-    700 = 31.5 KB, italic 400 = 30.7 KB.
-  - Bản quyền: `OFL-BeVietnam.txt` chép từ thư mục nguồn, ghi "Copyright 2019 The Be Vietnam
-    Project Authors". **Khác** `OFL.txt` của Be Vietnam Pro ("2021 … Pro Project Authors"),
-    nên hai tệp tồn tại song song chứ không ghi đè nhau.
-- **Chỉ tải khi người dùng chọn:** `css/fonts.css` chứa toàn bộ `@font-face` nhưng chỉ được
-  chèn `<link>` từ `ui/theme.js` (`ensureFontStylesheet()`) ở lần chọn đầu tiên. Mặc định
-  `system` không tải byte nào (đã kiểm chứng: 0 request tới `assets/fonts/`, không có
-  `#font-faces`). `@font-face` khai báo `font-weight` tường minh vì tên họ nội bộ của file
-  500 là "Roboto Medium" / "Be Vietnam Pro Medium".
-- `FONT_STACKS` trong `lib/settings.js` là nguồn duy nhất cho stack chữ; `system` là `null`
-  nên `--font` được gỡ về mặc định của `base.css`. Mọi stack đều kết thúc bằng một họ
-  generic để chữ vẫn hiện nếu woff2 lỗi. Stack của `be-vietnam` trỏ `"Be Vietnam"` **không**
-  kèm `Pro` — `vtesst1/settings-appearance.test.mjs` chặn việc để lẫn hai họ này.
+- **Be Vietnam** (`be-vietnam`) là họ voz.vn thật sự render nội dung bài viết. Đây là họ duy
+  nhất **khớp byte-for-byte** với voz.vn, và cũng là họ dễ sửa sai nhất — đọc kỹ mục này.
+  - **voz.vn khai họ này ở ĐÚNG MỘT mức 400.** Ba `@font-face` của họ là ba dải
+    `unicode-range` của *cùng* một face 400, không phải ba mức đậm. Đo trên voz.vn @32px với
+    `Đặng Fioren ộữệĩ`: 400 = 500 = 255.12 (một face), 600 = 700 = 265.78 (bold do trình
+    duyệt **tự tổng hợp**), italic = 255.12 (**nghiêng giả**, không có file nghiêng).
+  - **Vì sao phải bỏ 500/700/italic cũ:** repo từng vendor cùng tên họ nhưng từ revision
+    **2.000** của `bettergui/BeVietnam` với 400/500/700 + italic thật. Google phát hành
+    revision **4.000**, và **thiết kế khác hẳn** — bề rộng glyph lệch tới ~10%:
+
+    | glyph | gstatic v10 (voz.vn) | bản 2.000 cũ của repo |
+    |---|---|---|
+    | `Đ` U+0110 | **714** | 786 |
+    | `ạ` U+1EA1 | **620** | 591 |
+
+    Đó chính là lý do chữ trông "đậm và rộng hơn" voz.vn: không phải lỗi build, mà là **hai
+    thiết kế khác nhau dưới cùng một tên họ**. Giữ face 500/700 thật sẽ tái hiện đúng sự
+    lệch đó, nên chúng đã bị xoá.
+  - **Cách dựng:** `tools/build-be-vietnam-gstatic.py` tải 3 file gstatic rồi **merge** lại
+    thành một face 400 duy nhất (`be-vietnam-400.woff2`), thay cho pipeline `build-be-vietnam.py`
+    cũ (script cũ vẫn còn trong repo nhưng không còn được dùng cho output này).
+  - **Đã kiểm chứng trùng khớp:** nạp file build ra bằng `FontFace` tươi (bỏ qua cache HTTP)
+    rồi đo — 400 = **255.12**, 500 = **255.12**, 600 = **265.78**, 700 = **265.78**,
+    italic = **255.12**. Tức **cả năm giá trị trùng voz.vn từng số một**.
+  - **Các ký hiệu `↑ ↓ ✓ ✕ ▲ ▼ ‐ ‑` KHÔNG có trong font này** — và cũng không có trong file
+    của voz.vn. Chúng rơi xuống họ kế tiếp trong stack, giống hệt trên voz.vn. Script build
+    cũ có liệt kê chúng trong dải subset nhưng điều đó **vô tác dụng**: subset chỉ giữ
+    codepoint khi font gốc thật sự có glyph đó. Đừng "sửa" bằng cách thêm lại.
+  - Bản quyền: `OFL-BeVietnam.txt` ghi "Copyright 2019 The Bevietnam Project Authors".
+    **Khác** `OFL.txt` của Be Vietnam Pro ("2021 … Pro Project Authors"), nên hai tệp tồn
+    tại song song chứ không ghi đè nhau.
+- **Be Vietnam Pro** (`be-vietnam-pro`): face 400/400italic/600/600italic lấy nguyên từ
+  chính voz.vn (`/styles/voz-xf-26/fonts/be-vietnam-pro/`), ghép cặp latin + vietnamese.
+  Face 400 và 600 đã đối chiếu trùng khớp (`A` = 736 / 758, `a` = 642 / 652).
+  - **Bẫy name table:** file 600 của voz.vn tự khai họ là `"Be Vietnam Pro SemiBold"` với
+    subfamily `Regular`. Để nguyên thì `font-weight: 600` trên `"Be Vietnam Pro"` **không
+    bao giờ khớp**, và trình duyệt sẽ tự tổng hợp bold từ face 400. Script chuẩn hoá lại
+    nameID 1/2/4/6/16/17 + `usWeightClass` + bit `fsSelection`/`macStyle`, rồi đọc lại file
+    woff2 thành phẩm để xác nhận.
+  - `be-vietnam-pro-500.woff2` là file **giữ lại từ build google/fonts cũ**: voz.vn không có
+    mức 500 nên không có gì để chép, và bỏ nó đi sẽ khiến `font-weight: 500` tụt về 400.
+- **SF Pro Display** (`sf-pro-display`) là phông San Francisco của Apple, và **không** phải
+  phông nguồn mở như các họ còn lại. Nguồn là bộ `.otf` CFF tĩnh (18 mức, Thin → Black, kèm
+  nghiêng); `tools/build-sf-pro-display.py` dựng 4 mức mà CSS dùng tới.
+  - **Giấy phép — đọc trước khi phát hành.** `name ID 13` trong chính file font ghi: chỉ được
+    dùng "solely for creating mock-ups of user interfaces to be used in software products
+    running on Apple's iOS, iPadOS, macOS or tvOS operating systems". Đây là phông độc quyền;
+    repo **không** kèm `OFL.txt` cho nó (khác mọi họ khác) và `css/fonts.css` ghi rõ điều này.
+    Bản dựng chỉ được thêm vào khi người dùng xác nhận đã có quyền dùng; hãy tự kiểm tra
+    trước khi phát hành tiếp.
+  - **Bẫy `usWeightClass`:** upstream khai `SF-Pro-Display-Bold.otf` là **600** (Apple để
+    `Semibold` và `Bold` cùng 600, `Heavy` = 800). Đây hoá ra lại **thuận lợi**: UI hỏi 600
+    nhiều hơn hẳn 700 và họ này không có 700 thật, nên cut Bold được đặt thẳng vào ô **600**
+    — `font-weight: 600` chọn được face thật, `700` dùng lại chính face đó. Nếu khai ở ô 700
+    như trước, `600` sẽ nhảy sang face nặng hơn và chữ trông quá đậm.
+  - **Đây là CFF/OpenType, không phải TrueType.** Hai pipeline kia dựa vào `glyf`/`loca`;
+    script này không. Subset vẫn ổn và bảng `CFF ` được giữ nguyên (đã đọc lại file woff2
+    thành phẩm để xác nhận: `CFF=True`, 372 ký tự, đủ dấu tiếng Việt).
+  - Chỉ dựng **4 mức** CSS có thể chạm tới; 14 mức còn lại của upstream không vendored (sẽ
+    thêm ~40 MB mà không rule nào dùng tới).
+  - Tổng **166.1 KB** cho 4 file (từ 8.8 MB file gốc): 400 = 39.6 KB, 500 = 47.6 KB,
+    600 = 45.1 KB, italic 400 = 33.7 KB.
+  - Stack đặt `"SF Pro Display"` trước rồi `-apple-system` để máy Apple dùng ngay San
+    Francisco thật của hệ điều hành, sau đó mới tới `"Segoe UI"`/Roboto cho máy khác.
+  - **Lưu ý:** đo @32px cho thấy 400 = 226.33 → 500 = 232.78 → 600 = 244.28 — bước nhảy
+    500→600 là 4.9%, lớn hơn Roboto. Đây là đặc điểm thiết kế của San Francisco (Medium →
+    SemiBold), không phải lỗi mapping.
+- **Segoe UI** (`segoe-ui`) là phông giao diện của Windows, cũng **độc quyền** như SF Pro.
+  `tools/build-segoe-ui.py` dựng 4 face từ bản **thật** trong `C:/Windows/Fonts`.
+  - **Đừng build từ bản "Segoe UI" trôi nổi trên mạng.** Bản trên các trang tải font là bản
+    cắt tỉa 19 năm tuổi: 199 glyph, cmap chỉ tới `U+02FF`, **0 dấu tiếng Việt**. Thử chuỗi
+    `Đặng Fioren ộữệĩ Nền kinh tế kỳ quặc` thì **thiếu 9/24 ký tự** — gần như mọi dòng của
+    diễn đàn sẽ gãy giữa chữ sang phông dự phòng. Bản thật trong `C:/Windows/Fonts` (5.70,
+    5393 glyph) không thiếu ký tự nào. Script ghi rõ cảnh báo này ở docstring.
+  - **Giấy phép.** `fsType = 8` (editable embedding — mức chặt nhất) và chuỗi licence chỉ cho
+    nhúng theo đúng các hạn chế đó. Repo **không** kèm `OFL.txt` cho họ này; `css/fonts.css`
+    ghi chú ngay cạnh khai báo. Bản dựng chỉ được thêm vào sau khi xác nhận có quyền dùng.
+  - **Cố ý đặt tên family là `"Segoe UI Local"`, không phải `"Segoe UI"`.** Trên Windows tên
+    `"Segoe UI"` vốn đã trỏ vào phông hệ điều hành; nếu khai bản nhúng trùng tên đó thì hai
+    nguồn sẽ tranh nhau cùng một family và bản tải về có thể **che** bản local — khiến lựa
+    chọn này làm thay đổi thứ đáng lẽ không đổi trên Windows. Tên riêng giữ hai bên tách
+    biệt; stack xếp `"Segoe UI Local"` trước rồi mới tới `"Segoe UI"` của hệ điều hành.
+  - **Không có cut Medium/Semibold** trên Windows (chỉ Regular / Bold / Italic / Bold Italic,
+    còn Light và Semilight nằm dưới tên họ khác). UI hỏi `600` nhiều hơn hẳn `700`, nên cut
+    Bold được đặt vào ô **600** — cùng cách xử lý như Roboto và SF Pro Display.
+  - **Đây là TrueType** (`glyf`), không phải CFF; bảng `FFTM` (timestamp của FontForge) bị
+    loại bỏ khi subset. Tổng **157.3 KB** cho 4 file (từ 2.9 MB file gốc).
+  - **Trên Windows lựa chọn này gần như không đổi gì** — phông đã có sẵn trong máy. Nó chỉ có
+    ý nghĩa trên macOS/Linux/Android.
+- **Cantarell** (`cantarell`) là phông humanist sans của Dave Crossland, mặt chữ mặc định của
+  GNOME. **OFL**, nên khác SF Pro/Segoe UI là có kèm giấy phép (`OFL-Cantarell.txt`).
+  `tools/build-cantarell.py` tự tải nguồn từ `GNOME/cantarell-fonts` rồi dựng.
+  - **TUYỆT ĐỐI không vendor bản trên Google Fonts.** Cantarell có trên fonts.google.com, nên
+    phản xạ đầu tiên là copy các file woff2 mà `fonts.googleapis.com/css2?family=Cantarell`
+    trỏ tới. Bộ đó **không render được tiếng Việt** — đã đo trực tiếp trên
+    `cantarell-*-latin.woff2` và `*-latin-ext.woff2` (v18):
+    - `U+01A0/01A1/01AF/01B0` (`Ơ ơ Ư ư`) **thiếu ở mọi file**;
+    - cả **90/90** dạng xếp dấu `U+1EA0-1EF9` (`ấ ầ ắ ằ ệ ộ` …) **thiếu ở mọi file**;
+    - **6/6** dấu tổ hợp (`U+0300/0301/0303/0309/0323/0327`) **thiếu**;
+    - file **không có** bảng `GSUB`/`GPOS`/`GDEF`/`kern` — nên trình duyệt cũng **không thể**
+      tự ghép dấu.
+    Chỉ `ă`/`đ` sống sót, và chỉ trong dải `latin-ext`. Google chia theo `unicode-range` và
+    nguồn Cantarell của họ chưa bao giờ map các codepoint đó, nên trình duyệt **tổng hợp dấu
+    từ một phông dự phòng khác** — tiếng Việt hiện ra với dấu sai kiểu và nhảy chữ giữa dòng.
+    Đây đúng cùng loại lỗi mà mục Segoe UI ở trên cảnh báo.
+  - **Nguồn upstream thì có, nhưng chỉ phát hành source.** Gói phát hành chỉ chứa ba master
+    `.ufo` + một `.designspace`; thư mục `prebuilt/` chỉ có `meson.build`. Nên script phải
+    **dựng** bằng `fontmake` trước rồi mới subset. `Cantarell-Regular.ttf` dựng ra map 1223
+    codepoint, gồm `ohorn`, `uhorn`, `acircumflexacute`, `abreveacute`, `ocircumflexdotbelow`,
+    `ihookabove` cùng `ccmp`/`locl`/`mark`/`mkmk`/`GDEF` — tức tiếng Việt thật.
+  - **Upstream là thiết kế 3 master** (Light 100 → Bold 700, thêm instance Extra Bold 800).
+    UI hỏi `400/500/600/700` mà họ này không có cut 500 hay 600, nên master **Bold vào ô 600**
+    và `700` dùng lại — đúng cách xử lý của Roboto/SF Pro/Segoe UI. Chỉ dựng 2 file (400/600);
+    master Light/Thin và instance Extra Bold không rule nào với tới.
+  - **Chốt chặn trong script.** `REQUIRED_VIETNAMESE` liệt kê `U+01A0/01A1/01AF/01B0` +
+    `U+1EA5/1EAF/1EC7/1ED9/1EC9`; nếu bản subset mất bất kỳ codepoint nào, script **`raise
+    SystemExit`** chứ không ship im lặng. Đây là bản bảo vệ chống tái phát đúng cái bẫy trên.
+  - **Đã kiểm chứng trong Firefox thật.** `cantarell-400.woff2` / `-600.woff2` sau khi ship:
+    cmap 356, `base_missing=none`, **90/90** dạng xếp dấu, **6/6** dấu tổ hợp,
+    `GSUB`/`GPOS`/`GDEF` đều có. Trên trang thật: `data-font="cantarell"`, hai face
+    `status: "loaded"`, `body` tính ra đúng stack Cantarell, và
+    `document.fonts.check('16px Cantarell', …)` trả **`true`** cho cả `latin`, chữ Việt cơ bản,
+    `ơ ư`, và dạng xếp dấu — chủ đề nextDNS thật có **14** codepoint xếp dấu khác nhau
+    (`ế ữ ở ộ ậ ứ ẫ ầ ấ ố ủ ệ ừ ạ`), tất cả render bằng Cantarell.
+  - **Dấu là do Cantarell vẽ, không phải phông dự phòng.** Đo trên canvas: dải dấu (22px trên
+    cùng của ô 70px) có **155px mực** với Cantarell so với **104px** khi loại Cantarell khỏi
+    stack; `â` và `ă` khác nhau **28px** ở dải dấu (bản fallback serif chỉ khác 5px, tức gần
+    như không vẽ gì) — hai mặt chữ circumflex/breve riêng của Cantarell đang được dùng.
+  - Tổng **25.3 KB** cho 2 file (từ 172.2 KB bản dựng).
+- **Cách tải — mặc định nay tốn đúng một file.** Vì `be-vietnam` là mặc định, mặt chữ của nó
+  **không thể** chờ `ui/theme.js` chèn stylesheet: chữ sẽ vẽ bằng phông dự phòng rồi mới đổi,
+  thấy rõ một cú nhảy trên mỗi lần tải nguội. Nên:
+  - `css/font-default.css` **chỉ khai báo đúng một face** (`be-vietnam-400`) và được
+    `index.html` link thẳng trong `<head>`, ngay sau `base.css`. Nhờ vậy `--font` của `base.css`
+    đã đúng **ngay lần vẽ đầu**, không nhấp nháy.
+  - `css/fonts.css` giữ năm họ còn lại và vẫn được `ui/theme.js`
+    (`ensureFontStylesheet()`) chèn **lazy** ở lần chọn đầu tiên. Nếu link cả `fonts.css` trong
+    `<head>` thì một lượt khách chỉ đọc trang mặc định cũng tải hết mặt chữ của cả năm họ —
+    mất hẳn tính "chỉ tải khi chọn".
+  - Giá phải trả của mặc định mới: **~19.6 KB** (một file `be-vietnam-400.woff2`), đo bằng
+    fetch `cache: no-store`. Năm họ kia vẫn 0 byte cho tới khi được chọn.
+  - `theme.js` bỏ qua `ensureFontStylesheet()` khi lựa chọn là họ mặc định, và cả khi là
+    `system` — cả hai đều không cần file nào.
+- **`system` phải tự khai stack, không được để `null`.** Trước đây `system` là `null` và hoạt
+  động bằng cách **gỡ** `--font` để `base.css` áp vào. Khi `base.css` đổi sang đặt
+  `"Be Vietnam"` lên đầu (vì đó là mặc định), cách đó khiến `system` **render đúng mặt chữ
+  vendored** — lựa chọn "Hệ thống" hoá thành nói dối. Nay `system` có stack OS riêng
+  (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, …`). Đã kiểm chứng bằng bề rộng
+  chuỗi `Đặng Fioren ộữệĩ` @32px: `system` = **243.38** (Segoe UI của hệ điều hành) vs
+  `be-vietnam` = **255.12** — trước khi sửa thì cả hai đều ra 255.12.
+  `vtesst1/settings-appearance.test.mjs` có test chặn việc để `system` trỏ về họ vendored.
+- `FONT_STACKS` trong `lib/settings.js` là nguồn duy nhất cho stack chữ. `be-vietnam` là `null`
+  (mặc định đã do `base.css` + `font-default.css` lo), mọi key khác đều có stack thật và mọi
+  stack đều kết thúc bằng một họ generic để chữ vẫn hiện nếu woff2 lỗi. Test kiểm chéo
+  `FONT_STACKS` với `base.css` để `base.css` không lỡ trỏ sang `Be Vietnam Pro`.
 - Link phông không bị gỡ khi quay lại `system` (tránh tải lại nếu người dùng đổi qua đổi
   lại); chỉ `--font` đổi.
 - Thêm phông mới phải sửa **ba** nơi: `FONTS`/`FONT_LABELS`/`FONT_STACKS` +
   `css/fonts.css`, và nhánh tương ứng trong script chống nhấp nháy ở `index.html` (test
   `theme-tokens.test.mjs` đọc `FONT_STACKS` để kiểm tra chéo, nên quên script là fail).
-- Chi tiết dựng lại font: chạy `python tuivoz/tools/build-fonts.py --src <thư mục .ttf>
-  --out tuivoz/public/assets/fonts` cho Roboto + Be Vietnam Pro, và
-  `python tuivoz/tools/build-be-vietnam.py --src <BeVietnam-master/ttf> --out tuivoz/public/assets/fonts`
-  cho Be Vietnam. Cả hai cần `fonttools` + `brotli`. Script Be Vietnam tự xoá các file
-  `be-vietnam-400-*.woff2` chia dải cũ (tắt bằng `--no-prune-legacy`).
+- Chi tiết dựng lại font (cần `fonttools` + `brotli`):
+  - `python tuivoz/tools/build-fonts.py --src <thư mục .ttf> --out tuivoz/public/assets/fonts`
+    — Roboto + Be Vietnam Pro từ google/fonts.
+  - `python tuivoz/tools/build-sf-pro-display.py --src <thư mục SF-Pro-Display> --out tuivoz/public/assets/fonts`
+    — SF Pro Display.
+  - `python tuivoz/tools/build-segoe-ui.py --src "C:/Windows/Fonts" --out tuivoz/public/assets/fonts`
+    — Segoe UI (dùng bản thật trong Windows, **không** dùng bản cắt tỉa tải trên mạng).
+  - `python tuivoz/tools/build-cantarell.py --out tuivoz/public/assets/fonts`
+    — Cantarell. Script **tự tải** nguồn GNOME về rồi dựng bằng `fontmake` (cần `pip install
+    fontmake ufo2ft`, không phải phụ thuộc runtime), nên không có `--src`. Xem mục Cantarell
+    bên dưới: bản trên Google Fonts **không dùng được** cho tiếng Việt.
+  - `python tuivoz/tools/build-be-vietnam-gstatic.py --src vtest/_voz-font-probe --out tuivoz/public/assets/fonts`
+    — Be Vietnam (merge 3 dải gstatic) + 4 face Be Vietnam Pro của voz.vn. Xem docstring
+    của script để biết URL tải `--src` về; thư mục `_voz-font-probe` chỉ là chỗ để tạm và
+    không cần commit.
+  - `tools/build-be-vietnam.py` **không còn dùng** cho output hiện tại (nó dựng revision
+    2.000, lệch thiết kế với voz.vn — xem mục Be Vietnam ở trên). Giữ lại chỉ để tham khảo
+    cách chuẩn hoá name table.
+
+**Căn ô chọn (radio) trong `.option-card`.** Mọi nhóm lựa chọn ở Cài đặt — theme, phông,
+cỡ chữ, cuộn liên tục — đều render bằng `optionCards()` trong `views/settings.js`, dùng chung
+hai class `.option-cards` / `.option-card` của `css/settings.css`. Đây là chỗ **dễ hỏng âm
+thầm** nên đọc trước khi sửa:
+
+- Ô radio là **điều khiển 14px cố định** (kích thước mặc định của trình duyệt, **không** co
+  theo `--ui-scale`), còn dòng chữ có `line-height` = 1.5 × cỡ chữ, tức **24px** ở mức 1 và
+  **32.4px** ở mức 1.35.
+- Cách cũ — `align-items: start` + `margin: 2px 0 0` trên input — đặt tâm vòng tròn **lệch
+  3px lên trên** so với tâm dòng chữ đầu, đúng như phản ánh "vòng tròn không thẳng với chữ".
+  Đó là lỗi thật, đo được, chứ không phải cảm giác.
+- **Đừng sửa bằng `margin-top` cứng.** Cần `(line-height − 14) / 2` = 5px ở mức 1, nhưng
+  **9.2px** ở mức 1.35 — một con số cứng sẽ lệch lại ngay khi người dùng đổi cỡ chữ.
+- Cách đúng: để lưới tự căn. `.option-card` dùng
+  `grid-template-areas: "radio name" ". desc"` — ô `.` giữ cột 1 trống ở hàng mô tả nên mô tả
+  vẫn thụt lề dưới tên, còn radio chỉ chiếm **hàng của tên**; `.option-card input` thêm
+  `grid-row: 1 / 2; align-self: center; margin: 0` để tự căn giữa theo đúng dòng đó.
+- Hai bẫy khiến cách này khác cách cũ:
+  - Nếu để radio trải **cả hai hàng** (`"radio name" / "radio desc"` như trước) thì
+    `align-self: center` sẽ căn giữa theo **toàn thẻ**, và vòng tròn lại trôi khỏi nhãn khi
+    thẻ có mô tả dài.
+  - Không được đặt `margin` cứng trên input: `margin` mặc định của `input[type=radio]` do
+    trình duyệt thêm, phải ghi đè bằng `margin: 0`.
+- Đã kiểm chứng ở **cả** `--ui-scale: 1` và `1.35`: 14/14 ô radio + checkbox trên toàn bộ
+  5 tab đều lệch tâm **0.0px**; mô tả vẫn thụt lề đúng bằng nhãn (`descLeft == nameLeft`).
+  Hàng `.settings-toggle` (checkbox "Tải ảnh", "Hiển thị nút chụp bài viết") dùng `flex` +
+  `align-items: center` nên vốn đã đúng — chúng căn giữa theo **cả khối hai dòng**, không
+  phải theo riêng dòng tên.
+- `vtesst1/settings-appearance.test.mjs` giữ lại ràng buộc này
+  (`the radio in an option card is centred on the first text line, not the whole card`):
+  nó đọc `css/settings.css` và chặn việc quay lại `grid-template-areas` cũ, thiếu
+  `grid-row: 1 / 2` / `align-self: center`, hoặc dùng lại `margin` cứng.
+
+**Tải ảnh** (`imageDownload`: boolean, mặc định `false`).
+
+- Nằm trong tab **Giao diện**. Khi bật, ảnh lớn trong nội dung bài viết có nút tải bán trong suốt ở góc trên phải; smilie, sticker nhỏ, favicon preview và ảnh dưới ngưỡng 96px/20.000px² không có nút.
+- Chạm/bấm nút tải ảnh ngay trên mobile và desktop. Ảnh WebP **tĩnh** được đọc qua canvas, nền trong suốt được lót trắng và lưu thành `.jpg`; ảnh định dạng khác giữ nguyên blob.
+- WebP **động** (voz.vn lưu mọi GIF tải lên thành WebP động, có chunk `ANIM` + `ANMF`) được tải nguyên blob `.webp` — canvas chỉ vẽ được khung hình đầu nên chuyển sang JPEG sẽ làm mất chuyển động, đúng như lỗi "ảnh GIF tải về thành JPG". `isAnimatedWebp()` chỉ đọc 64KB đầu của blob nên không phải nạp cả file vào bộ nhớ.
+- Ảnh khác origin đi thẳng qua `GET /api/image-download?url=…` (ảnh voz.vn/pik.vn/imgur không gửi header CORS nên gọi trực tiếp luôn thất bại — thử trực tiếp trước chỉ tốn thêm một vòng request vài giây trên mobile). Ảnh cùng origin được đọc thẳng. Proxy chỉ nhận URL HTTPS không credentials và chỉ trả response có `Content-Type: image/*`.
+- `[ATTACH]` được phân giải qua `/api/xf/attachments/{id}/` trước khi tải: URL `/attachments/{id}/` là redirect mà Cloudflare trả challenge khoảng một nửa số lần, còn route REST trả `direct_url` + `filename` nên file lưu giữ đúng tên tác giả. Proxy có vòng retry cho 403/429.
+- Lưu xong nút đổi sang dấu tích xanh kèm toast *Đã tải ảnh.*; lỗi hiện toast đỏ *Không tải được ảnh.* thay vì im lặng.
+- Thiết lập được lưu trong `localStorage['voz-settings:v1']`, phát `voz:settings` để ảnh đang hiển thị cập nhật ngay, và đi cùng JSON sao lưu/phục hồi.
+- Guard: `vtesst1/image-download.test.mjs` chạy lại `isAnimatedWebp()` trên header RIFF thật (động, tĩnh, và trường hợp `ANIM` không có `ANMF`) và chặn việc bỏ điều kiện phủ định `!await isAnimatedWebp(blob)` — đã thử đột biến, test fail đúng như mong đợi.
+
+**Nút chụp bài viết** (`postScreenshot`: boolean, mặc định `false`).
+
+- Cùng tab **Giao diện**. Khi bật, mỗi bài viết có nút icon máy ảnh trong hàng `#số` ở đầu bài; bấm để lưu cả bài **kèm tiêu đề chủ đề** thành một file PNG.
+- Nút nằm **trong luồng** của `.message-attribution-opposite`, chèn trước `<li>` bookmark — không phải lớp phủ tuyệt đối, nên không bao giờ che số `#post` và tự nhường chỗ khi cỡ chữ đổi. Khi tắt, cả `<li>` bọc ngoài bị xoá (không để lại ô rỗng làm lệch khoảng cách flex).
+- `lib/postScreenshot.js` nhân bản `.message` ra một sheet ngoài màn hình (`position: fixed; left: -100000px`), chèn dải tiêu đề, rồi dựng lại bằng SVG `<foreignObject>` + toàn bộ CSS hiện hành. Nhờ vậy chữ, xuống dòng, unfurl, spoiler, bảng, media… giữ nguyên bố cục mà không cần thư viện render nào.
+- **Ảnh phải inline thành data URL** trước khi vẽ: canvas đọc ảnh khác origin sẽ bị "taint" và `toBlob` ném lỗi. Mỗi ảnh đi qua `resolveAttachment()` + proxy như trên; ảnh không đọc được thì bỏ khỏi bản chụp thay vì làm hỏng cả ảnh.
+- Nhân bản sheet nằm ở `left: -100000px`; offset đó **không được lọt vào SVG**, nếu không cả bài render ra ngoài viewport của `foreignObject` và bitmap trắng trơn.
+- Tỉ lệ gốc 2× cho chữ nét trên màn hình HiDPI; bài quá dài được **giảm tỉ lệ** cho vừa ngân sách 40 triệu pixel và trần 16.000px của Firefox — **không cắt bớt nội dung**.
+- Sau khi chụp, vị trí cuộn được khôi phục để người đọc không mất chỗ trong chủ đề dài.
 
 **Cỡ chữ** (`postSize` + `uiSize`: phần trăm 80–200, bước 5, mặc định `100`).
 
@@ -1578,17 +1900,38 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | `?page=last` | nhảy đúng trang cuối của một thread nhiều trang |
 | Đăng nhập OAuth | popup → code → exchange → cookie → "Xin chào" |
 | Trả lời | post mới xuất hiện, nhảy tới đúng bài |
-| Trích dẫn | sinh đúng 1 block `[QUOTE="…, post: …, member: …"]` |
+| Trích dẫn | sinh đúng 1 block `[QUOTE="…, post: …, member: …"]`, không kèm dòng trống; nhiều quote nối liền nhau, chỉ một dòng trống ở cuối (khớp voz.vn) |
+| Quote dài | bài #1 thread 1296038: quote 13.737px → gấp còn **816px** (voz.vn 813px) kèm gradient `rgba(0,0,0,0) → var(--quote-bg)` cao 400px + nút *Bấm để mở rộng...*; bấm mở lại đủ 13.737px; 6 quote ngắn khác trên trang (106–331px) **không** bị đụng; editor xem trước vẫn hiện đủ, không lẫn nút |
 | Sửa bài | editor tại chỗ trong bài (không modal) → lưu → thân bài + "Đã sửa" cập nhật, không reload |
 | Chủ đề chưa đọc | danh sách in đậm tiêu đề; mở trang cuối → `POST /threads/{id}/mark-read` → quay lại danh sách hết đậm |
 | Xoá bài | confirm → biến mất, `reply_count` giảm |
 | Cảm xúc | Ưng: `insert` → `.has-reaction`; bỏ: `delete` → mất `.has-reaction` |
-| Số bài | `position` 0-based → hiển thị `#1`, `#2`, `#3`… |
+| Số bài | `position` 0-based → hiển thị `#1`, `#2`, `#3`…; chuỗi dài in đủ chữ số có dấu phẩy (`#13,661` khớp voz.vn, không bị rút gọn thành `#14K`) |
+| Menu chia sẻ của số bài | thread 522718 trang 684: bấm `#13,661` mở `.post-share-popup` (1 popup, không bị đóng sau khi mở) với 2 mục; clipboard thật đọc lại đúng `https://voz.vn/t/…-nextdns.522718/post-44247485` và `http://localhost:3112/t/…-nextdns.522718/page-684/#post-44247485`; bấm lần nữa thì đóng, bấm ra ngoài đóng, `Escape` đóng, cuộn đóng; `location.hash` vẫn thành `#post-44247485` (không mất hành vi nhảy tới bài) |
 | Theo dõi | icon con mắt trong thanh xanh, `watch`/`unwatch` đổi màu + tooltip |
 | Phân trang trên | `ul.pageNav-main`, trang hiện tại chữ cam, không vỡ layout |
-| Icon trích dẫn / trả lời | SVG, click vẫn chèn quote và focus textarea |
+| Icon trích dẫn / trả lời | SVG; Trích dẫn chèn quote nhưng giữ vị trí đọc, Trả lời chèn quote rồi cuộn/focus editor |
+| Nút chụp bài viết | icon máy ảnh nằm trong hàng số `#` ở đầu bài, bên trái nút bookmark (chỉ khi bật `postScreenshot`); không phủ, không che số bài; lưu PNG cả bài + tiêu đề chủ đề, ảnh/unfurl/embed giữ nguyên |
 | Ảnh có size | `[IMG size="80x80"]` render đúng 80×80 (trước đó 512×512) |
 | Ảnh `width=` | `[IMG width="150px"]` và `[ATTACH width="345px"]` đúng |
+| Tải ảnh, WebP động | thread 1296207 post 44280673 (`[ATTACH]3864797[/ATTACH]`, voz.vn lưu WebP động 798.518 byte, có `ANIM`+`ANMF`): nút tải xuất hiện (512×512 > ngưỡng), bấm tải về `…file_3925890.webp` **nguyên blob 798.518 byte** — giữ đúng animation, không còn bị ép thành `.jpg` khung đầu |
+| Tải ảnh, WebP tĩnh | thumbnail tuoitre trên cùng trang (WebP tĩnh 40.720 byte): vẫn chuyển và lưu thành `.jpg` như trước — nhánh chuyển đổi không bị bỏ |
+| Tải ảnh, bỏ qua sticker/emoji | 21 ảnh trong thân bài: chỉ **2** ảnh lớn được bọc `.downloadable-image` (thumbnail 1200×630 + ảnh GIF); **19** smilie 48×48 không có nút |
+| **Facebook embed** | `[MEDIA=facebook]5364524210439691[/MEDIA]` (post 44270761, thread 1295079): trước đây ra `media-embed--fallback` (chỉ link); nay `.fb-video` → `fb_iframe_widget`, iframe **560×495** trỏ `facebook.com/v21.0/plugins/video.php`, **không** còn class fallback, đúng **1** thẻ `#facebook-jssdk` |
+| Facebook, 2 embed trên 1 trang | cả **2** render (`rendered 2/2`, `iframe 2`), không nhân bản, không chồng iframe |
+| Facebook, điều hướng SPA | `/f/phan-mem.13/` (không embed: `fb 0`, `sdk false`) → điều hướng SPA sang thread Facebook → **2/2 embed render**; chứng minh poll DOM thật hoạt động, không phụ thuộc `#xfbml=1` chạy một lần |
+| Facebook, trang không có embed | SDK **không** được nạp (`#facebook-jssdk` không tồn tại), 0 request tới `connect.facebook.net` — nhờ `scheduleFacebookHydration(sawFacebook)` |
+| Facebook, so với voz.vn | cùng thread/plugin: voz.vn `v2.7` iframe 223px (SDK đo lúc viewport hẹp) vs `v21.0` 560px; **cùng nội dung**. Cả hai sinh **đúng hai class lỗi giống nhau** trong console (`Cookie "d79fa363-…" bị từ chối vì cross-site`, `ErrorUtils caught an error … Cannot listen to an undefined element` từ `static.xx.fbcdn.net`) → lỗi do plugin Facebook, không do tích hợp |
+| Facebook, thuộc tính giữ nguyên | `data-href`, `data-show-text`, `data-show-captions` sống sót qua `sanitizeHtml` (chỉ `on*` và `javascript:` bị gỡ) |
+| Douyin, endpoint phân giải | `GET /api/xf/douyin?url=…` với **cả hai** short link thật của bài 32957522 → `id=7329069669049027850` và `7262570651117047103`; link đầy đủ `www.douyin.com/video/<id>` → cùng id; `evil.example.com/video/123456789` → **404** `douyin_unresolved` (host lạ bị chặn trước khi fetch) |
+| Douyin, player nhúng được | `HEAD https://open.douyin.com/player/video?vid=…` → `200`, **không** `X-Frame-Options`, **không** `Content-Security-Policy` |
+| Douyin, render trên trang | thread 979840 page 87: **4** `.media-embed--douyin` (2 ở bài gốc + 2 trong trích dẫn quote), `vid=` đúng từng link, `sandbox`/`allow`/`referrerPolicy` như mọi embed khác, **0** link `link--external` còn sót |
+| Douyin, khung đúng kích thước | cả 4 iframe đo được **đúng 325×735** (`getComputedStyle().aspectRatio === '325 / 735'`); bản đầu có `max-height: 80vh` bị kẹp còn 354px trên viewport 900px → đã bỏ |
+| Douyin, video phát thật | đọc **bên trong** iframe: `readyState: 4`, `videoWidth` 1080 / 720, `duration` 8.40s / 33.09s, có phụ đề "@未来号 …" / "@锐猎姐姐讲射击 …", `.xgplayer` tồn tại → không phải trang lỗi |
+| Douyin, re-render không nhân bản | gọi lại `restoreMedia()` trên thân bài đã embed: **2 → 2** player (trước khi sửa: **2 → 6**), giữ nguyên sau **3** lần gọi thêm |
+| Douyin, re-render không xoá iframe | cùng phép thử: **2 → 2** iframe (trước khi sửa: **2 → 0**, `iframe.media-frame` mồ côi = 0 tức bị huỷ) — lỗi do thiếu `open.douyin.com` trong `frameRules` |
+| Douyin, ca tổng hợp | link đầy đủ trong `<p>` + link short trong card unfurl + link `example.com/video/<id>` làm nhiễu: **2** player đúng `src`, card unfurl bị thay **cả card**, link ngoài không đụng, **0** wrapper rỗng |
+| Douyin, so với voz.vn | cùng thread/post: voz.vn render **plain `<a class="link link--external">`**, không nhúng → đây là tính năng mới, không phải bản sao |
 | Footer bài ngắn | `margin: auto 0 0` → gap đáy = 0 trên cả 16 bài của trang |
 | DM trả lời | 1 → 2 tin nhắn |
 | DM mới | tìm một thành viên → gửi → mở conversation mới |
@@ -1632,7 +1975,7 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Unfurl, ngoài `.bbWrapper` | chèn card vào `<div>` trần ⇒ chiều cao/icon y hệt — selector không phụ thuộc container |
 | Unfurl, mobile | 390px ở 150%: card 346px, nằm trong `.message-cell--main`, `scrollWidth == innerWidth` |
 | Phông, mặc định | `system` → **không** có `<link id="font-faces">`, không tải file font nào |
-| Phông, chọn Roboto | link `fonts.css` được chèn, `--font` đổi, `document.fonts` báo Roboto 400/500/700 `loaded` |
+| Phông, chọn Roboto | link `fonts.css` được chèn, `--font` đổi, `document.fonts` báo Roboto 400/600 `loaded`; `font-weight: 600` (dùng cho username/tiêu đề) khớp face **600 thật**, không tổng hợp |
 | Phông, chọn Be Vietnam Pro | vẫn đúng **1** link (không nhân bản), stack đổi sang `"Be Vietnam Pro"` |
 | Phông, quay lại hệ thống | `--font` inline bị gỡ, về stack mặc định của `base.css`; link giữ lại để không tải lại |
 | Phông, tiếng Việt | `Đặng Hữu Phước ợ ẹ ẵ ộ ữ` render đủ, không tofu, ở cả 3 mức |
@@ -1653,6 +1996,7 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | imgur proxy, `client_id` rác | `…?client_id=deadbeef` → vẫn **200** (tham số bị bỏ qua, dùng key phía server) |
 | imgur nhập album, end-to-end | nhập `https://imgur.com/a/liverpool-emoticons-saitlzr` → tạo album `PepeTest`, tải ảnh xong, không lỗi |
 | Sao lưu, khoá JSON | `settings-export` → `app, version, exportedAt, navShortcuts, infiniteScroll, theme, font`; **không** có `clientId`; phục hồi lại → "Đã phục hồi: 3 phím tắt" |
+| Favicon | dùng đúng `voz-icon-32.png` và `voz-icon-192.png` của voz.vn, đều tải từ asset nội bộ |
 | Logo header | `/assets/img/voz-lockup.svg` tải 200, natural 348×177, render 51×26 (đúng tỉ lệ 1.963), không chồng lên ô tìm kiếm/tài khoản |
 | Logo header, mobile | 390px: vẫn 51×26, không tràn ngang, header 45px |
 | Ô tìm kiếm header | đã xoá — `document.querySelector('.p-header-search')` trả `null`, không còn tham chiếu nào trong HTML/CSS/JS |
@@ -1686,14 +2030,48 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Sửa album, mobile | 390px: hộp thoại 358px, không tràn ngang, lưới 330px |
 | Sửa album, cảm ứng | `@media (hover: none)` có trong CSS đã parse (`conditionText "(hover: none)"` → `.sticker-remove { opacity: 1 }`) |
 | Phông thay thế | đổi sang Be Vietnam Pro → 3 tệp woff2 tải xong, `--chrome-h` tự đo lại (47px khi nav rỗng rồi 81px khi phím tắt render), `scroll-padding-top` theo kịp |
-| Phông Be Vietnam | `data-font="be-vietnam"`, `--font` = `"Be Vietnam", …`, **4** file woff2 (400/500/700 + italic 400) đều 200 |
-| Be Vietnam, chữ Việt | đo bề rộng "Đặng ộ ữ ệ ĩ" bằng `"Be Vietnam"` so với `"Segoe UI"`: khác nhau ở cả 5 ký tự → file thật sự được dùng |
-| Be Vietnam, hết giả bold | cả 4 face `loaded`; bề rộng `Fioren Đặng` @32px: 400 = 191.97 → 500 = 194.03 → 700 = 197.43 (trước đây chỉ một face 400 nên 600 và 700 **bằng nhau** = 189.82) |
-| Be Vietnam, nghiêng thật | `font-style: italic` load `be-vietnam-italic-400.woff2` (bề rộng 187.42 ≠ 191.97 của upright) — hết nghiêng giả |
+| Phông Be Vietnam (mặc định) | không cần bấm gì: `data-font="be-vietnam"`, `--font` **không** set inline (để `base.css` lo), computed = `Be Vietnam`, face 400 `loaded`, và **chỉ** `font-default.css` được tải — `fonts.css` **không** link, 0 request cho 5 họ kia |
+| Mặc định, chi phí thật | fetch `be-vietnam-400.woff2` với `cache: no-store`: **19.6 KB** — đó là toàn bộ chi phí phông của một khách mới |
+| Thứ tự danh sách | radio group render đúng `Be Vietnam → Be Vietnam Pro → Hệ thống → Segoe UI → Cantarell → Roboto → SF Pro Display`, mục đầu `checked`; test `settings-appearance.test.mjs` chặn đảo thứ tự |
+| Cantarell, tệp đã ship | `cantarell-400.woff2` / `-600.woff2`: cmap 356, `base_missing=none`, **90/90** dạng xếp dấu, **6/6** dấu tổ hợp, có `GSUB`/`GPOS`/`GDEF`; `usWeightClass` = 400 và 600 |
+| Cantarell, bản Google Fonts bị loại | `cantarell-*-latin`/`-latin-ext` (v18): `Ơ ơ Ư ư` thiếu ở **mọi** file, **0/90** dạng xếp dấu, **0/6** dấu tổ hợp, **không** có `GSUB`/`GPOS`/`GDEF`/`kern` → phải dựng từ nguồn GNOME |
+| Cantarell, trang thật | `data-font="cantarell"`, hai face `400`/`600` `status: "loaded"`, `body` = stack Cantarell, `fonts.css` được chèn lazy bởi `ui/theme.js`; `document.fonts.check('16px Cantarell', …)` = **true** cho latin / chữ Việt cơ bản / `ơ ư` / dạng xếp dấu |
+| Cantarell, chữ Việt thật trên trang | chủ đề 522718 có **14** codepoint xếp dấu khác nhau (`ế ữ ở ộ ậ ứ ẫ ầ ấ ố ủ ệ ừ ạ`); dải dấu có **155px** mực với Cantarell vs **104px** khi loại Cantarell khỏi stack; `â` vs `ă` khác **28px** ở dải dấu (fallback serif chỉ 5px) → dấu do Cantarell vẽ |
+| Cantarell, script build | tải nguồn `GNOME/cantarell-fonts` v0.303 → `fontmake` dựng 2 master → subset còn **25.3 KB**; `REQUIRED_VIETNAMESE` khiến build **fail** nếu subset mất codepoint tiếng Việt |
+| `system` = "Hệ thống" | nhãn đổi từ "Mặc định hệ thống"; chọn `system` cho `--font` = `-apple-system, BlinkMacSystemFont, "Segoe UI", …`, bề rộng `Đặng Fioren ộữệĩ` @32px = **243.38** (phông hệ điều hành) chứ **không** phải 255.12 của mặt vendored — và `fonts.css` **không** bị link |
+| Sáu họ sau khi tải nguội | `be-vietnam` → Be Vietnam (255.12, không link fonts.css) · `be-vietnam-pro` → Be Vietnam Pro (266.37) · `system` → OS (243.38, không link) · `segoe-ui` → Segoe UI Local (243.38) · `roboto` → Roboto (242.2) · `sf-pro-display` → SF Pro Display (226.33) — mỗi lần đều đi qua `<link>` pre-paint nên không nhấp nháy |
+| Be Vietnam khớp voz.vn | nạp `be-vietnam-400.woff2` bằng `FontFace` tươi (bỏ cache HTTP) rồi đo `Đặng Fioren ộữệĩ` @32px: 400 = **255.12**, 500 = **255.12**, 600 = **265.78**, 700 = **265.78**, italic = **255.12** — **cả năm giá trị trùng voz.vn từng số một** |
+| Be Vietnam, chỉ một face | `document.fonts` chỉ có `Be Vietnam 400 normal`; 500 render đúng bằng 400 và 700 đúng bằng 600 (trình duyệt tổng hợp), y như voz.vn; italic là nghiêng giả — tất cả **có chủ đích** |
 | Be Vietnam, bền vững | F5 và điều hướng sang trang khác vẫn giữ phông; script pre-paint đặt `data-font` + `--font` trước lần vẽ đầu |
-| Bốn phông chuyển đổi | `roboto` → Roboto, `be-vietnam-pro` → Be Vietnam Pro, `be-vietnam` → Be Vietnam, `system` → gỡ `--font`, không tệp phông nào |
-| `system` không tải phông | 0 request tới `assets/fonts/`, `#font-faces` không tồn tại, `document.fonts` rỗng |
+| Năm họ chuyển đổi | `roboto` → Roboto, `sf-pro-display` → SF Pro Display, `be-vietnam-pro` → Be Vietnam Pro, `segoe-ui` → Segoe UI Local, `cantarell` → Cantarell, `system` → stack OS riêng (không link `fonts.css`) |
+| Mức 600 khớp face thật | cả bốn họ đều trả face thật cho `font-weight: 600` (username/tiêu đề): Roboto 600 = 244.75, SF Pro 600 = 244.28, Be Vietnam Pro 600 = thật, Be Vietnam = 400 (đúng voz.vn) |
+| Phông SF Pro Display | `data-font="sf-pro-display"`, `--font` = `"SF Pro Display", -apple-system, …`; face 400/500/600 + italic 400; username `font-weight: 600` khiến trình duyệt tải **`sf-pro-display-600.woff2`** (face thật), `500` không tải vì không ai dùng |
+| SF Pro, hết quá đậm | trước đây `600` nhảy sang file 700 (`A` = 244.89) rồi còn bị tổng hợp thêm; nay `600` khớp cut SemiBold thật (244.28) — bước 500→600 là 4.9%, đặc điểm thiết kế của San Francisco |
+| SF Pro, chữ Việt | 372 ký tự trong cmap; `ạ ệ ợ ỹ đ ư ơ â ă ể ấ ề` — **không thiếu ký tự nào** |
+| SF Pro, chỉ tải khi chọn | sau khi chọn mới tải `sf-pro-display-*.woff2`; không chọn thì không có file nào của họ này |
+| Phông Segoe UI | `data-font="segoe-ui"`, stack `"Segoe UI Local", "Segoe UI", …`; 4 face (400/600 + italic 400/600) `loaded`; `600` = 443.48 và `700` = 443.48 (dùng lại face 600 thật, không tổng hợp) |
+| Segoe UI, chữ Việt | `Đặng Fioren ộữệĩ Nền kinh tế kỳ quặc` — **0 ký tự thiếu**; bề rộng chuỗi `Đặng ộ ữ ệ ĩ` @28px = **151.18**, trùng khít với `"Segoe UI"` của hệ điều hành → không có chỗ nào gãy sang phông dự phòng |
+| Segoe UI, tách khỏi phông hệ điều hành | khai báo dưới tên `"Segoe UI Local"` nên không tranh chấp với `"Segoe UI"` có sẵn của Windows; test `settings-appearance.test.mjs` chặn việc khai trùng tên |
+| Segoe UI, chỉ tải khi chọn | sau khi chọn tải đúng 4 file, mỗi file ~33–48 KB; không chọn thì không có file nào của họ này |
+| Ký hiệu `↑ ✓ ✕` | **không** họ nào có glyph này (kể cả file của voz.vn) nên chúng rơi xuống `Segoe UI` — giống hệt voz.vn; đã kiểm tra lại phần cmap, không phải lỗi subset |
+| `system` không tải phông | chọn `system` → 0 request tới `assets/fonts/`, `#font-faces` không tồn tại (khác `be-vietnam`, họ mặc định, vốn tải sẵn một file) |
+| Ô chọn trong `.option-card` | tâm vòng tròn so với tâm dòng chữ đầu lệch **0.0px** ở **cả 12** thẻ (theme 3 + phông 6 + cỡ chữ + cuộn liên tục) trên cả 5 tab; mô tả vẫn thụt lề bằng nhãn (`descLeft == nameLeft`) |
+| Ô chọn, đổi cỡ chữ | lặp lại ở `--ui-scale: 1.35` (`line-height` 24px → 32.4px) vẫn lệch **0.0px**; cách cũ dùng `margin: 2px` sẽ lệch lại ~4px ở mức này |
+| Hàng `.settings-toggle` | checkbox "Tải ảnh" / "Hiển thị nút chụp bài viết" căn giữa cả khối hai dòng, lệch **0.0px** (`flex` + `align-items: center`, vốn đã đúng) |
+| Toàn bộ điều khiển ở Cài đặt | quét 14/14 `input[type=radio]` + `input[type=checkbox]` ở cả 5 panel → **0** ô lệch quá 0.6px |
 | Breadcrumb | màu `#d1d4d6` giống tên tác giả, đọc được trên nền tối |
+| Tiêu đề forum | `/f/phan-mem.13/` → `Phần mềm \| VOZ`, **trùng khít** voz.vn |
+| Tiêu đề forum, trang 3 | `/f/phan-mem.13/page-3/` → `Phần mềm \| Page 3 \| VOZ` (khớp voz.vn) |
+| Tiêu đề forum, `/page-1` | ra `Phần mềm \| VOZ` — **không** có `\| Page 1` (khớp voz.vn) |
+| Tiêu đề node tổng hợp | `/s/tin-tuc-inet.102/` → `Tin tức iNet \| VOZ` (khớp voz.vn) |
+| Tiêu đề chủ đề | `/t/…nextdns.522718/` → `Tất tần tật về dịch vụ nextDNS - thảo luận \| VOZ` — tiền tố **sau** tiêu đề (khớp voz.vn) |
+| Tiêu đề chủ đề, trang 684 | `Tất tần tật về dịch vụ nextDNS - thảo luận \| Page 684 \| VOZ` (khớp voz.vn) |
+| Tiêu đề chủ đề, thread khác | `/t/gnu-linux-nix.449667/` → `GNU/Linux, *nix - thảo luận \| VOZ` (khớp voz.vn) |
+| Tiêu đề thành viên | `/u/…1234567/` → `NguaConBatKham \| VOZ` (khớp voz.vn) |
+| Tiêu đề các trang còn lại | `/new/` → `What's new \| VOZ` · `/search/` → `Search \| VOZ` · `/direct-messages/` → `Direct messages \| VOZ` · `/login/` → `VOZ` · `/cai-dat-tuivoz` → `Cài đặt \| VOZ` (các trang có tiêu đề riêng đều khớp voz.vn) |
+| Tiêu đề trang lỗi | `/no-such-page/` → `Oops! We ran into some problems. \| VOZ` (khớp voz.vn) |
+| Tiêu đề khi điều hướng SPA | forum → click logo về trang chủ (`VOZ`) → `/cai-dat-tuivoz` (`Cài đặt \| VOZ`) → quay lại forum (`Phần mềm \| VOZ`): **không** để lại tiêu đề cũ, 13/13 route đúng |
+| Tiêu đề, 0 lỗi console | quét 13 route: **0** lỗi console |
 | Avatar thread | `/l/` (192×192) cho khung 96px, `srcset` thêm `/o/` cho 2x |
 
 Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, cảm xúc đã bỏ.
@@ -1708,7 +2086,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 - Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
 - Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
 - Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
-- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **152/152** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `font-scale.test.mjs` (chuẩn hoá cỡ chữ, giới hạn 80–200, không còn px trần, script pre-paint), `unfurl.test.mjs` (specificity icon/preview so với `.bbWrapper img:not(.smilie)`, hợp đồng `data-onerror`), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1\*.test.mjs` (hiện **254/254** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `font-scale.test.mjs` (chuẩn hoá cỡ chữ, giới hạn 80–200, không còn px trần, script pre-paint), `unfurl.test.mjs` (specificity icon/preview so với `.bbWrapper img:not(.smilie)`, hợp đồng `data-onerror`), `quote-expansion.test.mjs` / `quote-reply.test.mjs` (thu gọn quote dài, vị trí chèn quote khi Trả lời), `media-oembed.test.mjs` / `media-facebook.test.mjs` (oEmbed Flickr, SDK Facebook + nhánh fallback), `douyin-embed.test.mjs` (link douyin trần → player 325×735, chặn host lạ ở cả hai phía, quét lại DOM thật sau khi parse, cache short link, không nhân bản/không xoá iframe khi render lại), `page-title.test.mjs` / `page-title-wiring.test.mjs` (quy tắc tiêu đề, chặn view thiếu tiêu đề), `image-download.test.mjs` (WebP động giữ nguyên, WebP tĩnh → JPG), `post-number-popup.test.mjs` (hai URL chia sẻ, nhãn, thời điểm gắn listener đóng menu, số bài in đủ chữ số), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `settings-scroll.test.mjs`, `stickers.test.mjs`, `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
 
 ## 11. Ghi chú triển khai
 
@@ -1735,14 +2113,14 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 | Đổi màu / kích thước | `css/base.css` (`:root` cho bảng sáng, `:root[data-theme="dark"]` cho bảng tối) trước, chỉ thêm rule cục bộ khi thật sự cần. Mọi thành phần phải dùng `var(--token)`, không hardcode màu |
 | Đổi bố cục mobile | `css/responsive.css` (breakpoint 900/860/650/620) hoặc `@media` trong file khu vực |
 | Thêm BBCode mới | `lib/editorCodec.js` (`inline`/`block` map) + `lib/spoilers.js` nếu là block đặc biệt + `ui/editorTools.js` nếu cần nút |
-| Thêm provider media | `frameRules` + `restoreMedia()` trong `lib/media.js`, và nhánh tương ứng trong `editorTools.js`. Provider không có iframe (như Flickr) thì thêm vào `OEMBED_SITES`/`OEMBED_IMAGE_HOSTS` và `OEMBED_TARGETS` trong proxy |
+| Thêm provider media | `frameRules` + `restoreMedia()` trong `lib/media.js`, và nhánh tương ứng trong `editorTools.js`. Provider không có iframe (như Flickr) thì thêm vào `OEMBED_SITES`/`OEMBED_IMAGE_HOSTS` và `OEMBED_TARGETS` trong proxy. Provider cần SDK bên thứ ba (như Facebook) thì theo mục **Facebook** ở trên: nhánh riêng, giữ nguyên markup, và parse trên `document` chứ không phải `root`. Provider đến từ **liên kết trần** chứ không phải `[MEDIA=…]` (như Douyin) thì quét `a[href]` trong `restoreMedia()`, và nếu cần một bước mạng mà trình duyệt không tự làm được (redirect không CORS) thì thêm endpoint riêng trong `api/[...path].js` — xem mục **Douyin** ở trên |
 | Đổi cách hiển thị thời gian | `core/utils.js` (`timeAgo` / `postDate` / `fullDate`) |
 | Đổi badge chưa đọc | `ui/unreadCounts.js` |
 | Đổi nháp editor | `ui/editor.js` (`draftKey`, `save()`, `editor:clear-draft`) |
 | Thêm thiết lập mới | `lib/settings.js` (thêm field vào `emptySettings`/`normalizeSettings` + getter/setter + hằng số nhãn) + form trong `views/settings.js`; JSON backup tự động gồm field mới. Có hai nguồn nhãn cần cập nhật nếu thiết lập là giao diện: script inline trong `index.html` và `ui/theme.js` |
 | Thêm một `font-size` mới | luôn viết `calc(<px> * var(--ui-scale))`, hoặc `var(--post-scale)` nếu nằm trong `.message-body`. `vtesst1/font-scale.test.mjs` fail khi còn px trần, nên chạy lại bộ test sau khi sửa CSS |
 | Thêm một thiết lập cần `--font` | dùng `--font-control` (UI) hoặc `--font-post` (nội dung bài), **không** ghi trực tiếp `--font`: bên trong `.message-body` thì `--font` thắng `--font-post` và nhánh bài viết chết lặng |
-| Thêm phông chữ mới | bỏ `.ttf` gốc vào thư mục `--src`, thêm mức vào `WEIGHTS`/`FONT_STACKS`/`FONTS`/`FONT_LABELS`, chạy lại `tools/build-fonts.py`, thêm khối `@font-face` vào `css/fonts.css`, thêm nhánh trong script inline của `index.html` |
+| Thêm phông chữ mới | bỏ font gốc vào thư mục `--src`, thêm mức vào `WEIGHTS`/`FONT_STACKS`/`FONTS`/`FONT_LABELS`/`FONT_HELP`, chạy `tools/build-fonts.py` (hoặc script riêng nếu upstream lệch chuẩn — xem `build-be-vietnam.py`, `build-sf-pro-display.py`, `build-cantarell.py`), thêm khối `@font-face` vào `css/fonts.css`, thêm nhánh trong script inline của `index.html`; nếu là phông **không** OFL thì ghi chú giấy phép trong `css/fonts.css` và trong script build. **Luôn kiểm `cmap` của bản ship có đủ dấu tiếng Việt** (`U+01A0/01A1/01AF/01B0` + vài mã `U+1EA0-1EF9`) — bản cắt tỉa trên mạng thiếu sạch, xem mục Cantarell và Segoe UI |
 
 ### 11.2 Kiểm tra trước khi deploy
 

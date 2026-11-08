@@ -39,9 +39,12 @@ export const emptySettings = () => ({
   infiniteScroll: SCROLL_DEFAULT,
   theme: THEME_DEFAULT,
   font: FONT_DEFAULT,
-    postSize: FONT_SCALE_DEFAULT,
-    uiSize: FONT_SCALE_DEFAULT,
-  });
+  postSize: FONT_SCALE_DEFAULT,
+  uiSize: FONT_SCALE_DEFAULT,
+  imageDownload: IMAGE_DOWNLOAD_DEFAULT,
+  postScreenshot: POST_SCREENSHOT_DEFAULT,
+  staticAvatars: STATIC_AVATARS_DEFAULT,
+});
 
 // Colour scheme for the content area. The page chrome (header, nav) keeps its dark
 // VOZ styling in both modes — only the reading surface flips.
@@ -56,23 +59,48 @@ export const THEME_LABELS = {
   dark: 'Tối',
 };
 
-// Typography. `system` keeps the original stack and downloads nothing; the others load a
-// vendored woff2 set (assets/css/fonts.css) only once they are selected.
-export const FONTS = ['system', 'roboto', 'be-vietnam-pro', 'be-vietnam'];
-export const FONT_DEFAULT = 'system';
+// Typography. The list order is the order the radio group renders in Cài đặt → Giao diện, so
+// this array is the single source for both. `be-vietnam` is the default: it is the face voz.vn
+// itself renders in, so a new visitor gets the site's own typography with no action. `system`
+// injects nothing and leaves --font at base.css's value.
+//
+// Because the default is a vendored family, the first paint needs it: index.html links that one
+// 400 face directly (see the <link id="font-default"> there) instead of waiting for ui/theme.js.
+// The other families stay lazy — they are only fetched once selected.
+export const FONTS = ['be-vietnam', 'be-vietnam-pro', 'system', 'segoe-ui', 'cantarell', 'roboto', 'sf-pro-display'];
+export const FONT_DEFAULT = 'be-vietnam';
 export const FONT_LABELS = {
-  system: 'Mặc định hệ thống',
-  roboto: 'Roboto',
-  'be-vietnam-pro': 'Be Vietnam Pro',
   'be-vietnam': 'Be Vietnam',
+  'be-vietnam-pro': 'Be Vietnam Pro',
+  system: 'Hệ thống',
+  'segoe-ui': 'Segoe UI',
+  cantarell: 'Cantarell',
+  roboto: 'Roboto',
+  'sf-pro-display': 'SF Pro Display',
 };
 // Family name + the stylesheet to load for each downloadable option. `null` means "use the
 // --font stack as-is" and inject nothing.
 export const FONT_STACKS = {
-  system: null,
+  // The default carries NO stack: base.css names "Be Vietnam" first and font-default.css
+  // declares the face, so `be-vietnam` is applied by clearing the inline --font. Giving it a
+  // stack here too would be redundant and would drift from base.css.
+  'be-vietnam': null,
+  // `system` must name the OS fonts explicitly. It used to work by *removing* the inline
+  // --font so base.css applied — but base.css now names "Be Vietnam" first (it is the default),
+  // so that would silently render the vendored face and make this option a lie.
+  system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   roboto: 'Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  // Cantarell has no Medium/Semibold master, so only 400 and 600 are declared and a 600/700
+  // request is served by the Bold face — do not add a 500 to this stack expecting a real cut.
+  cantarell: '"Cantarell", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   'be-vietnam-pro': '"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  'be-vietnam': '"Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  // San Francisco first, then the Apple-first fallbacks so a non-Apple visitor still gets a
+  // comparable UI face. "-apple-system" resolves to the real San Francisco on macOS/iOS.
+  'sf-pro-display': '"SF Pro Display", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  // The vendored face is named "Segoe UI Local" so it cannot compete with the OS "Segoe UI":
+  // on Windows the plain name already resolves to the installed font, and declaring the
+  // download under the same name would let it shadow the local one. Local first, OS second.
+  'segoe-ui': '"Segoe UI Local", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };
 
 // Cỡ chữ. The two axes are independent: `postSize` scales prose inside a post, `uiSize`
@@ -83,6 +111,10 @@ export const FONT_SCALE_MIN = 80;
 export const FONT_SCALE_MAX = 200;
 export const FONT_SCALE_STEP = 5;
 export const FONT_SCALE_DEFAULT = 100;
+
+export const IMAGE_DOWNLOAD_DEFAULT = false;
+export const POST_SCREENSHOT_DEFAULT = false;
+export const STATIC_AVATARS_DEFAULT = false;
 
 export function normalizeFontScale(value) {
   // `Number(null)`, `Number('')` and `Number([])` are all 0, which would clamp to the 80%
@@ -123,6 +155,9 @@ export function normalizeSettings(raw) {
   out.font = FONTS.includes(raw?.font) ? raw.font : FONT_DEFAULT;
   out.postSize = normalizeFontScale(raw?.postSize);
   out.uiSize = normalizeFontScale(raw?.uiSize);
+  out.imageDownload = raw?.imageDownload === true;
+  out.postScreenshot = raw?.postScreenshot === true;
+  out.staticAvatars = raw?.staticAvatars === true;
   const list = Array.isArray(raw?.navShortcuts) ? raw.navShortcuts : [];
   const seen = new Set();
   for (const item of list.slice(0, MAX_SHORTCUTS)) {
@@ -240,6 +275,36 @@ export function getFontScale() {
   return { postSize, uiSize };
 }
 
+export function setImageDownload(enabled) {
+  const settings = loadSettings();
+  settings.imageDownload = enabled === true;
+  return saveSettings(settings);
+}
+
+export function getImageDownload() {
+  return loadSettings().imageDownload === true;
+}
+
+export function setPostScreenshot(enabled) {
+  const settings = loadSettings();
+  settings.postScreenshot = enabled === true;
+  return saveSettings(settings);
+}
+
+export function getPostScreenshot() {
+  return loadSettings().postScreenshot === true;
+}
+
+export function setStaticAvatars(enabled) {
+  const settings = loadSettings();
+  settings.staticAvatars = enabled === true;
+  return saveSettings(settings);
+}
+
+export function getStaticAvatars() {
+  return loadSettings().staticAvatars === true;
+}
+
 export function exportSettingsJson({ albums = [], recent = [] } = {}) {
   const settings = loadSettings();
   const payload = {
@@ -252,6 +317,9 @@ export function exportSettingsJson({ albums = [], recent = [] } = {}) {
     font: settings.font,
     postSize: settings.postSize,
     uiSize: settings.uiSize,
+    imageDownload: settings.imageDownload,
+    postScreenshot: settings.postScreenshot,
+    staticAvatars: settings.staticAvatars,
   };
   // Sticker payload mirrors the userscript backup so either file can be restored.
   if (albums.length || recent.length) {

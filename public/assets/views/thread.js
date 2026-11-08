@@ -7,6 +7,7 @@ import { currentPage, navigate } from '../core/nav.js';
 import { ICON_EYE_ON, ICON_EYE_OFF, ICON_USER } from '../core/icons.js';
 import { api, ApiError } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setThreadTitle } from '../ui/title.js';
 import { loading, errorBox, toast } from '../ui/feedback.js';
 import { pagination, wirePageJump, wireScrollArm } from '../ui/pagination.js';
 import { postHtml } from '../ui/post.js';
@@ -21,10 +22,46 @@ import { loadSmilies } from '../lib/smilies.js';
 import { wireMemberTooltips } from '../ui/memberTooltip.js';
 import { wireTitleHold } from '../ui/titleHold.js';
 import { mountInfiniteScroll } from '../ui/infiniteScroll.js';
+import { openPostNumberPopup } from '../ui/postNumberPopup.js';
 
 // Posts currently on screen. Filled per page and extended as infinite scroll appends,
 // so the delegated click handler can resolve a post from any appended page.
 const postIndex = new Map();
+
+// Every post-action click handler this view has attached to `#app`. Kept as a list rather than
+// a single slot so a concurrent `viewThread` run cannot orphan a listener.
+const threadClickHandlers = [];
+
+function removeThreadClickHandlers() {
+  for (const handler of threadClickHandlers) app.removeEventListener('click', handler);
+  threadClickHandlers.length = 0;
+  app._threadHandler = null;
+}
+
+// The reply editor keeps the textarea as its source of truth, but the visible surface is the
+// contenteditable `.editor-visual`. Assigning `.value` re-renders the visual editor, so the
+// quote lands in both — no need to touch the DOM by hand.
+// voz.vn stacks quoted posts directly against each other (no blank line between blocks) and
+// leaves a single empty line after the last one. The old code prepended the quote and always
+// emitted `\n\n`, which rendered as three blank lines under the quote.
+function insertQuote(post) {
+  const textarea = document.getElementById('reply-message');
+  if (!textarea) return false;
+  const value = textarea.value;
+  // Only the tail newline separates the last quote from where the caret should land, so a
+  // following quote replaces it instead of adding another blank line on top.
+  const base = value.replace(/\n+$/, '');
+  textarea.value = base ? `${base}${quoteBlock(post)}\n` : `${quoteBlock(post)}\n`;
+  return true;
+}
+
+// Put the caret after the inserted quote so the reader can type straight away.
+function focusReplyEnd() {
+  const textarea = document.getElementById('reply-message');
+  if (!textarea) return;
+  textarea.focus();
+  textarea.dispatchEvent(new Event('editor:focus-end'));
+}
 
 export async function viewThread(threadId, page, focusPost) {
   setActiveNav('home');
@@ -50,6 +87,8 @@ export async function viewThread(threadId, page, focusPost) {
     if (page === 'last' && res.pagination && res.pagination.last_page > 1) {
       return viewThread(threadId, res.pagination.last_page, focusPost);
     }
+    // Uses the resolved page, so /page-last and /unread get the real number rather than "last".
+    setThreadTitle(thread, res.pagination && res.pagination.current_page);
     setBreadcrumbs([
       { label: 'Diễn đàn', href: '/' },
       { label: forum.title || 'Chủ đề', href: forumPath(thread.Forum || { node_id: thread.node_id, title: '' }) },
@@ -150,7 +189,12 @@ function wireThreadActions(threadId, posts, thread, page = 1) {
   const byId = { get: (id) => postIndex.get(id) };
   const reload = (target, focus) => viewThread(threadId, target, focus);
 
-  if (app._threadHandler) app.removeEventListener('click', app._threadHandler);
+  // Every listener this view ever attached is tracked, and all are removed before a new one is
+  // added. A single `app._threadHandler` slot was not enough: `viewThread` can run twice
+  // concurrently (the `page === 'last'` recursion, and an SPA navigation), and the second run
+  // overwrote the slot while the first run's listener stayed attached. One click then ran the
+  // handler twice, which made the post number popup open and immediately toggle closed.
+  removeThreadClickHandlers();
 
   const onClick = async (event) => {
     const postTime = event.target.closest('[data-post-time]');
@@ -160,8 +204,21 @@ function wireThreadActions(threadId, posts, thread, page = 1) {
       postTime.textContent = postTime.title;
       return;
     }
-    const bookmarkBtn = event.target.closest('[data-bookmark]');
-    if (bookmarkBtn) {
+    const postNumberLink = event.target.closest('[data-post-number]');
+    if (postNumberLink) {
+      // The jump is left to the browser (the href is the real `#post-…` permalink); the
+      // popup only adds the two copy actions. `preventDefault` is deliberately not called so
+      // the reader keeps the normal scroll-to-post behaviour.
+      openPostNumberPopup(
+        postNumberLink,
+        thread,
+        Number(postNumberLink.dataset.postPage) || 1,
+        Number(postNumberLink.dataset.postNumber)
+      );
+      return;
+    }
+
+    const bookmarkBtn = event.target.closest('[data-bookmark]');    if (bookmarkBtn) {
       event.preventDefault();
       if (!state.loggedIn) return navigate('/login');
       if (bookmarkBtn.disabled) return;
@@ -227,11 +284,10 @@ function wireThreadActions(threadId, posts, thread, page = 1) {
       event.preventDefault();
       if (!state.loggedIn) return navigate('/login');
       const post = byId.get(Number(quoteLink.dataset.quote));
-      const textarea = document.getElementById('reply-message');
-      if (!post || !textarea) return;
-      textarea.value = quoteBlock(post) + textarea.value;
-      document.getElementById('reply-block').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      textarea.focus();
+      if (!post) return;
+      // Trích dẫn only fills the box: the reader keeps their place in the thread.
+      if (!insertQuote(post)) return;
+      toast('Đã trích dẫn vào khung trả lời');
       return;
     }
 
@@ -239,10 +295,13 @@ function wireThreadActions(threadId, posts, thread, page = 1) {
     if (replyLink) {
       event.preventDefault();
       if (!state.loggedIn) return navigate('/login');
-      const textarea = document.getElementById('reply-message');
-      if (!textarea) return;
-      document.getElementById('reply-block').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      textarea.focus();
+      const post = byId.get(Number(replyLink.dataset.reply));
+      if (!post) return;
+      // Trả lời quotes the post *and* takes the reader to the box, caret at the end.
+      if (!insertQuote(post)) return;
+      const block = document.getElementById('reply-block');
+      block?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusReplyEnd();
       return;
     }
 
@@ -278,6 +337,7 @@ function wireThreadActions(threadId, posts, thread, page = 1) {
   };
 
   app._threadHandler = onClick;
+  threadClickHandlers.push(onClick);
   app.addEventListener('click', onClick);
 
   const watchBtn = document.getElementById('watch-btn');

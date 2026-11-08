@@ -5,6 +5,7 @@ import { esc, num } from '../core/utils.js';
 import { forumPath, searchForumPath, withPage } from '../core/paths.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle, setBrandTitle } from '../ui/title.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { pagination, wirePageJump, wireScrollArm } from '../ui/pagination.js';
 import { threadRow } from '../ui/threadRow.js';
@@ -13,6 +14,7 @@ import { mountInfiniteScroll } from '../ui/infiniteScroll.js';
 
 export async function viewHome() {
   setActiveNav('home');
+  setBrandTitle();
   setBreadcrumbs([{ label: 'Diễn đàn' }]);
   loading();
   try {
@@ -41,6 +43,7 @@ export async function viewForum(nodeId, page) {
     setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, ...crumbs, { label: forum.title }], {
       href: `${forumPath(forum)}post-thread`, label: 'Tạo chủ đề mới',
     });
+    setTitle(forum.title, page);
 
     const sticky = threadsRes.sticky || [];
     const threads = threadsRes.threads || [];
@@ -97,6 +100,7 @@ export async function viewSearchForum(nodeId, page) {
     setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, ...crumbs, { label: node.title }], {
       href: 'https://voz.vn/f/-/post-thread', label: 'Tạo chủ đề mới',
     });
+    setTitle(node.title, page);
 
     const threads = threadsRes.threads || [];
     const sticky = threads.filter((t) => t.sticky);
@@ -140,6 +144,7 @@ export async function viewSearchForum(nodeId, page) {
 export async function viewNewThreads(page) {
   setActiveNav('new');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Bài mới' }]);
+  setTitle("What's new", page);
   loading();
   try {
     const res = await api.threads(page, 'post_date');

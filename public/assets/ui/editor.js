@@ -344,6 +344,25 @@ function wireOneEditor(editor) {
       }
     });
     textarea.addEventListener('editor:clear-draft', () => { try { localStorage.removeItem(draftKey); stored = null; restoreButton.disabled = true; status.textContent = 'Đã gửi · Đã xoá nháp.'; } catch { /* No storage available. */ } });
+    // Quote/reply actions insert at the top of the box; the caret belongs at the end so the
+    // reader can type immediately. The visual editor owns the caret, so it is placed there.
+    textarea.addEventListener('editor:focus-end', () => {
+      if (sourceMode) {
+        nativeFocus();
+        const end = value().length;
+        textarea.setSelectionRange(end, end);
+        sourceSelection = [end, end];
+        return;
+      }
+      visual.focus();
+      const target = document.createRange();
+      target.selectNodeContents(visual);
+      target.collapse(false);
+      const selection = document.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(target);
+      savedRange = target.cloneRange();
+    });
     render(); textarea.hidden = true; visual.hidden = false;
     editor.querySelector('[data-tool="undo"]').disabled = true;
     editor.querySelector('[data-tool="redo"]').disabled = true;

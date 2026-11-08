@@ -5,6 +5,7 @@ import { esc, num, timeAgo } from '../core/utils.js';
 import { userPath, withPage } from '../core/paths.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle } from '../ui/title.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { pagination, wirePageJump } from '../ui/pagination.js';
 import { requireLogin } from '../ui/session.js';
@@ -14,6 +15,7 @@ import { avatarMarkup } from '../lib/avatar.js';
 export async function viewAlerts(page) {
   setActiveNav('alerts');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Thông báo' }]);
+  setTitle('Alerts', page);
   if (!requireLogin()) return;
   loading();
   try {
@@ -50,6 +52,7 @@ export async function viewAlerts(page) {
 export async function viewBookmarks(page) {
   setActiveNav('bookmarks');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Đánh dấu' }]);
+  setTitle('Bookmarks', page);
   if (!requireLogin()) return;
   loading();
   try {
@@ -76,6 +79,7 @@ export async function viewBookmarks(page) {
 export async function viewWatched(page) {
   setActiveNav('watched');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Theo dõi' }]);
+  setTitle('Watched threads', page);
   if (!requireLogin()) return;
   loading();
   try {

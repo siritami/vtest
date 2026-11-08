@@ -10,6 +10,10 @@ import { wireNavShortcuts } from './ui/chrome.js';
 import { wireTheme } from './ui/theme.js';
 import { wireChromeAutoHide } from './ui/chromeAutoHide.js';
 import { wireImageFallbacks } from './lib/imageFallback.js';
+import { wireImageDownloads } from './lib/imageDownload.js';
+import { wireStaticAvatars } from './lib/avatarStatic.js';
+import { wirePostScreenshots } from './lib/postScreenshot.js';
+import { wireAllQuoteExpansion } from './lib/quotes.js';
 
 // Applied before the first paint of app content so the page never flashes the wrong scheme:
 // the reader's saved preference is in localStorage, so it is available synchronously.
@@ -46,6 +50,10 @@ wireChromeAutoHide();
 // voz.vn's markup carries data-onerror="hide-parent" on unfurl favicons; the attribute does
 // nothing without a listener, so dead favicons would otherwise keep their box and alt text.
 wireImageFallbacks();
+wireImageDownloads();
+wireStaticAvatars();
+wirePostScreenshots();
+wireAllQuoteExpansion();
 
 window.addEventListener('popstate', () => {
   window.scrollTo({ top: 0 });

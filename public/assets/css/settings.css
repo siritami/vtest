@@ -71,8 +71,14 @@
 .option-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .option-card {
   display: grid;
+  /* Two columns, two rows. The radio and the name share row 1 so the circle can be centred on
+     the name's line box; the description spans row 2 in the text column only. Row heights are
+     `auto` so both follow the current font size and --ui-scale. */
   grid-template-columns: auto 1fr;
-  grid-template-areas: "radio name" "radio desc";
+  /* `.` keeps column 1 empty on the description row so the description stays indented under
+     the name, while the radio occupies only the name row. */
+  grid-template-areas: "radio name" ". desc";
+  grid-template-rows: auto auto;
   gap: 0 10px;
   align-items: start;
   margin: 0;
@@ -84,7 +90,10 @@
 }
 .option-card:hover { border-color: var(--link); }
 .option-card.is-active { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); }
-.option-card input { grid-area: radio; margin: 2px 0 0; flex: 0 0 auto; }
+/* Centre the radio on the first text line: `1 / 2` keeps it in the name row only, so
+   `align-self: center` centres it against that line box rather than the whole card. This
+   stays correct at any --ui-scale, since the row height follows the line box. */
+.option-card input { grid-area: radio; grid-row: 1 / 2; align-self: center; margin: 0; flex: 0 0 auto; }
 .option-card-name { grid-area: name; font-weight: 600; color: var(--text); }
 .option-card-desc { grid-area: desc; font-size: calc(12px * var(--ui-scale)); color: var(--dimmed); line-height: 1.5; }
 
@@ -96,6 +105,21 @@
 .size-row-head label { font-weight: 600; color: var(--text); }
 .size-value { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--link); }
 .size-slider { display: block; width: 100%; margin: 0 0 4px; accent-color: var(--link); }
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.settings-toggle:hover { border-color: var(--link); }
+.settings-toggle-copy { display: flex; flex-direction: column; min-width: 0; }
+.settings-toggle-name { font-weight: 600; color: var(--text); }
+.settings-toggle input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--link); }
 .settings-backup .code-box { min-height: 190px; font-family: Consolas, "Courier New", monospace; font-size: calc(12px * var(--ui-scale)); white-space: pre; }
 .settings-backup .shortcut-form-actions { margin-top: 10px; }
 

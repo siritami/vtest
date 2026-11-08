@@ -4,6 +4,7 @@ import { app, state } from '../core/dom.js';
 import { esc, num, unix } from '../core/utils.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle } from '../ui/title.js';
 import { loading, errorBox } from '../ui/feedback.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { sanitizeHtml } from '../lib/bbcode.js';
@@ -16,6 +17,7 @@ export async function viewUser(userId) {
     const res = await api.user(userId);
     const user = res.user;
     setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: user.username }]);
+    setTitle(user.username);
     const isMe = state.me && state.me.user_id === user.user_id;
     app.innerHTML = `
       <div class="block">

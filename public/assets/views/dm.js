@@ -6,6 +6,7 @@ import { dmPath, userPath, withPage } from '../core/paths.js';
 import { navigate } from '../core/nav.js';
 import { api } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setTitle } from '../ui/title.js';
 import { loading, errorBox, toast } from '../ui/feedback.js';
 import { pagination, wirePageJump } from '../ui/pagination.js';
 import { requireLogin } from '../ui/session.js';
@@ -16,6 +17,7 @@ import { sanitizeHtml } from '../lib/bbcode.js';
 export async function viewDmList(page) {
   setActiveNav('dm');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Hộp thư' }]);
+  setTitle('Direct messages', page);
   if (!requireLogin()) return;
   loading();
   try {
@@ -67,6 +69,7 @@ export async function viewDm(conversationId, page) {
       { label: 'Hộp thư', href: '/direct-messages' },
       { label: conv.title },
     ]);
+    setTitle(conv.title, res.pagination && res.pagination.current_page);
     app.innerHTML = `
       <div class="block">
         <div class="block-header">${esc(conv.title)}<span class="block-header-extra">${num(conv.reply_count)} trả lời</span></div>
@@ -123,6 +126,7 @@ export async function viewNewDm(prefillUser) {
     { label: 'Hộp thư', href: '/direct-messages' },
     { label: 'Tin nhắn mới' },
   ]);
+  setTitle('Send direct message');
   app.innerHTML = `
     <div class="block">
       <div class="block-header">Tin nhắn mới</div>

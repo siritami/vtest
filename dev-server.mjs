@@ -16,6 +16,7 @@ const MIME = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
@@ -27,6 +28,8 @@ const { default: handler } = await import('./api/[...path].js');
 // Everything under /assets/ plus the app shell's own filenames must be a real file; only
 // other paths are SPA routes (see serveStatic).
 const ASSET_RE = /^\/(assets|userscript)\//;
+// Files the browser requests by fixed name; a missing one must 404, not return the shell.
+const ROOT_FILES = new Set(['/favicon.ico', '/site.webmanifest', '/robots.txt']);
 
 function toRequest(req, body) {
   const url = `http://${req.headers.host || `localhost:${PORT}`}${req.url}`;
@@ -72,7 +75,7 @@ async function serveStatic(req, res, pathname) {
     // The SPA fallback is for route paths only. A missing *asset* must 404: falling back to
     // index.html answered 200 with HTML for every absent file, which hid 404s (a deleted
     // font looked served) and turned a typo'd script into a bogus "unexpected token <" error.
-    if (ASSET_RE.test(pathname)) {
+    if (ASSET_RE.test(pathname) || ROOT_FILES.has(pathname)) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('not found');
       return;
     }

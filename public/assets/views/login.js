@@ -4,6 +4,7 @@ import { app, state } from '../core/dom.js';
 import { navigate } from '../core/nav.js';
 import { auth } from '../api.js';
 import { setActiveNav, setBreadcrumbs } from '../ui/chrome.js';
+import { setBrandTitle } from '../ui/title.js';
 import { toast } from '../ui/feedback.js';
 import { renderAccount } from '../ui/chrome.js';
 
@@ -24,6 +25,7 @@ async function makePkce() {
 export async function viewLogin() {
   setActiveNav('');
   setBreadcrumbs([{ label: 'Diễn đàn', href: '/' }, { label: 'Đăng nhập' }]);
+  setBrandTitle();
   if (!state.config) state.config = await auth.config();
   const cfg = state.config;
 

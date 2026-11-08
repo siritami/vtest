@@ -19,6 +19,7 @@ import { viewCompose } from '../views/compose.js';
 import { viewSettings } from '../views/settings.js';
 import { refreshUnreadCounts } from '../ui/unreadCounts.js';
 import { teardownInfiniteScroll } from '../ui/infiniteScroll.js';
+import { setTitle } from '../ui/title.js';
 
 export function parsePath() {
   const segments = location.pathname.split('/').filter(Boolean);
@@ -99,8 +100,11 @@ export async function route() {
     if (head === 'u') return await viewUser(idFromSegment(segments[1]));
     if (head === 'cai-dat-tuivoz') return viewSettings();
     if (head === 'login') return await viewLogin();
+    setTitle('Oops! We ran into some problems.');
     app.innerHTML = '<div class="empty">Không tìm thấy trang.</div>';
   } catch (err) {
+    // voz.vn's own error page title, so a failed route is still identifiable in a tab list.
+    setTitle('Oops! We ran into some problems.');
     app.innerHTML = errorBox(err);
   } finally {
     refreshUnreadCounts();

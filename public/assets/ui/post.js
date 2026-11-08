@@ -1,6 +1,6 @@
 // A single post (.message) — XenForo markup with the voz.vn metrics.
 
-import { esc, num, unix, timeAgo, fullDate, postDate } from '../core/utils.js';
+import { esc, num, postNumber, unix, timeAgo, fullDate, postDate } from '../core/utils.js';
 import { threadPath, userPath, withPage } from '../core/paths.js';
 import { avatarMarkup } from '../lib/avatar.js';
 import { sanitizeHtml } from '../lib/bbcode.js';
@@ -50,7 +50,7 @@ export function postHtml(post, thread, page) {
               </ul>
               <ul class="message-attribution-opposite">
                 <li><button class="post-bookmark" type="button" data-bookmark="${post.post_id}" aria-pressed="${!!post.is_bookmarked}" title="${post.is_bookmarked ? 'Bỏ đánh dấu' : 'Đánh dấu bài viết'}" aria-label="${post.is_bookmarked ? 'Bỏ đánh dấu' : 'Đánh dấu bài viết'}">${ICON_BOOKMARK}</button></li>
-                <li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}" class="message-postNumber">#${post.position + 1}</a></li>
+                <li><a href="${withPage(threadPath(thread), page)}#post-${post.post_id}" class="message-postNumber" data-post-number="${post.post_id}" data-post-page="${Number(page) || 1}" aria-haspopup="menu" aria-expanded="false" title="Chia sẻ bài viết">#${postNumber(post.position + 1)}</a></li>
               </ul>
             </header>
             <div class="message-content">

@@ -103,8 +103,12 @@
 
   --radius: 4px;
   --max-width: 1058px;
-    --font-post: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-control: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* The stock stack, used until ui/theme.js applies the reader's choice (and permanently for
+       `system`). It names "Be Vietnam" first because that is FONT_DEFAULT: the face is declared
+       in font-default.css, which index.html links, so this stack resolves on the very first
+       paint instead of falling through to the OS font. */
+    --font-post: "Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-control: "Be Vietnam", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font: var(--font-control);
     /* Cỡ chữ: --ui-scale sizes everything outside a post body, --post-scale sizes the prose
        inside one. Both are unitless multipliers set from Cài đặt (lib/settings.js). Sizes that

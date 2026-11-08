@@ -33,10 +33,15 @@ from fontTools.varLib import instancer
 
 # Weights the stylesheet uses. Roboto is instantiated at these values; Be Vietnam Pro
 # picks the matching static file.
+#
+# Roboto's 700 cut is written into the 600 slot: the UI asks for `font-weight: 600` far more
+# often than 700 and this family has no real 600, so without this the browser would snap 600
+# to the 700 face and every heading would render a full bold heavier than intended. 700 then
+# reuses the same file. See css/fonts.css.
 WEIGHTS = {
     400: "Regular",
     500: "Medium",
-    700: "Bold",
+    600: "Bold",
 }
 
 # Unicode ranges mirroring Google Fonts' `latin` and `vietnamese` subsets, plus the
