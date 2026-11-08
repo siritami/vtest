@@ -1,17 +1,19 @@
-/* Unfurl (link preview) cards. `height: auto` from `.bbWrapper img:not(.smilie)` in post.css
-   would otherwise win on specificity (0,2,1 vs 0,2,0) and a failed favicon — naturalHeight is
-   0, e.g. discord.com's .ico under a cross-origin policy — would render its alt text in a
-   16px-wide column hundreds of pixels tall. The unfurl rules are therefore scoped under
-   `.bbWrapper` to reach (0,3,2)/(0,3,1) and pin both images to their box. */
-.bbWrapper .bbCodeBlock--unfurl { margin: 1em 0; max-width: 650px; padding: 12px; border: 1px solid var(--border); border-left: 3px solid var(--block-header-bg); border-radius: 4px; background: var(--quote-bg); font-size: calc(13px * var(--ui-scale)); }
-.bbWrapper .bbCodeBlock--unfurl .contentRow { display: flex; align-items: center; gap: 12px; }
-.bbWrapper .bbCodeBlock--unfurl .contentRow-figure { flex: 0 0 80px; margin: 0; }
-.bbWrapper .bbCodeBlock--unfurl .bbCodeBlockUnfurl-image { display: block; width: 80px; height: 80px; object-fit: cover; margin: 0; }
-.bbWrapper .bbCodeBlock--unfurl .contentRow-main { flex: 1; min-width: 0; }
-.bbWrapper .bbCodeBlock--unfurl .contentRow-header { margin: 0 0 4px; font-size: calc(15px * var(--ui-scale)); line-height: 1.4; }
-.bbWrapper .bbCodeBlock--unfurl .contentRow-snippet { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.4; }
-.bbWrapper .bbCodeBlock--unfurl .contentRow-minor { margin-top: 5px; color: var(--dimmed); font-size: calc(12px * var(--ui-scale)); }
-.bbWrapper .bbCodeBlock--unfurl .bbCodeBlockUnfurl-icon { display: inline-block; width: 16px; height: 16px; max-height: 16px; object-fit: cover; margin: 0 4px 0 0; vertical-align: text-bottom; }
+/* Unfurl (link preview) cards.
+   `.bbWrapper img:not(.smilie)` in post.css sets `height: auto` at specificity (0,2,1), which
+   beats a plain `.bbCodeBlockUnfurl-icon` (0,2,0). A favicon that fails to load — discord.com's
+   .ico is a common one — reports naturalHeight 0, so `height: auto` + `width: 16px` renders its
+   alt text in a 16px-wide column hundreds of pixels tall and the card balloons from ~130px to
+   ~400px. Each image is therefore pinned through its own row wrapper, reaching (0,3,0), instead
+   of depending on an ancestor class the card does not always have. */
+.bbCodeBlock--unfurl { margin: 1em 0; max-width: 650px; padding: 12px; border: 1px solid var(--border); border-left: 3px solid var(--block-header-bg); border-radius: 4px; background: var(--quote-bg); font-size: calc(13px * var(--ui-scale)); }
+.bbCodeBlock--unfurl .contentRow { display: flex; align-items: center; gap: 12px; }
+.bbCodeBlock--unfurl .contentRow-figure { flex: 0 0 80px; margin: 0; }
+.bbCodeBlock--unfurl .contentRow-figure .bbCodeBlockUnfurl-image { display: block; width: 80px; height: 80px; object-fit: cover; margin: 0; }
+.bbCodeBlock--unfurl .contentRow-main { flex: 1; min-width: 0; }
+.bbCodeBlock--unfurl .contentRow-header { margin: 0 0 4px; font-size: calc(15px * var(--ui-scale)); line-height: 1.4; }
+.bbCodeBlock--unfurl .contentRow-snippet { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.4; }
+.bbCodeBlock--unfurl .contentRow-minor { margin-top: 5px; color: var(--dimmed); font-size: calc(12px * var(--ui-scale)); }
+.bbCodeBlock--unfurl .contentRow-minor .bbCodeBlockUnfurl-icon { display: inline-block; width: 16px; height: 16px; max-height: 16px; object-fit: cover; margin: 0 4px 0 0; vertical-align: text-bottom; }
 .media-embed { width: 100%; max-width: 560px; margin: 12px auto; }
 .media-frame { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; background: var(--content-bg); }
 .media-embed--portrait { max-width: 325px; }
@@ -33,5 +35,5 @@
   .bbCodeBlock--unfurl { padding: 8px; }
   .bbCodeBlock--unfurl .contentRow { gap: 8px; }
   .bbCodeBlock--unfurl .contentRow-figure { flex-basis: 60px; }
-  .bbCodeBlock--unfurl .bbCodeBlockUnfurl-image { width: 60px; height: 60px; }
+  .bbCodeBlock--unfurl .contentRow-figure .bbCodeBlockUnfurl-image { width: 60px; height: 60px; }
 }

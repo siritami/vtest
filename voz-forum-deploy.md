@@ -13,7 +13,7 @@ qua API, phiên đăng nhập lưu trong cookie mã hoá base64url.
 > vì cần cho việc deploy và không phải thông tin cá nhân.
 
 ```
-vtest/
+tuivoz/
 ├── api/
 │   ├── [...path].js      # Edge Function: proxy /api/xf/* + OAuth endpoints
 │   └── index.js          # re-export cho route /api
@@ -36,6 +36,7 @@ vtest/
 │   │   │   ├── signature.js  # chữ ký (BBCode thô) → HTML
 │   │   │   ├── editorCodec.js # BBCode ⇄ HTML cho trình soạn
 │   │   │   ├── media.js      # khôi phục iframe/media + resize Reddit + Flickr oEmbed
+│   │   │   ├── imageFallback.js # data-onerror (hide-parent/hide) — sự kiện error pha capture
 │   │   │   ├── prefix.js     # prefix_id → class màu
 │   │   │   ├── quotes.js     # khôi phục link nguồn của quote
 │   │   │   ├── attachments.js # [ATTACH]id → URL thật cho trình soạn
@@ -86,7 +87,7 @@ vtest/
 │   │       ├── forum.css     # node list / structItem / pageNav
 │   │       ├── avatar.css    # avatar + label tiền tố
 │   │       ├── post.css      # .message + bbWrapper (chữ trong bài theo --post-scale)
-│   │       ├── media.css     # unfurl + iframe media
+│   │       ├── media.css     # unfurl (ghim chặt ảnh/icon) + iframe media
 │   │       ├── reaction.css
 │   │       ├── forms.css     # button / input / tabs
 │   │       ├── editor.css    # trình soạn trực quan
@@ -136,6 +137,8 @@ ngay sau là `theme.css` (rule theo `data-theme`/`data-font`) và script chống
 - API thay nội dung spoiler bằng `Spoiler content hidden.`; `lib/spoilers.js` lấy lại nội dung từ BBCode gốc bằng parser stack, dựng `details/summary` hỗ trợ spoiler lồng nhau. Giữ các định dạng cơ bản, list, URL, ảnh/attachment, code, quote và media; EMBED chưa hỗ trợ giữ liên kết nguồn. Chỉ thay placeholder khi số spoiler ngoài cùng khớp, không tải HTML ngoài hay chạy BBCode như HTML. Nội dung phục hồi tiếp tục đi qua sanitizer, khôi phục quote/media/smiley và kích thước ảnh.
 - `lib/quotes.js` khôi phục liên kết bài gốc trong tên tác giả quote từ BBCode (bao gồm quote lồng nhau); quote không có post ID giữ tên thường. Route `/p/<id>/` lấy bài gốc và pagination API để chuyển đến đúng thread/trang rồi cuộn tới bài, không giả định 20 bài/trang.
 - `css/media.css` định dạng preview URL (`bbCodeBlock--unfurl`) từ HTML API: thumbnail, tiêu đề, mô tả, favicon; ảnh preview không nhận class ảnh bài viết. Không tự fetch URL tùy ý để lấy metadata. Khối embed (`.media-embed`) canh giữa bằng `margin: 12px auto` để video không dạt trái so với voz.vn.
+  - **Bẫy specificity (đã sửa).** `.bbWrapper img:not(.smilie)` ở `post.css` đặt `height: auto` với specificity (0,2,1), thắng `.bbCodeBlockUnfurl-icon` (0,2,0). Favicon tải lỗi có `naturalHeight = 0`, nên `height: auto` + `width: 16px` biến alt text (`discord.com`) thành một cột chữ 16px cao hàng trăm pixel: card từ ~130px phình lên ~400px, và vì chữ trong bài co giãn theo `--post-scale` nên lỗi nặng dần khi tăng cỡ chữ (100% → 397px, 150% → 397px, 200% → lớn hơn nữa). Hai ảnh của card giờ được ghim qua chính hàng của chúng — `.contentRow-figure .bbCodeBlockUnfurl-image` và `.contentRow-minor .bbCodeBlockUnfurl-icon`, đều (0,3,0) — nên thắng rule chung mà **không** phụ thuộc tổ tiên `.bbWrapper` (card vẫn đúng khi render ngoài `.bbWrapper`). Icon còn có `max-height: 16px` làm lớp bảo hiểm. Đo lại: card 131px ở 100%, 206px ở 150%, 306px ở 200% — chênh lệch chỉ do chữ, không do ảnh.
+  - **`data-onerror="hide-parent"` (đã hiện thực).** HTML của voz.vn gắn thuộc tính này lên favicon; bản thân nó là **trơ** — XenForo bind bằng JavaScript mà app không tải — nên favicon chết vẫn chiếm chỗ và hiện alt text. `lib/imageFallback.js` (`wireImageFallbacks()`, gọi một lần trong `app.js`) bắt `error` ở **pha capture** trên `document` (sự kiện `error` không bubble) và ẩn phần tử cha (`hide-parent`) hoặc chính ảnh (`hide`). Ảnh không có `data-onerror` không bị đụng tới. Chỉ favicon chết mới ẩn; ảnh preview 1×1 vẫn được kéo đầy khung 80/60px với `object-fit: cover`.
 - `lib/media.js` khôi phục wrapper media của API: YouTube, X/Twitter, TikTok, Reddit (`subreddit/comments/id`) và Imgur (`[MEDIA=imgur]<album_id>[/MEDIA]` → `https://imgur.com/<id>/embed`) được dựng iframe từ ID đã kiểm tra, có liên kết mở nguồn. Iframe sẵn có chỉ được giữ khi khớp HTTPS host/path cho YouTube, Vimeo, Dailymotion, Facebook plugins, Spotify, SoundCloud, TikTok, Twitter hoặc Imgur (`/^\/[\w-]+\/embed\/?$/`). Mọi thuộc tính iframe được dựng lại, loại `srcdoc`/event handler và áp sandbox; script bên ngoài không được chèn. Provider chưa hỗ trợ giữ nội dung/link fallback của API. Không sao chép mã plugin XenForo. Reddit và Imgur tự điều chỉnh chiều cao từ message của provider — Reddit dùng `resize.embed` (origin `embed.reddit.com`/`www.redditmedia.com`), Imgur dùng `resize_imgur` (origin `https://imgur.com`); cả hai đều kiểm tra `event.source` đúng iframe và giới hạn 100–3000px. Ảnh Imgur đơn lẻ không bị đổi: `i.imgur.com` vẫn là `<img>` bình thường. X dùng khung cao cố định có cuộn; nội dung bị xóa, giới hạn vùng/đăng nhập hoặc chặn embed phụ thuộc provider.
 - **Flickr qua oEmbed.** `[MEDIA=flickr]<short_id>[/MEDIA]` không có iframe để dựng: voz.vn để XenForo tự phân giải (`data-xf-init="oembed"`) và kết quả cuối cùng là **một ảnh**, không phải khung. Trang này làm tương tự: `restoreMedia()` thấy provider trong `OEMBED_SITES`, đánh dấu `media-embed--oembed` (giữ link fallback của API trong lúc chờ) rồi gọi `hydrateOembed()`. Hàm này `fetch('/api/xf/oembed?site=flickr&key=…')` — proxy vì Flickr **không gửi header CORS** — chờ placeholder xuất hiện trong DOM thật (`sanitizeHtml()` trả về chuỗi nên node lúc parse không phải node được chèn) rồi thay bằng `<a><img class="bbImage"></a>` + link "Xem trên Flickr". Ảnh chỉ được nhận khi host nằm trong `OEMBED_IMAGE_HOSTS` (`live.staticflickr.com` và các `farm*.staticflickr.com`), phải HTTPS và không có credentials; sai host thì bỏ ảnh và quay về fallback có viền. Giới hạn hiển thị `max-width: min(100%, 683px)`, giữ đúng tỉ lệ, canh trái như ảnh thường.
 - Trang chủ đề tải danh mục `/voz/smilies` qua `lib/smilies.js`, đổi mã smiley trong văn bản thành ảnh đúng kích thước/2x. Không thay mã trong liên kết hoặc khối code. Trình soạn cũng hiển thị smiley ngay khi chọn hoặc gõ mã, không cần bấm Xem trước; ảnh nằm trong `contenteditable` nên `data-smilie` giữ mã gốc để serialize về BBCode, caret được đặt lại theo độ dài mã khi ảnh thay thế text.
@@ -180,7 +183,7 @@ Vì sao phải có lớp edge:
 ### 2.1 Chuẩn bị
 
 ```powershell
-cd "D:\Data 2\Github-Clone\siritami\vtest"
+cd "D:\Data 2\Github-Clone\siritami\tuivoz"
 npm i -g vercel      # hoặc dùng npx vercel
 vercel login
 ```
@@ -228,7 +231,7 @@ Header `x-vercel-id` trong response cho biết region thực tế, ví dụ
 ### 2.4 Chạy local
 
 ```powershell
-cd "D:\Data 2\Github-Clone\siritami\vtest"
+cd "D:\Data 2\Github-Clone\siritami\tuivoz"
 node dev-server.mjs 3111
 # → http://localhost:3111
 ```
@@ -470,12 +473,13 @@ import mọi `views/*` để phân nhánh route — vì vậy `core/nav.js` gi�
 | File | Export | Việc làm |
 |---|---|---|
 | `avatar.js` | `avatarUrlById`, `avatarMarkup` | đoán `data.voz.vn/avatars/{size}/{floor(id/1000)}/{id}.jpg`; chồng `<img>` lên chữ cái màu, `onerror="this.remove()"` để lộ fallback |
-| `bbcode.js` | `sanitizeHtml`, `bbcodeToPlain`, `stripQuotes`, `quoteBlock` | pipeline sanitize 6 bước (xem §6); `stripQuotes()` đếm độ sâu quote; `quoteBlock()` dựng `[QUOTE="…, post: …, member: …"]` |
+| `bbcode.js` | `sanitizeHtml`, `bbcodeToPlain`, `stripQuotes`, `quoteBlock` | pipeline sanitize 7 bước (xem §6); `stripQuotes()` đếm độ sâu quote; `quoteBlock()` dựng `[QUOTE="…, post: …, member: …"]` |
 | `postLinks.js` | `localPathFor`, `rewriteVozLinks`, `isVozUrl`, `VOZ_ORIGIN` | đổi link `https://voz.vn/…` trong nội dung bài thành đường dẫn nội bộ (xem §6) |
 | `signature.js` | `signatureHtml` | chữ ký trả về dạng **BBCode thô** (xem §6.0b) nên phải render trước khi hiển thị; nhận `[URL=…]`, `[B]`, `[COLOR]`, `[SIZE]`, `[FONT]`, `[LIST]`, `[IMG]`…, tag lạ hiện nguyên văn |
 | `editorCodec.js` | `safeEditorUrl`, `parseEditorCode`, `editorCodePlain`, `editorCodeHtml`, `editorDomCode` | BBCode ⇄ HTML cho trình soạn; tag lạ giữ nguyên dạng `data-bb-raw` (atomic, `contenteditable=false`); `[IMG size=…]` và `[ATTACH]` đã đăng ký được vẽ thành `<img>` thật, thuộc tính giữ qua `data-bb-attrs` |
 | `attachments.js` | `registerAttachments`, `getAttachment`, `attachmentIdForUrl`, `clearAttachments`, `attachmentImage` | API trả `[ATTACH]id[/ATTACH]` trong `message` còn URL thật nằm ở `post.Attachments[].direct_url`; view đăng ký danh sách này để codec vẽ được ảnh. Không đăng ký thì giữ nguyên `data-bb-raw` (không mất dữ liệu) |
 | `media.js` | `safeMediaUrl`, `restoreMedia` | allowlist host/path cho iframe; dựng lại `[MEDIA=…]`; nghe `resize.embed` của Reddit; phân giải Flickr qua `/api/xf/oembed` thành ảnh (`OEMBED_SITES`, `OEMBED_IMAGE_HOSTS`) |
+| `imageFallback.js` | `wireImageFallbacks` | hiện thực `data-onerror` mà HTML voz.vn giả định có: bắt `error` pha **capture** trên `document` (sự kiện không bubble), `hide-parent` ẩn phần tử cha, `hide` ẩn ảnh. Gọi một lần ở `app.js`; không có `data-onerror` thì không đụng gì |
 | `prefix.js` | `prefixLabel` | `prefix_id` → `label--{green,red,royalBlue,orange,primary,accent,gray,olive}` |
 | `quotes.js` | `restoreQuoteLinks` | ghép `[quote=…, post: N]` với `blockquote.xfBb-quote` theo thứ tự + `data-name`, chèn link `↑` về `/p/N/` |
 | `smilies.js` | `smilieChoices`, `loadSmilies`, `smiliesReady`, `splitSmilieText`, `renderSmilies` | tải `/voz/smilies` một lần, dựng regex từ mã đã escape, chỉ thay trong text node không nằm trong `a/code/pre/script/style`, chỉ nhận ảnh `https://data.voz.vn/`; trả `true` khi có thay đổi để editor biết khi nào cần đặt lại caret |
@@ -1284,9 +1288,9 @@ tương phản với nền chrome tối.
 - Thêm phông mới phải sửa **ba** nơi: `FONTS`/`FONT_LABELS`/`FONT_STACKS` +
   `css/fonts.css`, và nhánh tương ứng trong script chống nhấp nháy ở `index.html` (test
   `theme-tokens.test.mjs` đọc `FONT_STACKS` để kiểm tra chéo, nên quên script là fail).
-- Chi tiết dựng lại font: chạy `python vtest/tools/build-fonts.py --src <thư mục .ttf>
-  --out vtest/public/assets/fonts` cho Roboto + Be Vietnam Pro, và
-  `python vtest/tools/build-be-vietnam.py --src <BeVietnam-master/ttf> --out vtest/public/assets/fonts`
+- Chi tiết dựng lại font: chạy `python tuivoz/tools/build-fonts.py --src <thư mục .ttf>
+  --out tuivoz/public/assets/fonts` cho Roboto + Be Vietnam Pro, và
+  `python tuivoz/tools/build-be-vietnam.py --src <BeVietnam-master/ttf> --out tuivoz/public/assets/fonts`
   cho Be Vietnam. Cả hai cần `fonttools` + `brotli`. Script Be Vietnam tự xoá các file
   `be-vietnam-400-*.woff2` chia dải cũ (tắt bằng `--no-prune-legacy`).
 
@@ -1623,6 +1627,10 @@ username, user id, thread id hay post id thật của bất kỳ ai.
 | Cỡ chữ, giới hạn | kéo tới `80%` và `200%`: `scrollWidth == innerWidth` ở 1265px lẫn 390px, nav không tràn |
 | Cỡ chữ, nhãn `em` | `.label` (prefix) `12.8px` ở 100%, `28.8px` ở `uiSize 150` — không nhân hai lần |
 | Cỡ chữ, lưu bền | reload ở 130%/90% → thanh trượt và `--*-scale` khôi phục đúng, backup JSON mang cả hai key |
+| Unfurl, favicon chết | card discord.com ở 100%/**150%**/200% ⇒ cao **131/206/306px** (trước khi sửa: 397px ở 150%); icon bị ẩn khỏi layout, không còn alt text dựng cột |
+| Unfurl, ảnh preview | thumbnail thật vẫn 80×80 (màn hẹp 60×60) với `object-fit: cover`; ảnh 1×1 cũng bị kéo đầy khung, không phình card |
+| Unfurl, ngoài `.bbWrapper` | chèn card vào `<div>` trần ⇒ chiều cao/icon y hệt — selector không phụ thuộc container |
+| Unfurl, mobile | 390px ở 150%: card 346px, nằm trong `.message-cell--main`, `scrollWidth == innerWidth` |
 | Phông, mặc định | `system` → **không** có `<link id="font-faces">`, không tải file font nào |
 | Phông, chọn Roboto | link `fonts.css` được chèn, `--font` đổi, `document.fonts` báo Roboto 400/500/700 `loaded` |
 | Phông, chọn Be Vietnam Pro | vẫn đúng **1** link (không nhân bản), stack đổi sang `"Be Vietnam Pro"` |
@@ -1700,7 +1708,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 - Giữ nguyên ID textarea và giao diện `.value` đồng bộ. Setter riêng cập nhật visual ngay khi handler quote gán `.value`; không cần event input. Đổi chế độ không serialize lại nội dung chưa sửa. Paste văn bản chỉ nhận text; nếu clipboard có mục `image/*` thì ảnh được tải lên pik.vn và chèn `[IMG]` (xem *Tải ảnh lên pik.vn*). Kéo thả chỉ nhận tệp ảnh, HTML không được chèn. URL chỉ HTTP(S) tuyệt đối, không credentials; HTML và thuộc tính luôn escape. Preview là codec cục bộ, không phải kết quả render chính thức của voz.vn.
 - Nháp lưu localStorage khi sửa (30 ngày), tách theo tài khoản/đường dẫn/editor và post ID khi sửa bài. Nháp không tự đè nội dung: dùng **Khôi phục nháp**; **Xoá nháp** chỉ xoá bản lưu, không xoá nội dung đang soạn. Gửi/lưu thành công mới xoá nháp. Nháp bao gồm nội dung DM dạng văn bản trên thiết bị: không dùng trên máy chia sẻ nếu không muốn lưu cục bộ. Không lưu tiêu đề/người nhận.
 - Không upload lên voz.vn: proxy chỉ xin `attachment:read`; API attachment vẫn lỗi theo `voz-app-api.md` §13.5 dù scope write có thể được cấp. Ảnh tải lên đi qua **pik.vn** (xem mục *Tải ảnh lên pik.vn*); ngoài ra vẫn dùng được URL ảnh hoặc giao diện voz.vn.
-- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **139/139** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `font-scale.test.mjs` (chuẩn hoá cỡ chữ, giới hạn 80–200, không còn px trần, script pre-paint), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
+- Kiểm tra không mạng: từ thư mục cha chạy `node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs` (codec, URL nguy hiểm, escape, nested BBCode, cấu trúc lossless, serializer). Hiện 10/10 test pass. Kiểm thử tương tác trình duyệt riêng; không gửi bài/DM thật để test. Bộ đầy đủ: `node --test vtesst1/*.test.mjs` (hiện **152/152** pass), gồm `unread.test.mjs` (phân giải bài chưa đọc), `threadRow.test.mjs` (link `/unread`), `subforums.test.mjs` (khối diễn đàn con không tiêu đề), `post-links.test.mjs` (link voz.vn → nội bộ, `/ignore` giữ nguyên), `signature.test.mjs` (chữ ký BBCode → HTML), `font-scale.test.mjs` (chuẩn hoá cỡ chữ, giới hạn 80–200, không còn px trần, script pre-paint), `unfurl.test.mjs` (specificity icon/preview so với `.bbWrapper img:not(.smilie)`, hợp đồng `data-onerror`), `settings-appearance.test.mjs` (sáng/tối/phông + sự tồn tại của mọi file phông), `settings-tabs.test.mjs` (tab theo fragment), `chrome-branding.test.mjs` (logo SVG + câu footer), `chrome-autohide.test.mjs` (hợp đồng sticky/z-index/scroll-padding + không có khe giữa hai thanh) và `theme-tokens.test.mjs` (hợp đồng token giữa hai bảng màu).
 
 ## 11. Ghi chú triển khai
 
@@ -1741,7 +1749,7 @@ Dữ liệu test đã dọn: bài test đã xoá, conversation test đã leave, 
 ```powershell
 cd "D:\Data 2\Github-Clone\siritami"
 node --test vtesst1\editor-codec.test.mjs vtesst1\editor-toolbar.test.mjs
-cd vtest
+cd tuivoz
 node dev-server.mjs 3111
 # mở http://localhost:3111 — kiểm tra trang chủ, 1 thread, 1 DM, /login
 ```

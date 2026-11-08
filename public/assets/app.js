@@ -9,6 +9,7 @@ import { wireHeaderMenus } from './ui/headerMenus.js';
 import { wireNavShortcuts } from './ui/chrome.js';
 import { wireTheme } from './ui/theme.js';
 import { wireChromeAutoHide } from './ui/chromeAutoHide.js';
+import { wireImageFallbacks } from './lib/imageFallback.js';
 
 // Applied before the first paint of app content so the page never flashes the wrong scheme:
 // the reader's saved preference is in localStorage, so it is available synchronously.
@@ -42,6 +43,9 @@ document.addEventListener('click', (event) => {
 wireHeaderMenus();
 wireNavShortcuts();
 wireChromeAutoHide();
+// voz.vn's markup carries data-onerror="hide-parent" on unfurl favicons; the attribute does
+// nothing without a listener, so dead favicons would otherwise keep their box and alt text.
+wireImageFallbacks();
 
 window.addEventListener('popstate', () => {
   window.scrollTo({ top: 0 });
