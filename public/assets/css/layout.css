@@ -76,7 +76,8 @@
   top: var(--header-h, 0px);
   z-index: 100;
   background: var(--nav-bg);
-  border-top: 1px solid var(--overlay-hairline);
+  /* No border-top: the header and nav share the same --nav-bg, and any hairline here reads as
+     a white line cutting the two bars apart. Separation comes from the active tab underline. */
   transition: transform .2s ease;
 }
 :root.chrome-hidden .p-nav {

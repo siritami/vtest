@@ -42,13 +42,19 @@ function suppressBriefly() {
 // Measured whenever either bar changes size (boot, resize, font swap, async render).
 function measure() {
   if (!header) return;
-  const headerH = header.offsetHeight;
-  const navH = nav?.offsetHeight || 0;
+  // getBoundingClientRect, not offsetHeight: offsetHeight rounds to an integer, so a 44.5px
+  // header reported 45 and the nav parked half a pixel low — leaving a 0.5px seam where the
+  // page background showed through between two bars that share the same colour. The exact
+  // fractional height is kept (trimmed to 3dp to avoid float noise like 44.399999px); a
+  // fractional `top` is perfectly valid and keeps the two edges flush.
+  const exact = (el) => Math.round(el.getBoundingClientRect().height * 1000) / 1000;
+  const headerH = exact(header);
+  const navH = nav ? exact(nav) : 0;
   const root = document.documentElement.style;
-  // --header-h parks the sticky nav under the header; --chrome-h is the pair's total height
-  // (what the hide transform and anything clearing the bars positions against).
+  // --header-h parks the sticky nav flush against the header; --chrome-h is the pair's total
+  // height (what the hide transform and scroll-padding-top position against).
   root.setProperty('--header-h', `${headerH}px`);
-  root.setProperty('--chrome-h', `${headerH + navH}px`);
+  root.setProperty('--chrome-h', `${Math.round((headerH + navH) * 1000) / 1000}px`);
 }
 
 function setHidden(next) {
